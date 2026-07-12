@@ -1,100 +1,173 @@
-# Site spec — contract for the marketplace website
+# Site spec — the in-repo catalog website
 
-The website that lets people browse and install plugins from this marketplace is a **separate
-project** — it is not built in this repository. This document is the contract: what this
-repository publishes, and what the website may assume about it. Nothing here describes the
-website's own implementation, framework, or hosting.
+The catalog website is built and hosted **from this repository**, under [`site/`](../site/). This
+document is its contract: how the data is generated, what the site renders, and how it deploys.
 
-## Indexing model (confirmed)
+> **History.** An earlier version of this spec described the website as a *separate project* that
+> only consumed a published `dist/index.json`. That decision was reversed — the site now lives here.
+> This document supersedes it.
 
-**Static index, built by this repository's CI.**
+## Status (what is actually built)
 
-- `scripts/build-index.mjs` reads `.claude-plugin/marketplace.json` and every
-  `plugins/<name>/.claude-plugin/plugin.json`, scans each plugin's `skills/`, `agents/`,
-  `commands/` for their frontmatter descriptions, and writes one self-contained file:
-  `dist/index.json`.
-- The **build** GitHub Actions workflow (`.github/workflows/build.yml`) runs this script on a
-  runner and publishes the result as a build artifact (every push/PR) and to GitHub Pages (on
-  `main`). This is a workflow **separate from and not blocking on** the `validate` workflow
-  that gates PRs — see the note on CI separation below.
-- The website fetches the published `index.json` (a stable URL). It never clones this repository,
-  parses raw markdown/frontmatter itself, or calls the GitHub API to list files at request time.
+- A **React + TypeScript + Vite** single-page app (see [`site/README.md`](../site/README.md) for
+  the file-by-file map) with a generated `site/public/catalog.json` data file fetched at load. No
+  backend; the only runtime dependencies are React, `react-router-dom`, and `minisearch`.
+- **Hash routing** (`HashRouter`): `#/` (catalog) and `#/plugin/:name` (plugin detail — a stable
+  deep link); unknown routes redirect to `#/`.
+- Client-side **fuzzy search** (MiniSearch — prefix + fuzzy, AND-combined terms) over every
+  plugin, skill, agent, and command; a **⌘/Ctrl-K command palette** over the same index;
+  **light/dark** theming; and a **copy-install** action.
+- All UI strings live in one i18n module (`site/src/i18n/strings.ts`) — components never hardcode
+  display text.
 
-**Why not read the repository directly:**
+## Data flow
 
-- **Stability and speed.** A generated, schema-shaped JSON file is a contract the website can
-  parse once and cache; raw repo access means re-parsing markdown frontmatter and re-deriving the
-  same structure on every request.
-- **No rate limits or auth.** Reading files from GitHub's API or raw content endpoints at request
-  time is subject to GitHub's own rate limits; a static artifact has none.
-- **Validation happens once, at build time**, not on every page load — `build-index.mjs` runs
-  after `validate-marketplace.mjs` has already confirmed the catalog is well-formed, so the
-  website can trust the shape of what it receives without its own defensive parsing.
+```
+plugins/** + .claude-plugin/marketplace.json
+        │  node scripts/build-index.mjs
+        ▼
+dist/index.json
+        │  node scripts/build-catalog.mjs   (npm run build:catalog runs both)
+        ▼
+site/public/catalog.json
+        │  vite build (site/) — copies public/ into the bundle
+        ▼
+site/dist/ ──► GitHub Pages | Render static
+```
 
-## `dist/index.json` shape
+No backend and no runtime GitHub API calls: the app only fetches its own static `catalog.json`
+(bundled next to it in `site/dist`). `site/public/catalog.json` is committed so a fresh clone can
+run the site without regenerating; CI and Render regenerate it on every deploy so a published site
+always reflects the current plugins.
 
-```json
+## `site/public/catalog.json` shape
+
+```jsonc
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-12T18:14:02.556Z",
-  "marketplace": { "name": "...", "description": "...", "owner": { "name": "...", "email": "..." } },
+  "generatedAt": "<ISO-8601>",
+  "marketplace": {
+    "name": "fk-dev-digest-marketplace",
+    "displayName": "Dev Digest",
+    "description": "...",
+    "owner": { "name": "Fel Kost", "email": "teacherfkv@gmail.com" },
+    "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+    "repoShort": "felkost/fk-dev-digest-marketplace",
+    "addCommand": "/plugin marketplace add felkost/fk-dev-digest-marketplace",
+    "installTemplate": "/plugin install {plugin}@fk-dev-digest-marketplace"
+  },
   "plugins": [
     {
-      "name": "...", "displayName": "...", "version": "...", "description": "...",
-      "category": "...", "keywords": ["..."],
-      "author": { "name": "...", "email": "..." }, "license": "...", "repository": "...",
-      "dependencies": [{ "name": "...", "version": "..." }],
-      "skills": [{ "name": "...", "description": "..." }],
-      "agents": [{ "name": "...", "description": "...", "model": "..." }],
-      "commands": [{ "name": "...", "description": "..." }],
+      "name": "sdd-engineering",
+      "displayName": "SDD Engineering",
+      "version": "1.0.0",
+      "description": "...",
+      "category": "workflow",
+      "keywords": ["sdd", "plan", "..."],
+      "author": { "name": "...", "email": "..." },
+      "license": "MIT",
+      "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+      "dependencies": [{ "name": "engineering-paved-path", "version": "^1.0.0" }],
+      "skills":   [{ "name": "run-plan", "description": "..." }],
+      "agents":   [{ "name": "implementer", "description": "...", "model": "sonnet" }],
+      "commands": [{ "name": "engineering-insights", "description": "..." }],
       "hookEvents": ["Stop"]
     }
   ]
 }
 ```
 
-`schemaVersion` increments on any breaking change to this shape — the website should check it and
-fail loudly rather than silently misrender on a future incompatible version.
+The `plugins` array is exactly `dist/index.json`'s `plugins` (see `scripts/build-index.mjs`); the
+`marketplace` block adds the two install commands the detail page renders (`{plugin}` is substituted
+per plugin in the UI). `schemaVersion` increments on any breaking change to this shape.
 
-## Local development
+## The app (`site/src/`)
 
-The website's local dev server fetches or generates the index **before** starting, not on demand
-per request:
+- **Routes** (`HashRouter`): `#/` — catalog; `#/plugin/:name` — plugin detail (stable deep link,
+  works on a fresh page load); anything else redirects to `#/`.
+- **Catalog page** — a centered hero (two-line headline), a category filter and keyword chips (both
+  derived from the data), and a uniform tile grid of plugin cards. Each card shows the plugin's
+  initials, name, version, category, description, and skill/agent/command counts.
+- **Plugin detail page** — metadata header (version, category, package name, license), a
+  terminal-styled **install** block with a **copy** button, tables for the plugin's skills, agents,
+  commands, and hooks, its dependencies (each a link to the depended-on plugin's own detail route),
+  and author / repository / keyword metadata.
+- **Search** — MiniSearch over one index of every plugin, skill, agent, and command (fields: label,
+  description, keywords, owning plugin). Prefix matching + fuzzy (0.2) with AND-combined terms, so
+  typos still hit. The header search filters the catalog grid by mapping component hits back to
+  their owning plugins. Pressing `/` focuses the search box.
+- **Command palette** — `⌘/Ctrl + K` opens a palette over the same MiniSearch index; type to
+  filter, arrow keys / Enter (or click) to jump — every hit opens its owning plugin's detail route.
+- **Theming** — light and dark via CSS custom properties. Default follows `prefers-color-scheme`;
+  the user's choice is stored in `localStorage` (`fkm-theme`) and applied as `data-theme` on the
+  app root element, which also carries `color` so all inherited text follows the active theme.
+  Palette is cool-neutral with a purple accent and a purple→teal gradient rule.
+- **Install commands** — built from `marketplace.addCommand` and `marketplace.installTemplate`; the
+  detail page shows both `/plugin marketplace add …` and `/plugin install <name>@…` and copies them
+  together.
 
-1. Either fetch the currently-published `index.json` from the deployed artifact/Pages URL, or run
-   `node scripts/build-index.mjs` against a local checkout of this repository to produce a fresh
-   one.
-2. Then run the website's own dev server (`npm run dev`) against that file.
+All displayed numbers and text come from `catalog.json` or `src/i18n/strings.ts` — nothing about
+the catalog is hardcoded in components.
 
-The website must never attempt to read this repository's raw files directly, in dev or in
-production — the same static-index contract applies in both.
+## Usage stats (`server/`)
 
-## Internationalization
+An optional companion backend counts how the catalog is used. Full details in
+[`server/README.md`](../server/README.md); the contract in short:
 
-If the website supports more than one display language, all UI strings live in **one dedicated
-translations file per language** (e.g. `locales/en.json`, `locales/uk.json`) — never hardcoded
-inside components. `index.json` itself is language-neutral: plugin/skill/agent descriptions come
-from this repository's English-only source content (see `CONTRIBUTING.md`) and are not translated
-by this repository; if the website wants localized copy, it maintains its own translation of the
-descriptive strings independently, keyed by plugin/skill/agent name.
+- **Stack** — Fastify + Drizzle + Zod + PostgreSQL (Neon), deployed as the `fk-dev-digest-stats`
+  web service in [`render.yaml`](../render.yaml). The marketplace dogfoods its own
+  `engineering-paved-path` stack.
+- **Events** — the site fire-and-forgets `POST /api/events` with `{ type, plugin }` on
+  copy-install clicks (`copy_install`) and plugin-page opens (`plugin_view`). No PII: no IP, UA,
+  cookies, or session ids are stored. `GET /api/stats` returns per-plugin aggregates, which the
+  detail page shows as a "Usage" metadata cell.
+- **Wiring** — the site reads the backend base URL from `VITE_STATS_API` at build time (set in
+  `pages.yml` and `render.yaml`). Unset it and the site builds with stats fully disabled — every
+  stats call is a graceful no-op.
+- **Honest limitation** — real installs happen via `git clone` of this repo by Claude Code and
+  never touch the website, so these counters measure catalog engagement, not installs. Harvesting
+  GitHub Traffic API clone counts (14-day window → needs a cron) is documented future work.
+
+## Not included in this version
+
+Possible future work, deliberately not built now: dedicated skill/agent detail routes, rendered
+README/`SKILL.md` markdown bodies (`marked` + `DOMPurify`), a "What's New" release feed (from
+CHANGELOG parsing), homepage stat tiles, GitHub clone-count harvesting (see above), and a
+multi-language UI switcher (the i18n module is ready; only `en` ships). Auth and ratings are out
+of scope entirely.
+
+## Build & deploy
+
+Local:
+
+```
+npm run build:catalog          # repo root — regenerate site/public/catalog.json
+cd site && npm ci && npm run build && npm run preview
+```
+
+(`npm run dev` inside `site/` gives the HMR dev server instead.)
+
+**GitHub Pages** — [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) regenerates
+`catalog.json`, builds the Vite app, and publishes `site/dist` on every push to `main`. Enable once
+via *Settings → Pages → Source → GitHub Actions*. The site is served from the repo subpath
+(`https://<owner>.github.io/<repo>/`); Vite's `base: "./"` keeps asset paths relative and routing
+is hash-based, so no base-path configuration or server rewrites are needed.
+
+**Render.com** — the repo-root [`render.yaml`](../render.yaml) blueprint builds with
+`npm ci && npm run build:catalog && cd site && npm ci && npm run build` and publishes `./site/dist`
+as a static site from the domain root.
 
 ## CI separation
 
-This repository runs two independent GitHub Actions workflows, deliberately not merged into one:
+Three independent workflows, deliberately not merged:
 
-- **`validate`** — gates every PR and push: schema validation, the custom linter, `claude plugin
-  validate --strict`, the eval static gate. This is the harness/content-quality check.
-- **`build`** — builds `dist/index.json` and publishes it. This is the artifact the website
-  depends on.
+- **`validate`** (`.github/workflows/validate.yml`) — content-quality gate on every PR and push:
+  Prettier, markdownlint, the marketplace linter, `claude plugin validate`, and the eval static gate.
+- **`site-build`** (`.github/workflows/site-build.yml`) — build check on every PR and push touching
+  the catalog data or the site (path-filtered): regenerates `catalog.json`, type-checks, and builds
+  the Vite app. Build-only — nothing is published.
+- **`pages`** (`.github/workflows/pages.yml`) — builds `catalog.json` + the app and deploys
+  `site/dist` to GitHub Pages on push to `main`.
 
-They show as two separate checks in the GitHub UI so a build failure (e.g. a transient Pages
-deploy issue) is never confused with a content-validation failure, and vice versa.
-
-## Screens (for the website to implement — informational, not a requirement of this repo)
-
-- **Catalog** — list of plugins from `index.json`, filterable by `category`/`keywords`.
-- **Plugin detail** — one plugin's full metadata, its skills/agents/commands tables, its
-  dependency list (rendered as links to the depended-on plugin's own detail page), install
-  command.
-- **Search** — client-side, over the already-fetched `index.json` (name, description, keywords) —
-  no server-side search index needed for a catalog this size.
+Keeping them separate means a deploy hiccup is never confused with a build break or a
+content-validation failure.

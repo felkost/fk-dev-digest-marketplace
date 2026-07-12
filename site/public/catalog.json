@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-12T20:15:52.668Z",
+  "marketplace": {
+    "name": "fk-dev-digest-marketplace",
+    "displayName": "Dev Digest",
+    "description": "SDD engineering workflow, paved-path knowledge skills, architecture review, and research tools extracted from the DevDigest harness.",
+    "owner": {
+      "name": "Fel Kost",
+      "email": "teacherfkv@gmail.com"
+    },
+    "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+    "repoShort": "felkost/fk-dev-digest-marketplace",
+    "addCommand": "/plugin marketplace add felkost/fk-dev-digest-marketplace",
+    "installTemplate": "/plugin install {plugin}@fk-dev-digest-marketplace"
+  },
+  "plugins": [
+    {
+      "name": "engineering-paved-path",
+      "displayName": "Engineering Paved Path",
+      "version": "1.0.0",
+      "description": "Canonical knowledge skills for the TypeScript stack: React/Next.js, Fastify, Drizzle, PostgreSQL, Zod, testing, security, Mermaid, onion architecture. Single source of truth consumed by the sdd-engineering and architecture-review plugins.",
+      "category": "knowledge",
+      "keywords": [
+        "skills",
+        "best-practices",
+        "typescript",
+        "react",
+        "nextjs",
+        "fastify",
+        "drizzle",
+        "postgresql",
+        "zod",
+        "security",
+        "mermaid",
+        "onion-architecture"
+      ],
+      "author": {
+        "name": "Fel Kost",
+        "email": "teacherfkv@gmail.com"
+      },
+      "license": "MIT",
+      "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+      "dependencies": [],
+      "skills": [
+        {
+          "name": "drizzle-orm-patterns",
+          "description": "Provides comprehensive Drizzle ORM patterns for schema definition, CRUD operations, relations, queries, transactions, and migrations. Proactively use for any Drizzle ORM development including defining database schemas, writing type-safe queries, implementing relations, managing transactions, and setting up migrations with Drizzle Kit. Supports PostgreSQL, MySQL, SQLite, MSSQL, and CockroachDB."
+        },
+        {
+          "name": "fastify-best-practices",
+          "description": "Guides development of Fastify Node.js backend servers and REST APIs using TypeScript or JavaScript. Use when building, configuring, or debugging a Fastify application — including defining routes, implementing plugins, setting up JSON Schema validation, handling errors, optimising performance, managing authentication, configuring CORS and security headers, integrating databases, working with WebSockets, and deploying to production. Covers the full Fastify request lifecycle (hooks, serialization, logging with Pino) and TypeScript integration via strip types. Trigger terms: Fastify, Node.js server, REST API, API routes, backend framework, fastify.config, server.ts, app.ts."
+        },
+        {
+          "name": "frontend-architecture",
+          "description": "Frontend architecture for React/Next.js: project structure, feature organization, where code belongs, architectural patterns (FSD, Feature-Based, Clean Architecture). Use when deciding WHERE code lives and WHY — not how to write React or how to use Next.js APIs."
+        },
+        {
+          "name": "mermaid-diagram",
+          "description": "Create Mermaid diagrams in markdown. Use when the user wants to visualize workflows, architectures, API flows, data models, state machines, or system designs. Covers flowcharts, sequence diagrams, class diagrams, ER diagrams, state diagrams, and more."
+        },
+        {
+          "name": "next-best-practices",
+          "description": "Next.js best practices - file conventions, RSC boundaries, data patterns, async APIs, metadata, error handling, route handlers, image/font optimization, bundling"
+        },
+        {
+          "name": "onion-architecture",
+          "description": "Backend architecture standard for Node.js/Fastify/Drizzle/TypeScript modules. Answers WHERE backend code belongs and WHY — layer definitions, dependency rules, canonical module structure, and convention constraints. Use when creating new modules, placing business logic, designing services, reviewing module structure, or wiring dependency injection."
+        },
+        {
+          "name": "postgresql-table-design",
+          "description": "Use this skill when designing or reviewing a PostgreSQL-specific schema. Covers best-practices, data types, indexing, constraints, performance patterns, and advanced features"
+        },
+        {
+          "name": "react-best-practices",
+          "description": "Modern React best practices and anti-pattern catalog (2025-26). Use when writing, reviewing, or refactoring React components, hooks, and state management. Covers component design, state patterns, hooks misuse, performance, data fetching, and code organization."
+        },
+        {
+          "name": "react-testing-library",
+          "description": "General-purpose React Testing Library guide with Vitest. Use when writing, reviewing, or setting up React component and hook tests. Covers project setup from scratch, RTL query priority, userEvent, async patterns, mocking strategies, and common anti-patterns. Applicable to any Vite + React project."
+        },
+        {
+          "name": "security",
+          "description": "Web application security best practices based on OWASP Top 10:2025. Use when reviewing code for vulnerabilities, implementing auth/authorization, handling user input, working with file uploads, managing secrets, or building API endpoints. Covers React, Express, MongoDB, and JWT security."
+        },
+        {
+          "name": "server-testing",
+          "description": "Backend test patterns for Fastify/Drizzle/Vitest — test split strategy, route testing with inject(), service unit testing, DB teardown, file placement, and coverage strategy."
+        },
+        {
+          "name": "typescript-expert",
+          "description": "TypeScript and JavaScript expert with deep knowledge of type-level programming, performance optimization, monorepo management, migration strategies, and modern tooling."
+        },
+        {
+          "name": "zod",
+          "description": "Zod schema validation best practices for type safety, parsing, and error handling. This skill should be used when defining z.object schemas, using z.string validations, safeParse, or z.infer. This skill does NOT cover React Hook Form integration patterns (use react-hook-form skill) or OpenAPI client generation (use orval skill)."
+        }
+      ],
+      "agents": [],
+      "commands": [],
+      "hookEvents": []
+    },
+    {
+      "name": "research-tools",
+      "displayName": "Research Tools",
+      "version": "1.0.0",
+      "description": "Generic read-only researcher agent, doc-writer agent + skill, and a dependency audit skill. No dependencies on other plugins; optional integrations with engineering-paved-path and sdd-engineering are soft references.",
+      "category": "research",
+      "keywords": [
+        "research",
+        "documentation",
+        "dependencies",
+        "read-only",
+        "mermaid"
+      ],
+      "author": {
+        "name": "Fel Kost",
+        "email": "teacherfkv@gmail.com"
+      },
+      "license": "MIT",
+      "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+      "dependencies": [],
+      "skills": [
+        {
+          "name": "dependency-checker",
+          "description": "Analyzes all dependencies across the repo's packages and produces a structured report — a Mermaid dependency graph, an installed-size breakdown table, severity-tiered findings (P0/P1/P2/Info), and prioritized recommendations. Use when asked to audit dependencies, check what each package weighs, find unused, duplicated, or version-drifted packages, map cross-package imports, or decide which dependencies to remove or upgrade first."
+        },
+        {
+          "name": "doc-writer",
+          "description": "Documentation standards for the dev-digest project — doc type to location mapping, per-symbol documentation structure, topological generation order, Mermaid conventions, and quality checks before writing."
+        }
+      ],
+      "agents": [
+        {
+          "name": "doc-writer",
+          "description": "Use when you need to generate or update documentation — describe an existing module's functionality, convert an implementation plan to a design doc, produce an API reference from route definitions, or create architecture diagrams. Knows the project's doc folder conventions and produces accurate, verifiable docs with Mermaid diagrams.",
+          "model": "sonnet"
+        },
+        {
+          "name": "researcher",
+          "description": "Returns a structured research report — codebase search (Glob, Grep, Bash) or web search (WebSearch, WebFetch) — with exact file:line citations, explicit Not Found gaps, and an actionable summary. Asks clarifying questions when the request is vague. Use before planning or implementing, when you need to understand existing code, locate symbols/patterns, or gather external documentation. Never writes or edits files.",
+          "model": "sonnet"
+        }
+      ],
+      "commands": [],
+      "hookEvents": []
+    },
+    {
+      "name": "architecture-review",
+      "displayName": "Architecture Review",
+      "version": "1.0.0",
+      "description": "Read-only architecture reviewers (strict and lite variants) that ground every finding in the host repository's own architecture docs and preload the paved-path knowledge skills.",
+      "category": "review",
+      "keywords": [
+        "architecture",
+        "review",
+        "onion",
+        "layering",
+        "read-only"
+      ],
+      "author": {
+        "name": "Fel Kost",
+        "email": "teacherfkv@gmail.com"
+      },
+      "license": "MIT",
+      "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+      "dependencies": [
+        {
+          "name": "engineering-paved-path",
+          "version": "^1.0.0"
+        }
+      ],
+      "skills": [],
+      "agents": [
+        {
+          "name": "architecture-reviewer-lite",
+          "description": "Read-only architectural reviewer (relaxed variant of architecture-reviewer). Use to audit a diff or file set against the host repository's documented structural contracts — layering, DI discipline, module isolation, shared-contract usage. May also report well-reasoned judgment findings; never edits.",
+          "model": "sonnet"
+        },
+        {
+          "name": "architecture-reviewer",
+          "description": "Read-only architectural reviewer. Use to audit a diff or file set against the host repository's documented structural contracts — layering, dependency direction, DI discipline, module isolation, shared-contract usage. Grounds every finding in the repo's own architecture docs; reports violations; never edits.",
+          "model": "sonnet"
+        }
+      ],
+      "commands": [],
+      "hookEvents": []
+    },
+    {
+      "name": "sdd-engineering",
+      "displayName": "SDD Engineering",
+      "version": "1.0.0",
+      "description": "Complete spec-driven development workflow: spec-creator, implementation-planner, implementer, test-writer, and plan-verifier agents, run-plan and implement orchestrator skills, workflow-retro, engineering-insights, and a Stop hook that prompts insight capture.",
+      "category": "workflow",
+      "keywords": [
+        "sdd",
+        "spec",
+        "plan",
+        "implement",
+        "verify",
+        "retro",
+        "pipeline",
+        "orchestrator"
+      ],
+      "author": {
+        "name": "Fel Kost",
+        "email": "teacherfkv@gmail.com"
+      },
+      "license": "MIT",
+      "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+      "dependencies": [
+        {
+          "name": "engineering-paved-path",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "research-tools",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "architecture-review",
+          "version": "^1.0.0"
+        }
+      ],
+      "skills": [
+        {
+          "name": "engineering-insights",
+          "description": "Captures and preserves non-obvious engineering discoveries in the affected module's insights.md file. Use when — (1) discovering a non-obvious solution, failure pattern, architectural decision, or dependency quirk mid-session (\"capture as you go\"); or (2) wrapping up a session longer than 30 minutes where a real problem was solved or discovered. Writes append-only to the insights.md of the most directly affected module of the host repository. Does not record observations obvious from reading the code or already in the repo's instruction files."
+        },
+        {
+          "name": "implement",
+          "description": "Execute an existing Development Plan end-to-end — implementer waves → completeness gate → architecture review with fix iterations → test coverage → bug review → final verification → sign-off. Use when a plan exists in docs/plans/ and the user wants it implemented and verified. Spec creation and planning are NOT part of this command — run spec-creator and implementation-planner separately first."
+        },
+        {
+          "name": "plan-verifier",
+          "description": "Verification methodology for Development Plans — how to parse plan requirements, gather codebase evidence, assign Done/Partial/Missing status, and format the verification report."
+        },
+        {
+          "name": "run-plan",
+          "description": "Full SDD pipeline orchestrator for a single feature — researcher → spec-creator → architecture-reviewer (pre-plan) → implementation-planner → implementer → test-writer → plan-verifier → architecture-reviewer (post-impl) → verify → workflow-retro. Pauses after every stage to ask the user whether to continue in the current session or hand off to a new one; a handoff always ships a mandatory handoff doc, a ready-to-paste commit message, and the exact next-session kickoff prompt. Narrates progress live in structured lists/tables, gives a summary after each stage, and closes with a pipeline-improvement analysis for token/time economy. Use when the user wants the ENTIRE spec-through-retro pipeline for a new feature driven end-to-end with a human checkpoint at every stage. Do NOT use for single-stage work — call spec-creator, implementation-planner, /implement, or /workflow-retro directly for that."
+        },
+        {
+          "name": "workflow-retro",
+          "description": "Manual retrospective of a multi-agent run (spec → plan → implement pipeline or any session with subagents). Computes real metrics from session transcripts on disk — tokens in/out/cache-read per context including nested subagents, cache-hit rate, tool calls, durations, parallelism — then turns them into insights, concrete recommendations, and a trend row in docs/retros/ledger.md. Run manually after a run worth analyzing; never triggered by hooks."
+        }
+      ],
+      "agents": [
+        {
+          "name": "implementation-planner",
+          "description": "Creates a structured Development Plan (8 sections — Context, Architecture Fit, Skills Applied, Constraints, Implementation Steps, Acceptance Criteria, Testing Plan, Out of Scope). Uses an existing spec (docs/feature-requirements/) or inline requirements when available; without one, captures requirements through targeted questions before planning. Reviews requirements for gaps and constraint conflicts, proposes improvements, and asks whether execution should be multi-agent (parallel implementers) or single-agent. Use before implementing any non-trivial feature. Writes only the plan file in docs/plans/ — never code, never specifications.",
+          "model": "sonnet"
+        },
+        {
+          "name": "implementer",
+          "description": "Executes exactly one assigned task from a Development Plan for backend (Fastify/Drizzle/Zod) or frontend (Next.js/React/TanStack) code. Reads module insights, loads domain skills, implements the task, type-checks, self-reviews against skill rules, and runs hermetic tests before reporting done. Spawn one instance per task for parallel delivery. Use when you have a plan document with a specific task to execute.",
+          "model": "sonnet"
+        },
+        {
+          "name": "plan-verifier",
+          "description": "Read-only agent that verifies a Development Plan against the current codebase. Given a plan document (typically from docs/plans/), it checks that every requirement in Implementation Steps and Acceptance Criteria has a corresponding implementation. Outputs a ✅/⚠️/❌ verification table. Does not judge code quality or architecture.",
+          "model": "sonnet"
+        },
+        {
+          "name": "spec-creator",
+          "description": "Use when a feature needs a formal specification (the WHAT) before any plan or code exists. Produces an EARS-based feature spec in docs/feature-requirements/ by reading project context, asking iterative questions across 6 categories, and analyzing design digests for gaps. Writes only inside docs/feature-requirements/ — never code, never package specs/.",
+          "model": "sonnet"
+        },
+        {
+          "name": "test-writer",
+          "description": "Use when you need to write unit or integration tests for a frontend source file (React/RTL/Vitest) or a backend one (Fastify/Drizzle/Vitest). Detects the domain from the file path and applies the appropriate testing strategy. Reads existing tests before writing and extends them without overwriting.",
+          "model": "sonnet"
+        }
+      ],
+      "commands": [
+        {
+          "name": "engineering-insights",
+          "description": "Wrap up this session using the engineering-insights skill — capture non-obvious discoveries into the affected module's insights.md."
+        }
+      ],
+      "hookEvents": [
+        "Stop"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+# Render.com blueprint — deploys the catalog website (site/ — React + TypeScript + Vite) as a
+# static site. https://render.com/docs/blueprint-spec
+#
+# The build regenerates catalog.json from the repo, then builds the Vite app, so a deploy always
+# reflects the current plugins. Vite's base is "./" (relative assets) and routing is hash-based,
+# so serving from the domain root needs no extra configuration. Point Render at this repo, choose
+# "Blueprint", and it picks this file up automatically.
+services:
+  - type: web
+    name: fk-dev-digest-catalog
+    runtime: static
+    buildCommand: npm ci && npm run build:catalog && cd site && npm ci && npm run build
+    staticPublishPath: ./site/dist
+    pullRequestPreviewsEnabled: true
+    envVars:
+      # Base URL of the usage-stats backend below. Remove this var to build the site with stats
+      # collection fully disabled — the site works either way.
+      - key: VITE_STATS_API
+        value: https://fk-dev-digest-stats.onrender.com
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+    routes:
+      # The app has no server-side routes; send unknown paths back to the single page.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Usage-stats backend (server/): Fastify + Drizzle + PostgreSQL. Counts copy-install clicks and
+  # plugin views sent by the site; exposes GET /api/stats. The database is an external Neon
+  # PostgreSQL instance — create one at https://neon.tech (free tier) and paste its connection
+  # string as DATABASE_URL in the Render dashboard (sync: false keeps it out of this file).
+  # Note: on Render's free plan this service sleeps when idle; events are fire-and-forget from
+  # the site, so a cold start only means the first event after a quiet period may be dropped.
+  - type: web
+    name: fk-dev-digest-stats
+    runtime: node
+    rootDir: server
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://felkost.github.io,https://fk-dev-digest-catalog.onrender.com

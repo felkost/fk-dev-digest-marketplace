@@ -9,6 +9,7 @@
     "lint:format": "prettier --check .",
     "lint:markdown": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\"",
     "build": "node scripts/build-index.mjs",
+    "build:catalog": "node scripts/build-index.mjs && node scripts/build-catalog.mjs",
     "release": "node scripts/release.mjs",
     "rollback": "node scripts/rollback.mjs"
   },

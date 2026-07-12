@@ -1,0 +1,79 @@
+name: pages
+
+# Builds the catalog website (site/ — React + TypeScript + Vite) and publishes it to GitHub Pages
+# on every push to main. Deliberately a SEPARATE workflow from `validate` (validate.yml, the
+# content-quality gate) so a Pages/deploy hiccup here is never confused with a content-validation
+# failure there.
+#
+# The site is served from the repo subpath (https://<owner>.github.io/<repo>/); Vite builds with
+# base "./" (relative asset paths) and routing is hash-based, so no base-path configuration or
+# server rewrites are needed.
+#
+# Pages enablement: the configure-pages step below tries to enable Pages via the API on first run
+# (`enablement: true`). If that fails with a permissions error, enable it once by hand:
+# Settings → Pages → Build and deployment → Source → GitHub Actions — then re-run this workflow.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Configure GitHub Pages (enable on first run)
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build catalog data (dist/index.json → site/public/catalog.json)
+        run: npm run build:catalog
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Build site (typecheck + Vite)
+        working-directory: site
+        env:
+          # Base URL of the usage-stats backend (server/ on Render). Leaving this unset builds a
+          # site with stats collection fully disabled — the site works either way.
+          VITE_STATS_API: https://fk-dev-digest-stats.onrender.com
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

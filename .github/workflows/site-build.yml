@@ -1,0 +1,59 @@
+name: site-build
+
+# Build check for the catalog data + website: regenerates dist/index.json and
+# site/public/catalog.json, then type-checks and builds the Vite app — so a broken generator or a
+# TS error is caught on the PR, before anything reaches the `pages` deploy. Build-only: no
+# artifact is published and nothing is deployed here (that is pages.yml's job, push-to-main only).
+# Deliberately a SEPARATE workflow from `validate` (the content-quality gate) per this repo's CI
+# separation convention — see docs/SITE-SPEC.md § CI separation.
+
+on:
+  pull_request:
+    paths:
+      - "plugins/**"
+      - ".claude-plugin/**"
+      - "site/**"
+      - "scripts/build-index.mjs"
+      - "scripts/build-catalog.mjs"
+      - ".github/workflows/site-build.yml"
+  push:
+    branches: [main]
+    paths:
+      - "plugins/**"
+      - ".claude-plugin/**"
+      - "site/**"
+      - "scripts/build-index.mjs"
+      - "scripts/build-catalog.mjs"
+      - ".github/workflows/site-build.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: site-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build catalog data (dist/index.json → site/public/catalog.json)
+        run: npm run build:catalog
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Build site (typecheck + Vite)
+        working-directory: site
+        run: npm run build

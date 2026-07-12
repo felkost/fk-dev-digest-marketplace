@@ -1,0 +1,30 @@
+{
+  "name": "fk-dev-digest-stats",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Usage-stats backend for the fk-dev-digest catalog website: counts copy-install clicks and plugin views. Fastify + Drizzle + PostgreSQL (Neon).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "drizzle-orm": "^0.38.0",
+    "fastify": "^5.0.0",
+    "postgres": "^3.4.4",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.2"
+  }
+}

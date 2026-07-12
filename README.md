@@ -105,7 +105,9 @@ first release, because they need network access or credentials this repository d
 - [`docs/PLUGIN-GUIDELINES.md`](docs/PLUGIN-GUIDELINES.md) — naming, canonical structure, manifest fields, cross-plugin references
 - [`docs/SECURITY.md`](docs/SECURITY.md) — permissions model, secrets policy, incident response
 - [`docs/RELEASES.md`](docs/RELEASES.md) — SemVer, tagging, `scripts/release.mjs` / `scripts/rollback.mjs`
-- [`docs/SITE-SPEC.md`](docs/SITE-SPEC.md) — the contract a separate website project consumes from this repo
+- [`docs/SITE-SPEC.md`](docs/SITE-SPEC.md) — spec for the in-repo catalog website: data pipeline, `catalog.json` shape, views, search, build & deploy
+- [`site/README.md`](site/README.md) — the browsable catalog website (`site/`): how to build `catalog.json` and deploy to GitHub Pages or Render
+- [`server/README.md`](server/README.md) — the optional usage-stats backend (`server/`): Fastify + Drizzle + Neon on Render
 - [`CODEOWNERS`](CODEOWNERS) — who reviews and releases what
 
 ## Provenance

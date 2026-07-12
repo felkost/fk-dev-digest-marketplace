@@ -1,9 +1,10 @@
 name: validate
 
 # Harness/content-quality gate — schema validation, the marketplace's own linter, the official
-# plugin validator, and the eval static gate. Deliberately a SEPARATE workflow from `build`
-# (build-index.yml) so this shows as its own check in the GitHub UI, never conflated with the
-# catalog-index build the website depends on. See docs/SITE-SPEC.md § CI separation.
+# plugin validator, and the eval static gate. Deliberately a SEPARATE workflow from `site-build`
+# (site-build.yml, the website build check) and `pages` (pages.yml, the Pages deploy) so this
+# shows as its own check in the GitHub UI, never conflated with the website the catalog feeds.
+# See docs/SITE-SPEC.md § CI separation.
 
 on:
   push:
@@ -19,9 +20,9 @@ jobs:
     name: validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
 
