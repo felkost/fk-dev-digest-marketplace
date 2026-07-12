@@ -1,0 +1,13 @@
+{
+  "name": "research-tools",
+  "displayName": "Research Tools",
+  "version": "1.0.0",
+  "description": "Generic read-only researcher agent, doc-writer agent + skill, and a dependency audit skill. No dependencies on other plugins; optional integrations with engineering-paved-path and sdd-engineering are soft references.",
+  "author": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+  "license": "MIT",
+  "keywords": ["research", "documentation", "dependencies", "read-only", "mermaid"]
+}

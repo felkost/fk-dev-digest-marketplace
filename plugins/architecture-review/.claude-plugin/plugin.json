@@ -1,0 +1,14 @@
+{
+  "name": "architecture-review",
+  "displayName": "Architecture Review",
+  "version": "1.0.0",
+  "description": "Read-only architecture reviewers (strict and lite variants) that ground every finding in the host repository's own architecture docs and preload the paved-path knowledge skills.",
+  "author": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+  "license": "MIT",
+  "keywords": ["architecture", "review", "onion", "layering", "read-only"],
+  "dependencies": [{ "name": "engineering-paved-path", "version": "^1.0.0" }]
+}

@@ -1,0 +1,69 @@
+name: validate
+
+# Harness/content-quality gate — schema validation, the marketplace's own linter, the official
+# plugin validator, and the eval static gate. Deliberately a SEPARATE workflow from `build`
+# (build-index.yml) so this shows as its own check in the GitHub UI, never conflated with the
+# catalog-index build the website depends on. See docs/SITE-SPEC.md § CI separation.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Prettier check
+        run: npx prettier --check .
+
+      - name: Markdownlint
+        run: npx markdownlint-cli2 "**/*.md" "#**/node_modules" "#**/dist"
+
+      - name: Marketplace linter (schema + cross-checks + forbidden markers + Cyrillic)
+        run: node scripts/validate-marketplace.mjs
+
+      - name: Install Claude Code CLI
+        id: install_cli
+        # Best-effort: the official validator is a stronger check than the linter above, but this
+        # step depends on an external package staying installable on the runner. If it ever
+        # becomes flaky, this step is intentionally non-blocking (continue-on-error below) — the
+        # marketplace linter above is the CI-authoritative gate; `claude plugin validate` stays a
+        # required LOCAL check before every release (see CONTRIBUTING.md).
+        continue-on-error: true
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: claude plugin validate (marketplace + every plugin)
+        if: steps.install_cli.outcome == 'success'
+        continue-on-error: true
+        run: |
+          claude plugin validate . --strict
+          for d in plugins/*/; do
+            claude plugin validate "$d" --strict
+          done
+
+      - name: Install eval dependencies
+        working-directory: evals
+        # --legacy-peer-deps: @anthropic-ai/claude-agent-sdk and openai both pull in zod at
+        # compatible-but-not-identical versions; npm's strict peer resolution flags that as a
+        # conflict even though the resolved version satisfies both ranges. This flag only skips
+        # the strict abort — it does not change what's declared or force an actually broken tree.
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Eval static gate (no model, no network)
+        working-directory: evals
+        run: npm run eval:quality

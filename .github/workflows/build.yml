@@ -1,0 +1,63 @@
+name: build
+
+# Builds the static catalog index (dist/index.json) the separate marketplace website consumes —
+# see docs/SITE-SPEC.md. Deliberately a SEPARATE workflow from `validate` (validate.yml) so this
+# shows as its own check in the GitHub UI: a Pages/artifact hiccup here is never confused with a
+# content-validation failure there, and vice versa.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build catalog index
+        run: node scripts/build-index.mjs
+
+      - name: Upload index.json as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-index
+          path: dist/index.json
+          retention-days: 30
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: deploy-pages
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

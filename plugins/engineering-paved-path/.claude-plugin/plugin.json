@@ -1,0 +1,26 @@
+{
+  "name": "engineering-paved-path",
+  "displayName": "Engineering Paved Path",
+  "version": "1.0.0",
+  "description": "Canonical knowledge skills for the TypeScript stack: React/Next.js, Fastify, Drizzle, PostgreSQL, Zod, testing, security, Mermaid, onion architecture. Single source of truth consumed by the sdd-engineering and architecture-review plugins.",
+  "author": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "best-practices",
+    "typescript",
+    "react",
+    "nextjs",
+    "fastify",
+    "drizzle",
+    "postgresql",
+    "zod",
+    "security",
+    "mermaid",
+    "onion-architecture"
+  ]
+}

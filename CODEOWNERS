@@ -1,0 +1,18 @@
+# Default owner for everything not covered below — also the only person with release rights
+# (tagging, running scripts/release.mjs --push) until this marketplace has more than one maintainer.
+* @felkost
+
+# Per-plugin ownership — add a co-owner here when a plugin gets a maintainer other than the
+# marketplace default, so that plugin's PRs route to them without touching this line for anyone
+# else's plugin.
+/plugins/engineering-paved-path/ @felkost
+/plugins/research-tools/ @felkost
+/plugins/architecture-review/ @felkost
+/plugins/sdd-engineering/ @felkost
+
+# Governance and release tooling changes always need the marketplace owner's review, even if a
+# plugin above has a different co-owner.
+/.claude-plugin/ @felkost
+/scripts/ @felkost
+/docs/ @felkost
+/CONTRIBUTING.md @felkost

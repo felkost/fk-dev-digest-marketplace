@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "fk-dev-digest-marketplace",
+  "owner": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "description": "SDD engineering workflow, paved-path knowledge skills, architecture review, and research tools extracted from the DevDigest harness.",
+  "plugins": [
+    {
+      "name": "engineering-paved-path",
+      "source": "./plugins/engineering-paved-path",
+      "description": "Canonical knowledge skills for the TypeScript stack: React/Next.js, Fastify, Drizzle, PostgreSQL, Zod, testing, security, Mermaid, onion architecture.",
+      "category": "knowledge",
+      "keywords": [
+        "skills",
+        "best-practices",
+        "typescript",
+        "react",
+        "fastify",
+        "drizzle",
+        "security"
+      ]
+    },
+    {
+      "name": "research-tools",
+      "source": "./plugins/research-tools",
+      "description": "Generic read-only researcher agent, doc-writer agent + skill, and a dependency audit skill.",
+      "category": "research",
+      "keywords": ["research", "documentation", "dependencies", "read-only"]
+    },
+    {
+      "name": "architecture-review",
+      "source": "./plugins/architecture-review",
+      "description": "Read-only architecture reviewers that ground every finding in the host repository's own architecture docs.",
+      "category": "review",
+      "keywords": ["architecture", "review", "onion", "layering", "read-only"]
+    },
+    {
+      "name": "sdd-engineering",
+      "source": "./plugins/sdd-engineering",
+      "description": "Complete SDD workflow: spec-creator, implementation-planner, implementer, test-writer, plan-verifier agents plus run-plan/implement orchestrators, workflow-retro, and engineering-insights.",
+      "category": "workflow",
+      "keywords": ["sdd", "spec", "plan", "implement", "verify", "retro", "pipeline"]
+    }
+  ],
+  "renames": {}
+}

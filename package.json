@@ -1,0 +1,20 @@
+{
+  "name": "fk-dev-digest-marketplace",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Claude Code plugin marketplace: SDD engineering workflow, paved-path knowledge skills, architecture review, and research tools.",
+  "scripts": {
+    "lint": "node scripts/validate-marketplace.mjs",
+    "lint:format": "prettier --check .",
+    "lint:markdown": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\"",
+    "build": "node scripts/build-index.mjs",
+    "release": "node scripts/release.mjs",
+    "rollback": "node scripts/rollback.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "markdownlint-cli2": "^0.14.0",
+    "prettier": "^3.3.3"
+  }
+}

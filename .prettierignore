@@ -1,0 +1,8 @@
+node_modules/
+dist/
+evals/node_modules/
+evals/results/
+# Markdown is hand-authored knowledge content (skills, agents, docs) with tables and long lines
+# by design — prettier's proseWrap would reformat hundreds of files with no functional benefit.
+# markdownlint-cli2 covers markdown quality instead (see .markdownlint.jsonc).
+*.md

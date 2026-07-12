@@ -1,0 +1,18 @@
+{
+  "name": "sdd-engineering",
+  "displayName": "SDD Engineering",
+  "version": "1.0.0",
+  "description": "Complete spec-driven development workflow: spec-creator, implementation-planner, implementer, test-writer, and plan-verifier agents, run-plan and implement orchestrator skills, workflow-retro, engineering-insights, and a Stop hook that prompts insight capture.",
+  "author": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "repository": "https://github.com/felkost/fk-dev-digest-marketplace",
+  "license": "MIT",
+  "keywords": ["sdd", "spec", "plan", "implement", "verify", "retro", "pipeline", "orchestrator"],
+  "dependencies": [
+    { "name": "engineering-paved-path", "version": "^1.0.0" },
+    { "name": "research-tools", "version": "^1.0.0" },
+    { "name": "architecture-review", "version": "^1.0.0" }
+  ]
+}
