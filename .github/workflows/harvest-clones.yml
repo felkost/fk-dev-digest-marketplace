@@ -6,13 +6,17 @@ name: harvest-clones
 # re-run — it upserts by day, refining the last couple of days as GitHub finalizes them rather
 # than duplicating history.
 #
-# Requires the repo secret STATS_DATABASE_URL (the same Neon/PostgreSQL connection string used by
-# the fk-dev-digest-stats Render service — Settings → Secrets and variables → Actions).
+# Requires two repo secrets (Settings → Secrets and variables → Actions):
+#   * STATS_DATABASE_URL — the same Neon/PostgreSQL connection string used by the
+#     fk-dev-digest-stats Render service.
+#   * TRAFFIC_PAT — a Personal Access Token that can read this repo's clone traffic. The GitHub
+#     Traffic API is NOT accessible to the default GITHUB_TOKEN (it returns 403 "Resource not
+#     accessible by integration", and traffic access cannot be granted via `permissions:`). Use a
+#     fine-grained PAT scoped to this repo with the "Administration: Read-only" permission, or a
+#     classic PAT with the `repo` scope, created by an account with push access.
 #
-# The default GITHUB_TOKEN is tried first since it needs no setup. The GitHub Traffic API
-# requires push access to the repo; if this job fails with a 403, create a classic PAT with the
-# `repo` scope from an account with push access, save it as the repo secret TRAFFIC_PAT, and
-# switch the token line below to `${{ secrets.TRAFFIC_PAT }}`.
+# The token line falls back to GITHUB_TOKEN when TRAFFIC_PAT is unset, so the workflow stays valid
+# before the PAT is added — that run will 403 until TRAFFIC_PAT exists.
 
 on:
   schedule:
@@ -44,7 +48,9 @@ jobs:
       - name: Harvest clone traffic into clone_stats
         working-directory: server
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Prefer the traffic-capable PAT; fall back to the default token (which 403s on the
+          # Traffic API) only so the workflow stays valid before the PAT secret is added.
+          GITHUB_TOKEN: ${{ secrets.TRAFFIC_PAT || secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           DATABASE_URL: ${{ secrets.STATS_DATABASE_URL }}
         run: npm run harvest:clones
