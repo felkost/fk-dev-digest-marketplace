@@ -23,6 +23,14 @@ export const strings = {
     tagline:
       "Reviews, tests, docs, and shippable digests for Claude Code. Browse the catalog, then add the marketplace and install what you need.",
   },
+  stats: {
+    clonesTotal: "repo clones",
+    clones14d: "clones · last 14 days",
+    copyInstalls: "install copies",
+    views: "plugin views",
+    caption:
+      "Clones approximate installs (they clone the repo directly); copies and views are site activity.",
+  },
   catalog: {
     categoryLabel: "Category",
     keywordsLabel: "Keywords",

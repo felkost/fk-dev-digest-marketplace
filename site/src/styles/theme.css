@@ -303,6 +303,58 @@ input:focus-visible {
   color: var(--text-dim);
 }
 
+.stats {
+  margin: 30px auto 0;
+  max-width: 640px;
+}
+.stats-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  box-shadow: var(--shadow);
+}
+.stat-tile.accent {
+  border-color: var(--accent-soft);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--accent-soft) 22%, var(--surface)),
+    var(--surface) 60%
+  );
+}
+.stat-value {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.stat-tile.accent .stat-value {
+  color: var(--accent-strong);
+}
+.stat-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.stats-caption {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
 .layout {
   display: flex;
   gap: 40px;
@@ -881,9 +933,9 @@ input:focus-visible {
   gap: 22px;
 }
 .meta-col-author {
-  flex: 0 1 150px;
+  flex: 0 1 220px;
   min-width: 140px;
-  max-width: 190px;
+  max-width: 260px;
 }
 .meta-col-repo {
   flex: 1 1 300px;

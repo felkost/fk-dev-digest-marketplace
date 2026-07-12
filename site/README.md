@@ -22,7 +22,8 @@ marketplace content under `plugins/`.
 | `src/lib/search.ts` | MiniSearch index over plugins, skills, agents, and commands (prefix + fuzzy). |
 | `src/lib/theme.tsx` | Light/dark theme context — `prefers-color-scheme` default, `localStorage` override. |
 | `src/lib/util.ts` | Small helpers (`initials`, `plural`, `copyText`, …). |
-| `src/components/` | `Header`, `Footer`, `Hero`, `Sidebar`, `PluginCard`, `InstallBlock`, `CommandPalette`. |
+| `src/lib/statsApi.ts` | Optional usage-stats client (events + cached `/api/stats`); no-op without `VITE_STATS_API`. |
+| `src/components/` | `Header`, `Footer`, `Hero`, `Sidebar`, `PluginCard`, `InstallBlock`, `CommandPalette`, `StatsTiles`. |
 | `src/pages/` | `CatalogPage` (`#/`), `PluginDetailPage` (`#/plugin/:name`). |
 | `public/catalog.json` | Generated plugin data — copied into `dist/` by the build. Never edit by hand. |
 | `public/.nojekyll` | Tells GitHub Pages to serve files as-is. |

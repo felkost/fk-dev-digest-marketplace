@@ -119,8 +119,13 @@ An optional companion backend counts how the catalog is used. Full details in
   `engineering-paved-path` stack.
 - **Events** — the site fire-and-forgets `POST /api/events` with `{ type, plugin }` on
   copy-install clicks (`copy_install`) and plugin-page opens (`plugin_view`). No PII: no IP, UA,
-  cookies, or session ids are stored. `GET /api/stats` returns per-plugin aggregates, which the
-  detail page shows as a "Usage" metadata cell.
+  cookies, or session ids are stored. `GET /api/stats` returns per-plugin aggregates, plus
+  `totals` and the `clones` summary.
+- **Display** — the detail page shows this plugin's numbers as a "Usage" metadata cell; the
+  homepage hero shows a `StatsTiles` row (repo clones, clones · last 14 days, install copies,
+  plugin views) from `totals` + `clones`. Both fetch `/api/stats` once (shared cached promise in
+  `statsApi.ts`). All of it renders nothing when `VITE_STATS_API` is unset or a value is still 0,
+  so the UI is unchanged until real numbers exist.
 - **Wiring** — the site reads the backend base URL from `VITE_STATS_API` at build time (set in
   `pages.yml` and `render.yaml`). Unset it and the site builds with stats fully disabled — every
   stats call is a graceful no-op.
@@ -139,9 +144,8 @@ An optional companion backend counts how the catalog is used. Full details in
 
 Possible future work, deliberately not built now: dedicated skill/agent detail routes, rendered
 README/`SKILL.md` markdown bodies (`marked` + `DOMPurify`), a "What's New" release feed (from
-CHANGELOG parsing), homepage/UI display of the usage and clone stats (the data exists via
-`GET /api/stats`; no chart or tile renders it yet), and a multi-language UI switcher (the i18n
-module is ready; only `en` ships). Auth and ratings are out of scope entirely.
+CHANGELOG parsing), and a multi-language UI switcher (the i18n module is ready; only `en` ships).
+Auth and ratings are out of scope entirely.
 
 ## Build & deploy
 

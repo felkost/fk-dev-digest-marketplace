@@ -1,4 +1,5 @@
 import { strings } from "../i18n/strings";
+import { StatsTiles } from "./StatsTiles";
 
 export function Hero({ total }: { total: number }) {
   return (
@@ -10,6 +11,7 @@ export function Hero({ total }: { total: number }) {
         {strings.hero.titleLine2}
       </h1>
       <p className="hero-tagline">{strings.hero.tagline}</p>
+      <StatsTiles />
     </section>
   );
 }
