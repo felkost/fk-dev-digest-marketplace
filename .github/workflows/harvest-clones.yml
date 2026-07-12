@@ -1,0 +1,50 @@
+name: harvest-clones
+
+# Harvests GitHub's repository clone traffic into the stats backend's clone_stats table, because
+# the GitHub Traffic API itself only retains a rolling 14-day window (see
+# server/src/harvestClones.ts and server/README.md § Clone harvesting). Runs daily; safe to
+# re-run — it upserts by day, refining the last couple of days as GitHub finalizes them rather
+# than duplicating history.
+#
+# Requires the repo secret STATS_DATABASE_URL (the same Neon/PostgreSQL connection string used by
+# the fk-dev-digest-stats Render service — Settings → Secrets and variables → Actions).
+#
+# The default GITHUB_TOKEN is tried first since it needs no setup. The GitHub Traffic API
+# requires push access to the repo; if this job fails with a 403, create a classic PAT with the
+# `repo` scope from an account with push access, save it as the repo secret TRAFFIC_PAT, and
+# switch the token line below to `${{ secrets.TRAFFIC_PAT }}`.
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # once daily, off-peak UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harvest-clones
+  cancel-in-progress: false
+
+jobs:
+  harvest:
+    name: harvest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Harvest clone traffic into clone_stats
+        working-directory: server
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DATABASE_URL: ${{ secrets.STATS_DATABASE_URL }}
+        run: npm run harvest:clones

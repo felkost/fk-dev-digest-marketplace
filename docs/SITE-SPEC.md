@@ -125,16 +125,23 @@ An optional companion backend counts how the catalog is used. Full details in
   `pages.yml` and `render.yaml`). Unset it and the site builds with stats fully disabled — every
   stats call is a graceful no-op.
 - **Honest limitation** — real installs happen via `git clone` of this repo by Claude Code and
-  never touch the website, so these counters measure catalog engagement, not installs. Harvesting
-  GitHub Traffic API clone counts (14-day window → needs a cron) is documented future work.
+  never touch the website, so `copy_install`/`plugin_view` measure catalog engagement, not
+  installs.
+- **Clone harvesting** — the closer proxy for real installs. `.github/workflows/harvest-clones.yml`
+  runs daily, pulling GitHub's Traffic API (`/traffic/clones`, a 14-day rolling window) and
+  upserting each day into `clone_stats` (`server/src/harvestClones.ts`), so history survives past
+  that window. `GET /api/stats`'s `clones` field exposes `since`, `recordedDays`,
+  `totalSinceTracking`, `last14dCount`, `last14dUniques`. See
+  [`server/README.md` § Clone harvesting](../server/README.md#clone-harvesting-github-traffic-api)
+  for setup and the reading caveat on `uniques`.
 
 ## Not included in this version
 
 Possible future work, deliberately not built now: dedicated skill/agent detail routes, rendered
 README/`SKILL.md` markdown bodies (`marked` + `DOMPurify`), a "What's New" release feed (from
-CHANGELOG parsing), homepage stat tiles, GitHub clone-count harvesting (see above), and a
-multi-language UI switcher (the i18n module is ready; only `en` ships). Auth and ratings are out
-of scope entirely.
+CHANGELOG parsing), homepage/UI display of the usage and clone stats (the data exists via
+`GET /api/stats`; no chart or tile renders it yet), and a multi-language UI switcher (the i18n
+module is ready; only `en` ships). Auth and ratings are out of scope entirely.
 
 ## Build & deploy
 

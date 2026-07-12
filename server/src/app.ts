@@ -1,10 +1,10 @@
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
-import { count, sql } from "drizzle-orm";
+import { count, desc, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import Fastify from "fastify";
 import { z } from "zod";
-import { events } from "./db/schema.js";
+import { cloneStats, events } from "./db/schema.js";
 
 export const EVENT_TYPES = ["copy_install", "plugin_view"] as const;
 
@@ -73,9 +73,27 @@ export async function buildApp(db: Db, opts: AppOptions) {
         (perPlugin[row.plugin] ??= {})[row.type] = row.count;
         totals[row.type] = (totals[row.type] ?? 0) + row.count;
       }
+
+      // Clone counts harvested from the GitHub Traffic API (see harvestClones.ts) — the closest
+      // proxy for actual `/plugin install` runs, since installs clone the repo directly and never
+      // touch this site or backend. `since` is null until the harvester has run at least once.
+      const cloneRows = await db
+        .select()
+        .from(cloneStats)
+        .orderBy(desc(cloneStats.day))
+        .limit(3650); // ~10 years — effectively "all of it" without an unbounded scan
+      const last14 = cloneRows.slice(0, 14);
+      const clones = {
+        since: cloneRows.length ? cloneRows[cloneRows.length - 1].day : null,
+        recordedDays: cloneRows.length,
+        totalSinceTracking: cloneRows.reduce((sum, r) => sum + r.count, 0),
+        last14dCount: last14.reduce((sum, r) => sum + r.count, 0),
+        last14dUniques: last14.reduce((sum, r) => sum + r.uniques, 0),
+      };
+
       statsCache = {
         at: now,
-        body: { generatedAt: new Date(now).toISOString(), perPlugin, totals },
+        body: { generatedAt: new Date(now).toISOString(), perPlugin, totals, clones },
       };
     }
     return reply.header("cache-control", "public, max-age=60").send(statsCache.body);

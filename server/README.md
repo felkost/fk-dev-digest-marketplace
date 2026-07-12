@@ -13,7 +13,7 @@ no session ids are ever stored.
 | Route | Method | Description |
 |---|---|---|
 | `/api/events` | POST | Record one event. Body: `{ "type": "copy_install" \| "plugin_view", "plugin": "<kebab-case-name>" }`. Strict schema (unknown fields rejected), rate-limited 30/min per IP. Returns 204. |
-| `/api/stats` | GET | Aggregated counts: `{ generatedAt, perPlugin: { <plugin>: { copy_install, plugin_view } }, totals }`. Cached 60 s. |
+| `/api/stats` | GET | Aggregated counts: `{ generatedAt, perPlugin: { <plugin>: { copy_install, plugin_view } }, totals, clones }`. `clones` is the harvested GitHub clone-traffic aggregate (see below) — `{ since, recordedDays, totalSinceTracking, last14dCount, last14dUniques }`, all `0`/`null` until the harvester has run at least once. Cached 60 s. |
 | `/healthz` | GET | Liveness + database check. |
 
 CORS allows only the origins in `CORS_ORIGINS`; everything else is browser-blocked.
@@ -52,9 +52,27 @@ The website picks the backend up through `VITE_STATS_API` at build time (set in 
 Render and in `.github/workflows/pages.yml` for GitHub Pages). If `VITE_STATS_API` is unset, the
 site builds with stats collection fully disabled and works exactly as before.
 
-## What this does not do (yet)
+## Clone harvesting (GitHub Traffic API)
 
-GitHub clone counts — the closest proxy for real `/plugin install` runs (installs clone the repo,
-they never touch the website) — are not harvested yet. The GitHub Traffic API keeps only 14 days
-of history, so a scheduled job (GitHub Action cron writing into this database or into a committed
-JSON) is the natural next step.
+Real `/plugin install` runs never touch this website or backend — they `git clone`/`fetch` the
+repository directly. GitHub's own **Traffic API** (`GET /repos/<owner>/<repo>/traffic/clones`) is
+the closest available proxy for that, but it only retains a rolling **14-day window**, so history
+is lost unless something persists it. [`.github/workflows/harvest-clones.yml`](../.github/workflows/harvest-clones.yml)
+runs [`src/harvestClones.ts`](src/harvestClones.ts) once a day to upsert each day's clone
+count/uniques into the `clone_stats` table here — safe to re-run any time, since it upserts by day
+(refining the last day or two as GitHub finalizes them) rather than duplicating history.
+
+**One-time setup:**
+
+1. Add the repo secret `STATS_DATABASE_URL` — the same Neon/PostgreSQL connection string used by
+   the Render service (Settings → Secrets and variables → Actions → New repository secret).
+2. Nothing else — the workflow uses the default `GITHUB_TOKEN` GitHub Actions provides. If the
+   harvest job fails with a `403`, the Traffic API requires push access the default token doesn't
+   have here; create a classic PAT with the `repo` scope from an account with push access, save it
+   as the repo secret `TRAFFIC_PAT`, and change the `GITHUB_TOKEN` line in the workflow to
+   `${{ secrets.TRAFFIC_PAT }}`.
+
+**Reading caveat:** `uniques` is GitHub's *per-day* unique-cloner count — summing it across days
+(as `last14dUniques` does) is "daily-uniques added up," not a distinct-visitor count over the whole
+period (the same machine cloning on two different days counts twice). Treat these numbers as an
+engagement trend, not a precise headcount.

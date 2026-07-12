@@ -11,7 +11,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "harvest:clones": "tsx src/harvestClones.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
