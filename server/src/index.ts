@@ -13,7 +13,7 @@ if (!DATABASE_URL) {
 }
 
 const corsOrigins = (
-  process.env.CORS_ORIGINS ?? "https://felkost.github.io,https://fk-dev-digest-catalog.onrender.com"
+  process.env.CORS_ORIGINS ?? "https://felkost.github.io,https://fk-dev-digest-marketplace.onrender.com"
 )
   .split(",")
   .map((s) => s.trim())
