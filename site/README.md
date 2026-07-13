@@ -71,3 +71,49 @@ The repo-root [`render.yaml`](../render.yaml) blueprint publishes the built app 
 
 On Render, create a new **Blueprint** from this repository and it picks `render.yaml` up
 automatically; the site is then served from the domain root.
+
+## How the usage counters behave
+
+The hero stat tiles come from the optional stats backend (`server/`) via `GET /api/stats`. They
+render only when `VITE_STATS_API` is set at build time and a value is greater than 0, so the page
+looks unchanged until real numbers exist. Each tile updates on its own schedule:
+
+- **install copies / plugin views** — updated **automatically, in real time**. When any visitor on
+  the deployed site opens a plugin page or clicks a copy button, the browser sends a fire-and-forget
+  `POST /api/events` to the backend, which writes it to Postgres. The tile re-reads `/api/stats` on
+  each page load (the server caches it for 60 s), so the numbers grow by themselves as people use
+  the site — no redeploy, no manual step.
+- **repo clones / clones · last 14 days** — updated **once a day**. They stay hidden (0) until the
+  `harvest-clones` GitHub Action has run successfully at least once (it needs the `TRAFFIC_PAT`
+  secret — see [`server/README.md`](../server/README.md) § Clone harvesting). After that it runs on
+  a daily cron with no further action needed.
+
+### Nothing to do on the GitHub Pages side
+
+The published frontend only *displays* numbers it fetches live from the Render backend at runtime.
+The counters never require a Pages rebuild. You only redeploy Pages (by pushing to `main`) when you
+change the site's **code** or the `VITE_STATS_API` value.
+
+### Why Render numbers can be slow to appear (free plan)
+
+On Render's free plan the `fk-dev-digest-stats` web service **spins down after ~15 minutes of
+inactivity** and takes ~30–60 s to wake on the next request. Consequences:
+
+- The first homepage load after an idle period waits for that cold start before the tiles appear
+  (they show late, not as an error).
+- A copy/view event fired at the exact moment the service is asleep can be **dropped** — events are
+  fire-and-forget with no retry, so a rare miss during spin-up is expected and acceptable for a
+  rough engagement metric.
+
+The accumulated data itself is safe regardless: it lives in Neon Postgres, so nothing is lost while
+the service sleeps — it just reads the existing totals once it wakes. If you need no missed events
+or instant loads, either upgrade the Render service to an always-on paid instance or add an external
+keep-alive ping (e.g. UptimeRobot every 5–10 min).
+
+### Quick check that it is live
+
+Open these directly in a browser (substitute your backend domain):
+
+- `https://<stats-service>.onrender.com/healthz` → `{"ok":true}`
+- `https://<stats-service>.onrender.com/api/stats` → raw numbers: `totals` (copies/views) and
+  `clones` (zeros until `TRAFFIC_PAT` is configured and the harvester has run).
