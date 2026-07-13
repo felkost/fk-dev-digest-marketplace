@@ -3,6 +3,12 @@
 All notable changes to this plugin are documented here. Follows SemVer; releases are tagged
 `sdd-engineering--v<version>`.
 
+## 1.0.1 — 2026-07-13
+
+Docs-only patch: the install example's version number had drifted from `plugin.json`.
+
+- README install example bumped from `sdd-engineering@1.0.0` to `sdd-engineering@1.0.1`.
+
 ## 1.0.0 — 2026-07-12
 
 Initial extraction from the DevDigest harness (branch `feat/lesson_08`).
