@@ -14,7 +14,7 @@ in `engineering-paved-path`, and the reviewers/researchers it orchestrates live 
 The installer shows the full dependency plan before confirming:
 
 ```
-sdd-engineering@1.0.1
+sdd-engineering@1.1.0
 ├── engineering-paved-path@^1.0.0
 ├── research-tools@^1.0.0
 └── architecture-review@^1.0.0

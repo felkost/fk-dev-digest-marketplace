@@ -16,9 +16,9 @@ module's `insights.md` using the skill's Edit-only discipline.
 
 ## Fixtures
 
-`fixtures/eval-0` .. `fixtures/eval-3` are minimal, non-compiling repo skeletons — a `CLAUDE.md`
+`fixtures/eval-0` .. `fixtures/eval-4` are minimal, non-compiling repo skeletons — a `CLAUDE.md`
 plus just enough module structure (`server/`, `client/`) to exercise module targeting. Each one
-seeds a different starting state so the four scenarios probe different behaviors:
+seeds a different starting state so the five scenarios probe different behaviors:
 
 | Fixture | Starting state | Behavior under test |
 | --- | --- | --- |
@@ -26,6 +26,7 @@ seeds a different starting state so the four scenarios probe different behaviors
 | `eval-1` | `client/insights.md` with 2 entries | Discovery bar → zero entries on a trivial session |
 | `eval-2` | `server/insights.md` with a `db:seed` Mistake entry | Duplicate detection → extend via Edit, not a new bullet |
 | `eval-3` | Both `server/insights.md` and `client/insights.md` populated | Most-affected-module targeting + `[Decision]` category |
+| `eval-4` | `server/insights.md` with a now-wrong `fastify-type-provider-zod` Quirk | Supersession → strike the stale entry, append the correction below it, footer count stays flat |
 
 No fixture file hints at the "right answer" in a comment — the correct outcome is derivable
 only from applying the skill's discovery bar, module map, and dedup rule to the session
@@ -42,7 +43,7 @@ Compare the agent's mutated `insights.md` file(s) against `expected-outcomes.jso
   not a recall-tunable detector, so partial credit within one eval isn't meaningful — a wrong
   module, a wrong dedup decision, or a clobbered sibling file are each a full failure, not a
   point deduction.
-- Report results per-eval as pass/fail, and roll up to "N of 4 evals fully passing" rather than
+- Report results per-eval as pass/fail, and roll up to "N of 5 evals fully passing" rather than
   an aggregate percentage.
 
 ## Running
@@ -56,7 +57,7 @@ python .claude/skills/engineering-insights/evals/grade.py \
 ```
 
 `grade.py` is a generic interpreter over `expected-outcomes.json` — it does not hardcode any
-eval-specific logic. To add a 5th scenario: add a fixture under `fixtures/`, a prompt in
+eval-specific logic. To add another scenario: add a fixture under `fixtures/`, a prompt in
 `evals.json`, and an outcome block in `expected-outcomes.json`; no code change is needed.
 
 To produce a fresh iteration, spawn one subagent per `(eval, config)` pair against a copy of the

@@ -88,7 +88,11 @@ Duplicate of existing entry: [yes/no — if yes, extend that entry instead]
 
 After summarizing:
 - **Duplicate found** → use the **Edit tool** to locate the exact existing entry text (`old_string` = the full entry line) and append a dated note to it. Do not add a new list item.
-- **Existing entry is now wrong** → use the **Edit tool** to replace the exact entry text with its stale form: `~~original text~~` `(superseded YYYY-MM-DD)`, then append the corrected entry as a new line immediately below it.
+- **Existing entry is now wrong (supersession)** → use the **Edit tool** twice, in place, to mark the original stale and record the correction as **two bullets**:
+  1. Replace the exact original entry with its struck form — the bullet marker stays outside the strikethrough so it still renders as a list item:
+     `- ~~**YYYY-MM-DD [Category]** — original text. \`file:line\`~~ (superseded YYYY-MM-DD)`
+  2. Append the corrected entry as a **new bullet on the line immediately below**, in standard format with today's date.
+  The footer count does **not** change on supersession: the struck entry drops out of the count and its correction takes its place (net zero). Only increment the footer when adding a genuinely new insight — never when superseding. See [format.md](format.md) § Stale Entry for the exact shape.
 
 ### Step 4 — Classify
 

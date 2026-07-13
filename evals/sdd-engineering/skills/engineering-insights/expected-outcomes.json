@@ -159,6 +159,36 @@
           "text": "client footer untouched (Entries: 1)"
         }
       ]
+    },
+    {
+      "eval_id": 4,
+      "name": "supersede-stale-entry",
+      "checks": [
+        {
+          "type": "contains",
+          "path": "server/insights.md",
+          "value": "~~",
+          "text": "original entry struck through (supersession, not deletion or Write)"
+        },
+        {
+          "type": "contains",
+          "path": "server/insights.md",
+          "value": "superseded",
+          "text": "struck entry carries the (superseded YYYY-MM-DD) marker"
+        },
+        {
+          "type": "entry_count",
+          "path": "server/insights.md",
+          "expected": 2,
+          "text": "two bullets present: the struck original + the correction below it"
+        },
+        {
+          "type": "footer_count",
+          "path": "server/insights.md",
+          "expected": 1,
+          "text": "footer not incremented on supersession (Entries: 1)"
+        }
+      ]
     }
   ]
 }

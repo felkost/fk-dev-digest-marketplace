@@ -1,7 +1,7 @@
 {
   "name": "sdd-engineering",
   "displayName": "SDD Engineering",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Complete spec-driven development workflow: spec-creator, implementation-planner, implementer, test-writer, and plan-verifier agents, run-plan and implement orchestrator skills, workflow-retro, engineering-insights, and a Stop hook that prompts insight capture.",
   "author": {
     "name": "Fel Kost",

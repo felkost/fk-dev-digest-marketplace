@@ -28,6 +28,13 @@
       "prompt": "Wrapping up a session that touched both client and server. The substantive decision: we chose to store the blast-radius summary as a denormalized string column `pull_requests.blast_summary` (written once when the review completes) instead of recomputing it per request from the symbol index. Reason: the index walk was 300ms+ on large PRs and the summary is immutable after the run finishes. On the client I only wired `BlastCard.tsx` to render the stored string. Server code lives at `server/src/modules/blast/service.ts` around line 88. Wrap up and capture any engineering insights worth preserving. Repo root: REPO_PATH.",
       "expected_output": "Writes the entry to server/insights.md (the most directly affected module) as a [Decision] with the why (300ms index walk / immutable summary) and the server/src/modules/blast/service.ts anchor; increments server footer to Entries: 2. client/insights.md is left untouched.",
       "files": []
+    },
+    {
+      "id": 4,
+      "name": "supersede-stale-entry",
+      "prompt": "Wrapping up a server session. The `fastify-type-provider-zod` quirk already noted in the server insights file — that changing a route's reply schema needs a full restart because schemas compile once at boot — no longer holds. After this session's bump of `fastify-type-provider-zod` I confirmed the reply schema is now recompiled on each watch-mode reload, so the restart workaround is obsolete. Relevant code is `server/src/modules/reviews/routes.ts` around line 67. Wrap up the session and capture any engineering insights worth preserving. Repo root: REPO_PATH.",
+      "expected_output": "Recognizes the existing fastify-type-provider-zod Quirk as now-wrong and supersedes it via Edit: strikes the original entry with ~~...~~ (superseded <today>) and appends the corrected Quirk entry as a new bullet immediately below. Footer stays Entries: 1 (a superseded entry drops from the count as its correction takes its place). Does not add an unrelated second topic and does not rewrite the file with Write.",
+      "files": []
     }
   ]
 }

@@ -19,11 +19,16 @@ Rules:
 
 ## Stale Entry (superseded)
 
+Supersession is **two bullets**: the original struck in place, the correction on the line directly below it. The bullet marker stays outside the strikethrough so both lines still render as list items.
+
 ```
-- ~~**YYYY-MM-DD [Category]** — original text. `file:line`~~ (superseded YYYY-MM-DD — new behavior: corrected text. `file:line`)
+- ~~**YYYY-MM-DD [Category]** — original text. `file:line`~~ (superseded YYYY-MM-DD)
+- **YYYY-MM-DD [Category]** — corrected text describing the new behavior. `file:line`
 ```
 
 Use strikethrough when the behavior changed but the history is worth keeping. Use plain deletion during monthly prune when the entry is simply no longer relevant.
+
+The footer `Entries:` count does **not** change on supersession: the struck line leaves the count (it is now stale) as its correction joins it, so the net total is unchanged.
 
 ---
 
