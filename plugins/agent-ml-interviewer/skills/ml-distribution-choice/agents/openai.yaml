@@ -1,0 +1,13 @@
+interface:
+  display_name: "Розподіл даних → модель і метрика"
+  short_description: "Від природи даних до втрати, моделі й метрики"
+  default_prompt: Use $ml-distribution-choice to identify the data distribution
+    from its signature and domain, verify it, and derive the model family, loss,
+    and metric with Leemis UDR citations; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

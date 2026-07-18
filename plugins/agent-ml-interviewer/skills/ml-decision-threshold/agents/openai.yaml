@@ -1,0 +1,13 @@
+interface:
+  display_name: "Підбір порогу рішення"
+  short_description: "Поріг бінарного класифікатора за 4 критеріями"
+  default_prompt: Use $ml-decision-threshold to select the decision threshold
+    (Youden, closest-to-(0,1), F-beta, domain constraint) and map it to
+    TunedThresholdClassifierCV; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

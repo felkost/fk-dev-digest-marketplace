@@ -1,0 +1,23 @@
+# Ядро — потрібне скриптам пака (перевірено 2026-07-18: sklearn 1.9.0,
+# statsmodels 0.14.6, kneed 0.8.6; підлога >=1.5 навмисна — скрипти не
+# залежать від 1.9-фіч, самотести пройдені і на 1.6.1, і на 1.9.0):
+numpy>=2.0
+pandas>=2.2
+scipy>=1.14
+scikit-learn>=1.5        # TunedThresholdClassifierCV, FixedThresholdClassifier, FrozenEstimator
+statsmodels>=0.14         # collinearity_report.py: жорстка залежність (VIF), без фолбеку
+
+# Потрібне лише bayesian_diagnostics_report.py (перевірено 2026-07-18: pymc
+# 6.1.0, arviz 1.2.0 — обидва щойно встановлені, до цього в середовищі не
+# було). ci_kind="hdi"/pm.compute_log_likelihood вимагають саме цих версій:
+pymc>=6.0
+arviz>=1.2
+
+# Опційна, є фолбек у коді, якщо не встановлена:
+# kneed>=0.8              # cluster_k_report.py: коліно через KneeLocator; без неї -- відстань до хорди вручну
+
+# Не імпортується жодним скриптом пака — лише приклади коду в
+# ml-search-strategy/references/api-2026.md, які користувач запускає сам:
+# optuna>=4.9             # TPESampler з дефолтами БЕЗ deprecated-kwargs (gamma/weights/...)
+# lifelines               # survival: цензурований час до події, C-index (rl/distribution-choice поради)
+# matplotlib>=3.8         # графіки (скрипти пака друкують текстові звіти й без нього)

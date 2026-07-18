@@ -1,0 +1,11 @@
+interface:
+  display_name: "Вибір кількості кластерів"
+  short_description: "Elbow + silhouette + Davies-Bouldin разом"
+  default_prompt: Use $ml-clustering-k to select k and clustering hyperparameters from elbow, silhouette and Davies-Bouldin; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

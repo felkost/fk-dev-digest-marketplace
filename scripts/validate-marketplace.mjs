@@ -212,6 +212,11 @@ const CYRILLIC_RE = /[Ѐ-ӿ]/;
 
 const TOP_LEVEL_DOC_NAMES = new Set(["README.md", "CHANGELOG.md", "COMPATIBILITY.md"]);
 
+// Plugins vendored as-is from non-English sources. Their content predates and is independent of
+// this marketplace's English-only convention (see CONTRIBUTING.md) — quarantined from section (c)
+// entirely rather than translated, by explicit decision. Do not add to this list casually.
+const QUARANTINED_PLUGINS = new Set(["agent-ml-interviewer", "eda-skills"]);
+
 function isTopLevelPluginDoc(filePath, pluginDir) {
   return (
     dirname(filePath) === pluginDir && TOP_LEVEL_DOC_NAMES.has(filePath.slice(pluginDir.length + 1))
@@ -229,6 +234,7 @@ function walkFiles(dir, out) {
 const TEXT_EXT_RE = /\.(md|ts|mjs|js|json|sh|txt|yml|yaml)$/i;
 
 for (const [name, { dir }] of plugins) {
+  if (QUARANTINED_PLUGINS.has(name)) continue;
   const files = [];
   walkFiles(dir, files);
   for (const f of files) {

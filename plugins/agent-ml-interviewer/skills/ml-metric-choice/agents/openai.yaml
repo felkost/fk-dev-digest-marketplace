@@ -1,0 +1,12 @@
+interface:
+  display_name: "Вибір метрики класифікації"
+  short_description: "Метрика за балансом класів і ціною помилок"
+  default_prompt: Use $ml-metric-choice to select the evaluation metric from class
+    balance and FP/FN cost asymmetry; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -42,6 +42,20 @@
       "description": "Complete SDD workflow: spec-creator, implementation-planner, implementer, test-writer, plan-verifier agents plus run-plan/implement orchestrators, workflow-retro, and engineering-insights.",
       "category": "workflow",
       "keywords": ["sdd", "spec", "plan", "implement", "verify", "retro", "pipeline"]
+    },
+    {
+      "name": "agent-ml-interviewer",
+      "source": "./plugins/agent-ml-interviewer",
+      "description": "21 decision-procedure skills for classical ML, Bayesian inference, forecasting, and LLM/RL parameter choice. Content is in Ukrainian — quarantined from the marketplace's English-only content checks (see validate-marketplace.mjs).",
+      "category": "knowledge",
+      "keywords": ["machine-learning", "hyperparameters", "metrics", "bayesian", "forecasting", "llm", "reinforcement-learning"]
+    },
+    {
+      "name": "eda-skills",
+      "source": "./plugins/eda-skills",
+      "description": "4 linked skills that turn raw data into a documented, leakage-safe, validated dataset. Content is in Ukrainian — quarantined from the marketplace's English-only content checks (see validate-marketplace.mjs).",
+      "category": "knowledge",
+      "keywords": ["eda", "data-quality", "feature-engineering", "dataset-validation", "data-leakage"]
     }
   ],
   "renames": {}

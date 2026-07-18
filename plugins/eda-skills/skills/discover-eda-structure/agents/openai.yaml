@@ -1,0 +1,16 @@
+interface:
+  display_name: "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430 \u0442\u0430\
+    \ \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0438 EDA"
+  short_description: "\u0428\u0443\u043A\u0430\u0454 \u0437\u0432\u2019\u044F\u0437\
+    \u043A\u0438, \u043A\u043B\u0430\u0441\u0442\u0435\u0440\u0438 \u0439 \u043B\u0430\
+    \u0442\u0435\u043D\u0442\u043D\u0456 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\
+    \u0440\u0438"
+  default_prompt: Use $discover-eda-structure to select and justify association, clustering,
+    dimensionality-reduction, and time-series analyses; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -1,0 +1,11 @@
+interface:
+  display_name: "Лінійні моделі й регуляризація"
+  short_description: "VIF-драбина мультиколінеарності, L1/L2, сітки C і alpha"
+  default_prompt: Use $ml-linear-regularization to audit multicollinearity with VIF and pick L1/L2 regularisation with log-scale grids; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

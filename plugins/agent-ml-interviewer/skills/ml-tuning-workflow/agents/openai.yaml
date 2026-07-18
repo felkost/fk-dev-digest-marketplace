@@ -1,0 +1,11 @@
+interface:
+  display_name: "Наскрізний тюнінг моделі"
+  short_description: "Оркестратор: метрика→базлайн→діагноз→пошук→поріг→звіт"
+  default_prompt: Use $ml-tuning-workflow to run the full tuning consultation end to end, delegating to the specialist skills; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

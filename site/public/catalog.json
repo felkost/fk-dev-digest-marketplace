@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-12T20:15:52.668Z",
+  "generatedAt": "2026-07-18T21:47:42.240Z",
   "marketplace": {
     "name": "fk-dev-digest-marketplace",
     "displayName": "Dev Digest",
@@ -189,7 +189,7 @@
     {
       "name": "sdd-engineering",
       "displayName": "SDD Engineering",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Complete spec-driven development workflow: spec-creator, implementation-planner, implementer, test-writer, and plan-verifier agents, run-plan and implement orchestrator skills, workflow-retro, engineering-insights, and a Stop hook that prompts insight capture.",
       "category": "workflow",
       "keywords": [
@@ -280,6 +280,162 @@
       "hookEvents": [
         "Stop"
       ]
+    },
+    {
+      "name": "agent-ml-interviewer",
+      "displayName": "ML Interview Advisor",
+      "version": "1.0.0",
+      "description": "21 decision-procedure skills covering classical ML, Bayesian inference, forecasting, and LLM/RL parameter choice — turns metric/threshold/model-family selection rules into an agent that asks the right questions and cites the underlying proof. Skill content and worked examples are in Ukrainian.",
+      "category": "knowledge",
+      "keywords": [
+        "machine-learning",
+        "hyperparameters",
+        "metrics",
+        "bayesian",
+        "forecasting",
+        "llm",
+        "reinforcement-learning",
+        "ukrainian"
+      ],
+      "author": {
+        "name": "Fel Kost",
+        "email": "teacherfkv@gmail.com"
+      },
+      "license": "MIT",
+      "repository": null,
+      "dependencies": [],
+      "skills": [
+        {
+          "name": "llm-parameter-choice",
+          "description": "Configures LLM inference in 2026, where temperature, top_p, top_k and manual thinking budgets are REMOVED on current Claude models (HTTP 400) — the live controls are output_config.effort, adaptive thinking and its display, max_tokens with streaming, task budgets, prompt-caching economics, and structured outputs; prompt-program optimisation via DSPy MIPROv2/GEPA replaces decoding-knob tuning; and, for self-hosted serving, the compute-bound prefill versus memory-bound decode split and the throughput-latency curve that makes bigger batches stop paying off; and, for a RAG service moving out of a notebook, which of its settings are real hyperparameters (chunk size, overlap, k, embedding model — measured against a golden set, retrieval scored separately from generation) versus deployment theatre, plus the silent failures of the standard tutorial stack (unpinned LangChain imports that no longer exist, two services in one container CMD reporting exit code 0 while the backend is dead, API keys baked into an image layer). Use when asked what temperature to set, how to make a model think harder or answer faster, how to cut LLM cost or latency, how to get output variety without temperature, how to optimise a prompt systematically, how batch size trades throughput against per-token latency when hosting a model yourself, or how to take a RAG chatbot from prototype to production and what to measure once it is there. Does NOT cover classical-ML hyperparameters (use ml-search-strategy), does NOT choose ML metrics (use ml-metric-choice), and does NOT design the eval split that a golden set sits in (use ml-validation-design)."
+        },
+        {
+          "name": "ml-bayesian-inference",
+          "description": "Runs the Bayesian inference workflow as an alternative to point-estimate frequentist fitting — when to go Bayesian at all (small n, decision-critical stakes, sequential updating, borrowing strength across groups), the prior-selection ladder (vague/weakly-informative/informative/conjugate/Jeffreys and how prior influence fades as n grows), the PyMC model-sample-check workflow with the sandboxed-multiprocessing gotcha, MCMC convergence diagnostics (r_hat, ESS, divergences, trace plots, the folk theorem), posterior predictive checks, and credible intervals versus confidence intervals (including ArviZ's non-obvious default interval type). Use when asked to quantify uncertainty via priors and posteriors, when told to build a PyMC/probabilistic-programming model, when MCMC won't converge or throws divergences, or when a credible interval is confused with a confidence interval. Does NOT compare finished Bayesian models against each other (WAIC/LOO/Bayes factors — use ml-model-selection) and does NOT choose the likelihood family from data shape (use ml-distribution-choice)."
+        },
+        {
+          "name": "ml-clustering-k",
+          "description": "Selects the number of clusters and the algorithm-specific hyperparameters for unsupervised models — elbow on inertia with KneeLocator, silhouette and Davies-Bouldin sweeps that are read together and may disagree, k-means init/n_init/max_iter/tol, MiniBatch for large n, GaussianMixture covariance_type, DBSCAN eps and min_samples, OPTICS xi, and agglomerative linkage — with mandatory scaling before any of it. Use when choosing k, when clusters look wrong or unstable, when k-means is slow on big data, or when picking between k-means, GMM, DBSCAN, OPTICS and hierarchical clustering. Does NOT reduce dimensionality first (use ml-dimensionality-features) and does NOT pick supervised metrics (use ml-metric-choice)."
+        },
+        {
+          "name": "ml-decision-threshold",
+          "description": "Selects the decision threshold that turns a scoring classifier into a yes/no rule — Youden's J, closest-to-(0,1), min|sensitivity−specificity|, F-beta-optimal, and domain-constrained criteria — and maps each onto sklearn's TunedThresholdClassifierCV and FixedThresholdClassifier. Use when a model outputs probabilities but deployment needs a decision, when predict() underperforms predict_proba(), when 0.5 is the wrong cut-off, or when a minimum precision or recall must be guaranteed. Does NOT choose which metric to optimise (use ml-metric-choice) and does NOT tune model hyperparameters (use ml-search-strategy)."
+        },
+        {
+          "name": "ml-dimensionality-features",
+          "description": "Chooses how many dimensions to keep and by which method — PCA n_components by explained variance, PCA versus LDA versus t-SNE (with perplexity, learning_rate and max_iter ranges), and filter/wrapper/embedded feature selection including mutual information against the XOR trap, SelectFromModel thresholds, and the six feature-importance methods cross-checked with injected-noise canaries. Use when the feature count is too high, when deciding which features to drop, when an importance ranking looks implausible, or when an embedding visualisation needs tuning. Does NOT own the multicollinearity/VIF ladder (use ml-linear-regularization) and does NOT diagnose overfitting itself (use ml-overfitting-diagnosis)."
+        },
+        {
+          "name": "ml-distribution-choice",
+          "description": "Identifies the probability distribution behind a variable or target from its data signature (support, discreteness, dispersion, zeros, tails, censoring) and domain, verifies the candidate on the data, and translates it into the model family, GLM family and link, training loss, and evaluation metric — citing proof PDFs from the Leemis & McQueston Univariate Distribution Relationships chart. Use when asked which distribution fits the data, which loss or deviance to train with, why MSE misbehaves on counts or heavy tails, when to use Poisson versus negative binomial, or how to justify a log-transform. Does NOT choose classification metrics under imbalance (use ml-metric-choice) and does NOT pick decision thresholds (use ml-decision-threshold)."
+        },
+        {
+          "name": "ml-forecasting-model",
+          "description": "Chooses the time-series forecasting model and its core settings — whether the task is genuine forecasting (extrapolating a series' own past) versus cross-sectional regression on time features, the stationarity check with ADF and KPSS reading them together because they test opposite nulls, the model ladder from naive and seasonal-naive baselines through ETS/Holt-Winters and ARIMA/SARIMAX to global gradient-boosted models on lag features, local versus global fitting, ACF/PACF versus AIC order selection, and the scale-free MASE metric because MAPE explodes on zeros. Use when forecasting a series forward, when choosing between ARIMA, ETS, Prophet and ML, when asked how many differences or which seasonal order, when a forecast must be validated, or when deciding local per-series versus one global model. Does NOT design the backtest splitter itself (use ml-validation-design for rolling-origin/purged CV) and does NOT tune the gradient-boosting hyperparameters (use ml-tree-ensemble-params)."
+        },
+        {
+          "name": "ml-label-quality",
+          "description": "Checks whether the label actually measures the thing the project cares about, before any modelling effort is spent on it — the construct versus its proxy, the four ways a proxy diverges (underrepresentation, contamination, group-dependent bias, definition drift), label noise and why it damages the measurement far more than the training, the 1-p ceiling that caps every metric computed against noisy labels, asymmetric noise and what it does to precision versus recall, and annotator agreement via Cohen/Fleiss kappa where raw percent agreement lies. Use when the target is a stand-in for what is really wanted (clicks for satisfaction, cost for illness, arrests for crime), when labels come from human annotators or from another model, when a metric looks suspiciously capped, or when asked whether the label is any good. Does NOT choose which metric to compute on the label (use ml-metric-choice) and does NOT decide which rows entered the dataset (use ml-task-framing Step 3a)."
+        },
+        {
+          "name": "ml-linear-regularization",
+          "description": "Tunes and validates linear and logistic models — the parameter-vs-hyperparameter distinction, Gauss-Markov conditions behind OLS/BLUE, multicollinearity detection with the |r|>0.8 → VIF>5 → VIF>10 action ladder (VIF computed WITH a constant column), the L1-vs-L2-vs-ElasticNet choice, C and alpha log-scale grids, and mandatory in-pipeline scaling. Use when fitting or debugging OLS, Ridge, LASSO, ElasticNet or LogisticRegression, when coefficients are unstable or wrongly signed, or when deciding which correlated features to drop. Does NOT diagnose bias-vs-variance first (use ml-overfitting-diagnosis) and does NOT run the search (use ml-search-strategy)."
+        },
+        {
+          "name": "ml-metric-choice",
+          "description": "Selects the evaluation metric for a classification problem from class balance and the relative cost of false positives versus false negatives — accuracy and why it fails under imbalance, precision, recall, F-beta including how to pick beta, MCC, Cohen's kappa, balanced accuracy, PR-AUC versus ROC-AUC, and the None/macro/weighted/micro averaging choice for multiclass. Use when asked which metric to optimise or report, why accuracy looks suspiciously high, what F1 or MCC or kappa actually measure, or which curve to plot on imbalanced data. Does NOT choose the operating threshold (use ml-decision-threshold) and does NOT diagnose why a model underperforms (use ml-overfitting-diagnosis)."
+        },
+        {
+          "name": "ml-missing-data",
+          "description": "Diagnoses the missingness mechanism (MCAR/MAR/MNAR) and turns it into a handling strategy — whether to impute at all (tree models that eat NaN natively versus those that refuse), the ladder from constant/mean through KNN to IterativeImputer with posterior sampling, missingness as a feature via add_indicator, mandatory in-pipeline fitting against leakage, and planned-missing designs that make absence a deliberate budget decision. Use when the data has NaN or blanks, when choosing an imputation strategy, when deciding whether missingness itself carries signal, or when planning which data to collect under a labelling budget. Does NOT choose the model family that will consume the result (use ml-model-selection) and does NOT design the cross-validation the imputer must sit inside (use ml-validation-design)."
+        },
+        {
+          "name": "ml-model-selection",
+          "description": "Chooses the model family for a task with justification — screens candidates against seven constraints (explainability, memory/incrementality, n and d, categorical vs numeric features, linearity of the boundary, training time, inference latency), maps data signatures to families (linear, tree, RF, gradient boosting, kNN, SVM, naive Bayes, neural nets), names the preprocessing each family requires, hands the winner to the family-specific tuning skill, and — for already-fitted Bayesian candidates — compares them via WAIC/LOO/Occam's razor instead of held-out CV. Use when deciding which algorithm to use, when comparing candidate models (frequentist or Bayesian), when asked whether a neural net or boosting is warranted, or when a model was picked without justification. Does NOT tune the chosen family's hyperparameters (use ml-tree-ensemble-params or ml-linear-regularization) and does NOT design the validation that compares frequentist candidates (use ml-validation-design)."
+        },
+        {
+          "name": "ml-overfitting-diagnosis",
+          "description": "Diagnoses why a model underperforms from its own numbers — train/validation gap thresholds (>20–30% overfitting, >15–20% concerning), bias–variance reading, learning-curve shape, the leakage signature where injected noise features RAISE the CV score, and test-better-than-train anomalies — then names the fix and hands off to the skill that owns the knob. Use when a model overfits or underfits, when train and validation disagree on the same data, or when a result looks too good to be true (the injected-noise canary). Does NOT run hyperparameter search (use ml-search-strategy), does NOT own family-specific knobs (use ml-tree-ensemble-params or ml-linear-regularization), and does NOT handle a CV number that simply fails to transfer to production because the split never imitated production in the first place (use ml-validation-design)."
+        },
+        {
+          "name": "ml-sampling-design",
+          "description": "Turns the way the data were sampled into modelling consequences — target population versus sampling frame, the five selection schemes (simple random, systematic, stratified, cluster, multistage), sampling and non-response weights, how to actually get those weights into sklearn (they reach fit but silently NOT the metric without metadata routing), the design effect that converts clustered rows into a much smaller effective n, and the design-based versus model-based choice that ML makes silently and always model-based. Use when data come from strata, clusters, schools, sites, panels or an oversampled subgroup, when a survey or weighted dataset must be modelled, when asked whether to pass sample_weight, or when a result must generalize to a population that the sample does not mirror. Does NOT cover which rows were selected INTO the data by survival or feedback (use ml-task-framing Step 3a) and does NOT design the cross-validation splitter itself (use ml-validation-design)."
+        },
+        {
+          "name": "ml-search-strategy",
+          "description": "Chooses how to search a hyperparameter space and how to validate the result — grid versus random versus successive halving versus Optuna 4.9 TPE, KFold/StratifiedKFold/GroupKFold/TimeSeriesSplit design, pipeline-scoped preprocessing against leakage, log-scale grids, search budget, and nested CV for honest reporting. Use when deciding between GridSearchCV, RandomizedSearchCV, HalvingGridSearchCV and Optuna, when sizing n_trials or a grid, when designing the cross-validation that scores a search, or when a tuned score will be reported to stakeholders. Does NOT decide which hyperparameters matter for a family (use ml-tree-ensemble-params / ml-linear-regularization) and does NOT diagnose why a model fails (use ml-overfitting-diagnosis)."
+        },
+        {
+          "name": "ml-task-framing",
+          "description": "Turns a vague business request into a well-posed ML task before any modelling — asks whether ML is needed at all, identifies the task type across the full taxonomy (binary/multiclass/multi-label/one-class and anomaly/ranking/forecasting/sequence labelling/seq2seq/clustering/RL), defines the unit of observation and the target with its horizon and label delay, specifies the point-in-time input contract that prevents leakage, and routes to the metric, validation and model-selection skills. Use when starting any modelling consultation, when the request is \"build a model for X\", when it is unclear what the target or the row even is, or when a project needs reframing. Does NOT choose the model family (use ml-model-selection) and does NOT design the validation split (use ml-validation-design)."
+        },
+        {
+          "name": "ml-tree-ensemble-params",
+          "description": "Sets the capacity knobs for decision trees and their ensembles — split criterion (gini vs entropy vs gain ratio and the algorithm each implies), max_depth and min_samples pre-pruning, cost-complexity ccp_alpha post-pruning, Random Forest max_features and OOB, and the n_estimators ↔ learning_rate trade-off for AdaBoost and gradient boosting — with sklearn 1.9 breaking changes and deprecations flagged (AdaBoost's algorithm= removed entirely — TypeError, not a warning). Use when tuning DecisionTree, RandomForest, AdaBoost, GradientBoosting, HistGradientBoosting or XGBoost, when a tree overfits, or when feature importances look implausible. Does NOT diagnose whether the problem is bias or variance first (use ml-overfitting-diagnosis) and does NOT run the search itself (use ml-search-strategy)."
+        },
+        {
+          "name": "ml-tuning-workflow",
+          "description": "Orchestrates the full model-tuning consultation end to end — elicits the problem signature, then walks metric choice, data-distribution/loss choice, baseline, overfitting diagnosis, family-specific knobs, honest search, decision threshold, and a final report with reproducible settings, delegating each decision to the specialist skill that owns it. Use when the request is broad — \"help me build/tune a model\", \"my model is bad, where do I start\", \"review my whole modelling setup\" — or spans several decisions at once. Does NOT answer narrow single-decision questions — go directly to ml-task-framing, ml-model-selection, ml-validation-design, ml-metric-choice, ml-decision-threshold, ml-distribution-choice, ml-overfitting-diagnosis, ml-search-strategy, ml-tree-ensemble-params, ml-linear-regularization, ml-clustering-k, ml-dimensionality-features, rl-hyperparameters or llm-parameter-choice."
+        },
+        {
+          "name": "ml-validation-design",
+          "description": "Designs the validation schema before any tuning — picks the split that imitates production (holdout vs K-fold vs Group vs TimeSeries vs combined), sizes K from the bias/variance/compute trade-off, adds gap/embargo and rolling-vs-expanding windows for temporal data, decides when nested CV is required for an honest number, checks train/test comparability with adversarial validation, reports metrics as intervals rather than point estimates, and sets the split-refresh policy. Use when choosing how to split data, when CV score does not transfer to production, when data has groups, panels, time or leakage risk, or when asked which k-fold variant to use. Does NOT choose the metric being validated (use ml-metric-choice) and does NOT run the hyperparameter search itself (use ml-search-strategy)."
+        },
+        {
+          "name": "nn-training-params",
+          "description": "Sets neural network training hyperparameters once a net is already the chosen family — learning rate found by the threshold procedure (raise until the training cost oscillates, then halve), epochs delegated to early stopping with a no-improvement-in-n rule, LR schedules, mini-batch size chosen against wall-clock not epochs, L2/dropout/augmentation regularization, weight init and activation choice against vanishing gradients, loss and output layer matched to the task, and architecture sizing from data volume. Use when training or debugging a neural network, when a net does not learn at all or plateaus, or when choosing epochs, batch size, optimizer or learning rate. Does NOT choose the model family in the first place, including whether a net is warranted over gradient boosting (use ml-model-selection), and does NOT set LLM inference parameters (use llm-parameter-choice)."
+        },
+        {
+          "name": "rl-hyperparameters",
+          "description": "Sets reinforcement-learning hyperparameters — discount gamma from the task horizon (effective horizon 1/(1−gamma)), learning rate alpha and its decay, epsilon-greedy exploration with None/'1/n'/decay schedules and eps_min — and picks the algorithm across policy/value iteration, Monte Carlo, SARSA, Q-learning (SARSAmax), Expected SARSA, DQN, REINFORCE and actor-critic. Use when an RL agent trains unstably or not at all, when rewards plateau too early, when choosing between on-policy and off-policy TD, or when tuning gamma/alpha/epsilon and their schedules. Does NOT cover supervised hyperparameter search (use ml-search-strategy) and does NOT choose supervised metrics (use ml-metric-choice)."
+        }
+      ],
+      "agents": [],
+      "commands": [],
+      "hookEvents": []
+    },
+    {
+      "name": "eda-skills",
+      "displayName": "EDA Dataset Advisor",
+      "version": "1.0.0",
+      "description": "4 linked skills that turn raw data into a documented, leakage-safe, validated dataset: structure discovery, data-quality audit, feature engineering/selection, and an orchestrator with a split strategy and readiness gate. Training/tuning the final model is out of scope. Skill content and worked examples are in Ukrainian.",
+      "category": "knowledge",
+      "keywords": [
+        "eda",
+        "data-quality",
+        "feature-engineering",
+        "dataset-validation",
+        "data-leakage",
+        "ukrainian"
+      ],
+      "author": {
+        "name": "Fel Kost",
+        "email": "teacherfkv@gmail.com"
+      },
+      "license": "MIT",
+      "repository": null,
+      "dependencies": [],
+      "skills": [
+        {
+          "name": "audit-eda-data-quality",
+          "description": "Audit raw or intermediate tabular, time-series, geospatial, image, text, and multimodal datasets before modeling. Use for schema and semantic profiling, mixed-type detection, missingness, duplicates, invalid values, outliers, distribution properties, label quality, class imbalance, subgroup coverage, split design, point-in-time correctness, data-leakage checks, and geospatial checks (CRS, geometry validity, spatial autocorrelation, spatial splits). Produce evidence-backed remediation decisions without prematurely training or tuning a final model. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "discover-eda-structure",
+          "description": "Discover relationships, redundancy, clusters, manifolds, latent representations, and temporal structure during pre-model EDA. Use when choosing correlation or association measures, mutual information, clustered correlation maps, clustering algorithms for numeric/categorical/mixed/high-dimensional/time-series data, dimensionality-reduction methods, image or text embeddings, autoencoder/VAE probes, or lag/rolling/seasonal features. Require method assumptions, leakage controls, stability analysis, and domain interpretation. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "engineer-select-eda-features",
+          "description": "Create, extract, select, balance, and validate features during pre-model EDA so the output is a reproducible high-quality dataset for later training. Use for feature engineering, feature extraction, scaling/encoding, time-series lags, filter methods, mutual information, minimum Redundancy Maximum Relevance (mRMR), wrapper and embedded selection, feature and permutation importance, SHAP, class-imbalance strategies, diagnostic baselines, autoencoder/VAE or pretrained encoders, ablation, and final dataset validation. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "plan-eda-dataset",
+          "description": "Plan and orchestrate leakage-safe exploratory data analysis that turns raw tabular, time-series, image, text, or multimodal data into a documented and validated dataset ready for later model training and hyperparameter tuning. Use for EDA plans, dataset-readiness roadmaps, pre-model data investigations, sequencing data-quality audits, structure discovery, feature work, balancing, and final dataset validation. Coordinate the companion skills audit-eda-data-quality, discover-eda-structure, and engineer-select-eda-features. Respond in Ukrainian unless the user requests another language."
+        }
+      ],
+      "agents": [],
+      "commands": [],
+      "hookEvents": []
     }
   ]
 }

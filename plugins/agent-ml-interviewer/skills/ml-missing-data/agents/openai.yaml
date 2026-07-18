@@ -1,0 +1,11 @@
+interface:
+  display_name: "Пропущені дані (MCAR/MAR/MNAR)"
+  short_description: "Механізм пропусків → стратегія імпутації, пропуск як сигнал"
+  default_prompt: Use $ml-missing-data to diagnose the missingness mechanism (MCAR/MAR/MNAR) and choose a handling strategy — imputation ladder, missingness as a feature, in-pipeline fitting, planned-missing designs; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

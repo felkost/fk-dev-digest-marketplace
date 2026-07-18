@@ -1,0 +1,19 @@
+{
+  "name": "eda-skills",
+  "displayName": "EDA Dataset Advisor",
+  "version": "1.0.0",
+  "description": "4 linked skills that turn raw data into a documented, leakage-safe, validated dataset: structure discovery, data-quality audit, feature engineering/selection, and an orchestrator with a split strategy and readiness gate. Training/tuning the final model is out of scope. Skill content and worked examples are in Ukrainian.",
+  "author": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "eda",
+    "data-quality",
+    "feature-engineering",
+    "dataset-validation",
+    "data-leakage",
+    "ukrainian"
+  ]
+}

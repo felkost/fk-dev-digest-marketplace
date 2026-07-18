@@ -1,0 +1,25 @@
+# Dependencies for the EDA skill scripts.
+# Core is required; optional deps are imported lazily by the scripts and only
+# needed for the specific method noted. Missing optional deps degrade to a clear
+# message or a core-library fallback, never a crash on import.
+
+# --- core (required) ---
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
+scikit-learn>=1.3
+
+# --- optional (lazy-imported by scripts) ---
+matplotlib>=3.7          # stage visualizations in plan-eda-dataset/scripts/eda_plots.py
+seaborn>=0.13            # nicer statistical plot defaults (pairplot/violin/kde) — optional upgrade
+plotly>=5.18             # interactive exploration (hover/zoom) — optional, keep static exports for the record
+imbalanced-learn>=0.11   # SMOTE / SMOTENC / ADASYN / Tomek / ENN in balancing.py
+statsmodels>=0.14        # ADF/KPSS stationarity tests in time_series_features.py (ACF/PACF are built-in)
+umap-learn>=0.5          # UMAP in dim_reduction.py (t-SNE/PCA work without it)
+hdbscan>=0.8             # HDBSCAN in clustering.py (KMeans/GMM/DBSCAN work without it)
+kmodes>=0.12             # K-Modes / K-Prototypes in clustering.py
+prince>=0.13             # MCA / FAMD in dim_reduction.py
+shap>=0.44               # SHAP diagnostics in wrapper_embedded.py
+
+# --- notebook execution (only for running assets/eda_workflow_template.ipynb) ---
+jupyter

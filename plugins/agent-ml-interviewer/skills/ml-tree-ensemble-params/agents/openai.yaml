@@ -1,0 +1,11 @@
+interface:
+  display_name: "Параметри дерев і ансамблів"
+  short_description: "Критерій, глибина, обрізання, n_estimators і learning_rate"
+  default_prompt: Use $ml-tree-ensemble-params to set tree/RF/boosting capacity knobs and the n_estimators-learning_rate trade-off; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

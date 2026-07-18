@@ -2,6 +2,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 .DS_Store
+__pycache__/
+*.pyc
 
 # Local Claude Code settings (personal, per-machine — never shared)
 .claude/settings.local.json

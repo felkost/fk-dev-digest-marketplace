@@ -1,0 +1,11 @@
+interface:
+  display_name: "Постановка ML-задачі"
+  short_description: "Тип задачі, ціль з горизонтом, контракт входу"
+  default_prompt: Use $ml-task-framing to turn a vague request into a well-posed ML task — task type, target definition, point-in-time input contract; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

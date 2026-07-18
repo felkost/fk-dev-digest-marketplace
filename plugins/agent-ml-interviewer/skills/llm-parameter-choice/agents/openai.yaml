@@ -1,0 +1,11 @@
+interface:
+  display_name: "Параметри LLM 2026"
+  short_description: "Effort і thinking замість видалених temperature/top_p"
+  default_prompt: Use $llm-parameter-choice to configure 2026 LLM inference (effort, adaptive thinking, caching), prompt optimisation, and taking a RAG service from prototype to production (what to measure, what is deployment theatre); answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

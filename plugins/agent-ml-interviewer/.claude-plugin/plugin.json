@@ -1,0 +1,21 @@
+{
+  "name": "agent-ml-interviewer",
+  "displayName": "ML Interview Advisor",
+  "version": "1.0.0",
+  "description": "21 decision-procedure skills covering classical ML, Bayesian inference, forecasting, and LLM/RL parameter choice — turns metric/threshold/model-family selection rules into an agent that asks the right questions and cites the underlying proof. Skill content and worked examples are in Ukrainian.",
+  "author": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "machine-learning",
+    "hyperparameters",
+    "metrics",
+    "bayesian",
+    "forecasting",
+    "llm",
+    "reinforcement-learning",
+    "ukrainian"
+  ]
+}

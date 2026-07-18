@@ -1,0 +1,11 @@
+interface:
+  display_name: "Вибір сімейства моделі"
+  short_description: "Сім обмежень, профілі сімейств, чесне порівняння"
+  default_prompt: Use $ml-model-selection to pick a model family with justification from constraints and data signature; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -1,0 +1,11 @@
+interface:
+  display_name: "Гіперпараметри RL"
+  short_description: "Гамма з горизонту, альфа, епсилон-розклади, вибір алгоритму"
+  default_prompt: Use $rl-hyperparameters to set gamma/alpha/epsilon schedules and choose the RL algorithm; answer in Ukrainian.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
