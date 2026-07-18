@@ -42,4 +42,3 @@
 - Known limitations, forbidden uses, unresolved risks, and accepted exceptions.
 
 Return `ready`, `ready with accepted limitations`, or `not ready`. A high-severity unresolved leakage, label, identity, or split defect forces `not ready`.
-

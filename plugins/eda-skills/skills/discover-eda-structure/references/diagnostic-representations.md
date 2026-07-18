@@ -36,4 +36,3 @@ Use representation models as optional instruments, not default requirements.
 ## Acceptance
 
 Accept a representation only when it improves a stated diagnostic or feature objective, remains stable across seeds/splits, and passes leakage, privacy, cost, and interpretability checks. Preserve the raw features and document the encoder version and preprocessing.
-

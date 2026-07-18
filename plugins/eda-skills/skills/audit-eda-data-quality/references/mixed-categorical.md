@@ -38,4 +38,3 @@ Prefer multi-hot encoding; reduce to a single normalized combination category on
 - Use out-of-fold target encoding for training rows and train-fitted mappings for validation/test.
 - Treat rare-category grouping thresholds as learned parameters fitted on train.
 - Audit category distribution and unseen rates by split and time.
-

@@ -95,4 +95,3 @@ What to do with a hit: it is a **question for whoever produced the column** ("ho
 - Compare suspiciously predictive single features with domain semantics and acquisition time.
 - Verify all fitted pipeline steps expose only training indices.
 - Keep validation for decisions and test/holdout for the final untouched estimate.
-

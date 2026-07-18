@@ -27,4 +27,3 @@ Mark the dataset ready only when:
 - unresolved high-severity risks are absent, or the user explicitly accepts them.
 
 If a gate fails, return `not ready`, name the blocking evidence, and specify the smallest corrective experiment.
-

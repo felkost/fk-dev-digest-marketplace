@@ -261,4 +261,3 @@ Scaling is a modeling-pipeline choice, not a data-quality repair; decide it per 
 - **Interpretation caveat:** scaling obscures original units; keep raw values when coefficient or threshold interpretability matters.
 
 This is a starting heuristic, not a rule. Fit the chosen transformer on train/folds only (wrap it in a `Pipeline` so cross-validation refits per fold), persist it for inference, and confirm the downstream benefit rather than scaling by reflex.
-

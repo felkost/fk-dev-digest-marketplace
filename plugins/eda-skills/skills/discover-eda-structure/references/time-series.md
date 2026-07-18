@@ -119,4 +119,3 @@ If long memory itself is the question, estimate it with a method built for it
 - Check stability across forecast origins and entities.
 - Remove redundant lag grids through grouped selection or regularization, not one correlation threshold alone.
 - Record the maximum lookback and its operational data requirement.
-

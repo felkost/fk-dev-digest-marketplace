@@ -93,4 +93,3 @@ Use for nested exploration or moderate data size. Choose linkage to match the di
 - Autoencoder/VAE: compare reconstruction and downstream diagnostic utility to PCA; validate latent stability and collapse.
 
 Clustering should normally use the original or a validated information-preserving representation, not an attractive 2D projection.
-

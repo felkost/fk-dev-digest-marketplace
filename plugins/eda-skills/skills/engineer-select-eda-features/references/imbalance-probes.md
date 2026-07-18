@@ -56,4 +56,3 @@ For a 5% positive rate at 150k rows (~7,500 positives), do not force parity. The
 - Inspect nearest neighbors of synthetic samples and distance to validation/test records.
 - Review disagreement and high-loss rows as label-quality candidates; never auto-relabel solely from model predictions.
 - For generative data, evaluate marginal/joint fidelity, rare-mode coverage, duplicates/memorization, privacy attacks appropriate to the context, subgroup fairness, and train-on-synthetic/test-on-real utility.
-

@@ -63,4 +63,3 @@ For a nonlinear numeric→target shape that a *linear* probe or additive model m
 - MaxAbs for sparse values when centering would destroy sparsity.
 - Tree-only pipelines usually do not need scaling, but hybrid pipelines might.
 - Use a column-aware pipeline so binary/one-hot features are not transformed accidentally.
-

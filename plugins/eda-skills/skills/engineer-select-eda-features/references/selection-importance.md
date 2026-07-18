@@ -141,4 +141,3 @@ distinguish them.
 ## Selection record
 
 For every kept/dropped feature record method evidence, stability, redundancy group, cost, availability, leakage risk, subgroup impact, final decision, and reversibility.
-

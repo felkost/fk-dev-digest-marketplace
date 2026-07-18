@@ -65,4 +65,3 @@ This also fixes the scope of a sensitivity/multiverse check: re-running a findin
 The one thing exploration cannot do for itself is confirm. A finding earns confidence by reappearing in data that did not shape it — a held-out partition, a later time window, a different site, an independent cohort — not by surviving a more elaborate analysis of the same rows. Where the project can approximate this cheaply it does: split-based re-estimation (`selection_inflation_probe`), out-of-fold scoring, stability across seeds and folds, `label_alignment` against independent labels. Where it cannot, the honest output is a ranked list of hypotheses with the evidence and the ambiguity attached, handed to whoever collects the next batch.
 
 Report format that follows from this: state findings as facts measured / interpretations / hypotheses / missing information (the audit report already requires this split), and never promote a hypothesis to a fact because it was interesting.
-
