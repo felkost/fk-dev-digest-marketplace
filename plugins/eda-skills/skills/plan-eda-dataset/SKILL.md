@@ -13,7 +13,7 @@ description: Plan and orchestrate leakage-safe exploratory data analysis that tu
 - [scripts/contracts.py](scripts/contracts.py) — спільна схема 8 маніфестів (dataset contract, split, feature, transformation, selection, sampling, diagnostic, dataset card) + readiness verdict. Етапи обмінюються ними як JSON/dict, без жорсткого імпорту між скілами.
 - [scripts/eda_plots.py](scripts/eda_plots.py) + [references/visualization.md](references/visualization.md) — візуалізація етапів і результатів EDA: розподіли/missingness (аудит), кластерна кореляція, k-scan/силуетні «ножі», embedding-скетери (структура), importance з noise-baseline і порівняння варіантів датасета (ознаки). Графіки будувати по train/OOF, зберігати як артефакти поруч із маніфестами, підписувати що можна і що не можна з них висновувати.
 - [scripts/insights.py](scripts/insights.py) — persistent-правила користувача в `insights.md` (див. «Уточнення користувача» нижче).
-- Залежності — [requirements.txt](../requirements.txt): core обов'язковий; важкі бібліотеки імпортуються ліниво й опційно.
+- Залежності — [requirements.txt](../../requirements.txt): core обов'язковий; важкі бібліотеки імпортуються ліниво й опційно.
 
 ## Межі роботи
 
