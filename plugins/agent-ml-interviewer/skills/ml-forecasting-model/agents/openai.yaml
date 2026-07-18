@@ -4,8 +4,8 @@ interface:
   default_prompt: Use $ml-forecasting-model to choose a time-series forecasting model — is it forecasting versus feature regression, stationarity via ADF and KPSS read together, the ladder from naive/seasonal-naive through ETS and ARIMA/SARIMAX to global gradient boosting on lags, local versus global, rolling-origin validation, and MASE over MAPE; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true

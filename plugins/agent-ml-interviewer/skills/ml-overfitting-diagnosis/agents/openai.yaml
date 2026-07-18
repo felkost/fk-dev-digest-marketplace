@@ -4,8 +4,8 @@ interface:
   default_prompt: Use $ml-overfitting-diagnosis to diagnose over/underfitting from train/test gaps, learning curves and noise canaries; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true

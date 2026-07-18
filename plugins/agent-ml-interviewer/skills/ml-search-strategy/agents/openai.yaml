@@ -4,8 +4,8 @@ interface:
   default_prompt: Use $ml-search-strategy to choose the search method, CV design and budget with pipeline-scoped preprocessing; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true

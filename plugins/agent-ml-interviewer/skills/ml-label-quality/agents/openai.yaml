@@ -4,8 +4,8 @@ interface:
   default_prompt: Use $ml-label-quality to check whether the label measures the construct you actually care about — proxy targets and their group bias, construct contamination, label noise in train versus test, the 1-p metric ceiling, and annotator agreement via Cohen/Fleiss kappa; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true

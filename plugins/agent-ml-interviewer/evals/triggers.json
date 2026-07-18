@@ -1,513 +1,513 @@
 {
- "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11).",
- "items": [
-  {
-   "id": "t01",
-   "prompt": "Яку метрику обрати, якщо позитивного класу лише 3%?",
-   "expected": "ml-metric-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t02",
-   "prompt": "Чому accuracy 97%, а модель жодного хворого не знаходить?",
-   "expected": "ml-metric-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t03",
-   "prompt": "Де поставити поріг класифікатора, щоб precision був не нижче 0.9?",
-   "expected": "ml-decision-threshold",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t04",
-   "prompt": "predict_proba дає хороший ранжир, а predict — погані мітки. Що робити?",
-   "expected": "ml-decision-threshold",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t05",
-   "prompt": "Які втрата й метрика для лічильної цілі з купою нулів?",
-   "expected": "ml-distribution-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t06",
-   "prompt": "Poisson чи негативний біноміальний для кількості звернень на годину?",
-   "expected": "ml-distribution-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t07",
-   "prompt": "Train AUC 0.99, test 0.71 — що це означає і що робити?",
-   "expected": "ml-overfitting-diagnosis",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t08",
-   "prompt": "Модель у проді значно гірша, ніж була в крос-валідації. Чому?",
-   "expected": "ml-validation-design",
-   "acceptable_alt": "ml-overfitting-diagnosis",
-   "fixture_note": "Виправлено 2026-07-18 після Tier B на 21 скілі: очікування ml-overfitting-diagnosis суперечило ТІЛУ пака — 'в CV 0.95, у проді 0.6' явно належить ml-validation-design (Режими відмови), а ml-overfitting-diagnosis слова 'прод' не містить узагалі. Описи обох скілів заявляли той самий тригер; межу розведено в описі ml-overfitting-diagnosis."
-  },
-  {
-   "id": "t09",
-   "prompt": "GridSearchCV чи Optuna, якщо 6 гіперпараметрів і 2 години бюджету?",
-   "expected": "ml-search-strategy",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t10",
-   "prompt": "Як побудувати крос-валідацію, щоб скейлер не підглядав у валідаційні фолди?",
-   "expected": "ml-search-strategy",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t11",
-   "prompt": "Random Forest перенавчився — які саме параметри крутити?",
-   "expected": "ml-tree-ensemble-params",
-   "acceptable_alt": "ml-overfitting-diagnosis"
-  },
-  {
-   "id": "t12",
-   "prompt": "Збільшувати learning_rate чи n_estimators у градієнтному бустингу?",
-   "expected": "ml-tree-ensemble-params",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t13",
-   "prompt": "Коефіцієнти логістичної регресії міняють знак між фолдами.",
-   "expected": "ml-linear-regularization",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t14",
-   "prompt": "Порахуй VIF і скажи, що викинути з корельованих ознак.",
-   "expected": "ml-linear-regularization",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t15",
-   "prompt": "Скільки кластерів узяти для сегментації клієнтів?",
-   "expected": "ml-clustering-k",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t16",
-   "prompt": "Elbow каже 3 кластери, silhouette каже 2 — кому вірити?",
-   "expected": "ml-clustering-k",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t17",
-   "prompt": "У датасеті 400 ознак — як зменшити розмірність?",
-   "expected": "ml-dimensionality-features",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t18",
-   "prompt": "RandomForest поставив службову колонку-вагу на перше місце важливості. Це нормально?",
-   "expected": "ml-dimensionality-features",
-   "acceptable_alt": "ml-overfitting-diagnosis"
-  },
-  {
-   "id": "t19",
-   "prompt": "Обери γ і ε для Q-learning у FrozenLake.",
-   "expected": "rl-hyperparameters",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t20",
-   "prompt": "SARSA чи Q-learning, якщо важлива безпека під час навчання?",
-   "expected": "rl-hyperparameters",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t21",
-   "prompt": "Яку temperature поставити для Claude Opus 4.8?",
-   "expected": "llm-parameter-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t22",
-   "prompt": "Як удвічі здешевити виклики LLM без помітної втрати якості?",
-   "expected": "llm-parameter-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t23",
-   "prompt": "Допоможи повністю налаштувати модель для прогнозу відтоку клієнтів.",
-   "expected": "ml-tuning-workflow",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t24",
-   "prompt": "Є дані, немає ні моделі, ні метрики. З чого почати?",
-   "expected": "ml-tuning-workflow",
-   "acceptable_alt": "ml-task-framing"
-  },
-  {
-   "id": "t25",
-   "prompt": "Which metric should I optimise on a 2% positive-rate dataset?",
-   "expected": "ml-metric-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t26",
-   "prompt": "How do I pick the probability cutoff to guarantee 90% recall?",
-   "expected": "ml-decision-threshold",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t27",
-   "prompt": "My CV score went UP after adding random noise features. Is that good?",
-   "expected": "ml-overfitting-diagnosis",
-   "acceptable_alt": "ml-dimensionality-features"
-  },
-  {
-   "id": "t28",
-   "prompt": "Grid vs random vs Bayesian search for 8 hyperparameters?",
-   "expected": "ml-search-strategy",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t29",
-   "prompt": "Is gini or entropy better for my decision tree?",
-   "expected": "ml-tree-ensemble-params",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t30",
-   "prompt": "What loss should I train on for insurance claim amounts with many zeros?",
-   "expected": "ml-distribution-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n01",
-   "prompt": "Як змерджити два DataFrame у pandas за ключем?",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n02",
-   "prompt": "Напиши SQL-запит із LEFT JOIN і GROUP BY.",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n03",
-   "prompt": "Як задеплоїти FastAPI-застосунок у Docker?",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n04",
-   "prompt": "Поясни різницю між list і tuple у Python.",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n05",
-   "prompt": "Як виправити merge conflict у git?",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n06",
-   "prompt": "Прочитай Excel-файл із трьома аркушами в Python.",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n07",
-   "prompt": "Порадь хорошу книжку з машинного навчання.",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t31",
-   "prompt": "У мене купа даних про клієнтів, хочу щось передбачати, але навіть не знаю, що вважати одним рядком і що буде ціллю.",
-   "expected": "ml-task-framing",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t32",
-   "prompt": "Business asked me to 'build a model for churn' — where do I even start, what's the target?",
-   "expected": "ml-task-framing",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t33",
-   "prompt": "Обираю між логістичною регресією, Random Forest і градієнтним бустингом для табличних даних — як обґрунтувати вибір сімейства?",
-   "expected": "ml-model-selection",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t34",
-   "prompt": "Should I use a neural network or gradient boosting for this 50k-row tabular dataset?",
-   "expected": "ml-model-selection",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t35",
-   "prompt": "У мене повторні виміри тих самих пацієнтів у різні дні — як розбити на train/test, щоб не було витоку між ними?",
-   "expected": "ml-validation-design",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t36",
-   "prompt": "What K should I use for cross-validation, and is nested CV needed for an honest number here?",
-   "expected": "ml-validation-design",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t37",
-   "prompt": "Моя нейромережа взагалі не вчиться — loss не спадає жодну епоху. З чого почати?",
-   "expected": "nn-training-params",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t38",
-   "prompt": "How do I choose the learning rate and batch size for training my Keras model?",
-   "expected": "nn-training-params",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t39",
-   "prompt": "Тип задачі вже ясний — це бінарна класифікація відтоку. Яку модель узяти: логістичну, RF чи бустинг?",
-   "expected": "ml-model-selection",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t40",
-   "prompt": "Обрав градієнтний бустинг для табличних даних — тепер підкажи n_estimators і learning_rate.",
-   "expected": "ml-tree-ensemble-params",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t41",
-   "prompt": "У даних є групи — той самий клієнт трапляється кілька разів. Яку схему валідації використати: GroupKFold чи звичайний KFold?",
-   "expected": "ml-validation-design",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t42",
-   "prompt": "Схема валідації вже є (GroupKFold, 5 фолдів) — тепер обери Grid чи Random Search і бюджет.",
-   "expected": "ml-search-strategy",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t43",
-   "prompt": "Чи варто взагалі брати нейромережу для цієї табличної задачі на 500 рядках, чи краще градієнтний бустинг?",
-   "expected": "ml-model-selection",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t44",
-   "prompt": "Модель уже навчена, дає ймовірності — хочу підібрати поріг рішення.",
-   "expected": "ml-decision-threshold",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t45",
-   "prompt": "Скільки кластерів узяти для сегментації клієнтської бази?",
-   "expected": "ml-clustering-k",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t46",
-   "prompt": "Обираю між SARSA і Q-learning для навчання агента з небезпечним середовищем.",
-   "expected": "rl-hyperparameters",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t47",
-   "prompt": "Яку effort поставити для виклику Claude через API?",
-   "expected": "llm-parameter-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n08",
-   "prompt": "Напиши React-компонент форми логіну з валідацією полів.",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n09",
-   "prompt": "Explain what a REST API is and how HTTP verbs map to CRUD.",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t48",
-   "prompt": "Даних мало, а рішення дороге — хочу не точкову оцінку, а розподіл невизначеності параметра з пріором і постеріором. Як це зробити в PyMC?",
-   "expected": "ml-bayesian-inference",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t49",
-   "prompt": "My MCMC chains won't converge and I keep getting divergences — how do I diagnose what's wrong?",
-   "expected": "ml-bayesian-inference",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t50",
-   "prompt": "У мене вже є дві навчені PyMC-моделі з обчисленою log_likelihood — хочу порівняти їх через WAIC і обрати кращу.",
-   "expected": "ml-model-selection",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t51",
-   "prompt": "Яку правдоподібність обрати для лічильних даних із купою нулів — Пуассон чи негативний біноміальний?",
-   "expected": "ml-distribution-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t52",
-   "prompt": "У колонці доходу 18% пропусків. Видалити ці рядки чи імпутувати, і чим саме?",
-   "expected": "ml-missing-data",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t53",
-   "prompt": "Our dataset has NaNs scattered across several columns. How do we decide whether the missingness itself carries signal?",
-   "expected": "ml-missing-data",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t54",
-   "prompt": "Дані зібрані з 40 шкіл по 25 учнів у кожній. Чому довірчі інтервали, пораховані на 1000 рядках, надто вузькі?",
-   "expected": "ml-sampling-design",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t55",
-   "prompt": "We deliberately oversampled a rare region tenfold. Do I need to pass weights when fitting and when scoring?",
-   "expected": "ml-sampling-design",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t56",
-   "prompt": "Наша цільова змінна — витрати на лікування, але насправді нас цікавить тяжкість хвороби. Чи це проблема для моделі?",
-   "expected": "ml-label-quality",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t57",
-   "prompt": "Three annotators labelled our training set and raw percent agreement is 85%. Is that good enough to train on?",
-   "expected": "ml-label-quality",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t58",
-   "prompt": "Треба прогнозувати місячні продажі на 3 місяці вперед, є 4 роки історії. З якої моделі почати?",
-   "expected": "ml-forecasting-model",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t59",
-   "prompt": "Should I difference my series before fitting ARIMA, and how do I decide how many differences?",
-   "expected": "ml-forecasting-model",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t60",
-   "prompt": "У даних 40 шкіл. Який сплітер узяти, щоб одна школа не потрапила водночас у train і у val?",
-   "expected": "ml-validation-design",
-   "acceptable_alt": "ml-sampling-design"
-  },
-  {
-   "id": "t61",
-   "prompt": "Мітки про дефолт є лише по виданих кредитах — тим, кому відмовили, мітки немає. Чи можна на цьому вчити модель?",
-   "expected": "ml-task-framing",
-   "acceptable_alt": "ml-label-quality"
-  },
-  {
-   "id": "t62",
-   "prompt": "Чи підходить Cohen's kappa як метрика якості класифікатора при сильному дисбалансі?",
-   "expected": "ml-metric-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t63",
-   "prompt": "Що вважати відтоком — 30 днів без покупок чи 60? Від чого це залежить?",
-   "expected": "ml-task-framing",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t64",
-   "prompt": "Як побудувати backtest для часового ряду: які вікна брати і чи потрібен розрив між train і test?",
-   "expected": "ml-validation-design",
-   "acceptable_alt": "ml-forecasting-model"
-  },
-  {
-   "id": "t65",
-   "prompt": "У мене табличні дані, серед ознак є дата замовлення. Що взяти — випадковий ліс чи логістичну регресію?",
-   "expected": "ml-model-selection",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t66",
-   "prompt": "MAPE чи MASE брати для оцінки якості прогнозу продажів?",
-   "expected": "ml-forecasting-model",
-   "acceptable_alt": "ml-metric-choice"
-  },
-  {
-   "id": "t67",
-   "prompt": "Імп'ютер треба фітити на всьому датасеті чи всередині кожного фолду?",
-   "expected": "ml-missing-data",
-   "acceptable_alt": "ml-validation-design"
-  },
-  {
-   "id": "n10",
-   "prompt": "Як налаштувати GitHub Actions, щоб запускати тести на кожен пуш?",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "n11",
-   "prompt": "Which vector database should we pick for storing embeddings — Pinecone or pgvector?",
-   "expected": "none",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t79",
-   "prompt": "Чанки по 800 символів з перекриттям 100 — звідки ці числа і як підібрати їх для мого RAG?",
-   "expected": "llm-parameter-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t80",
-   "prompt": "RAG-бот вигадує відповіді. Правити промпт чи щось інше?",
-   "expected": "llm-parameter-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t81",
-   "prompt": "Виніс LLM-прототип із ноутбука в Docker і ngrok — що ще треба, щоб це був справжній прод?",
-   "expected": "llm-parameter-choice",
-   "acceptable_alt": null
-  },
-  {
-   "id": "t82",
-   "prompt": "Як розбити дані на train/test, щоб оцінка перенеслась у прод?",
-   "expected": "ml-validation-design",
-   "acceptable_alt": null,
-   "fixture_note": "Стрес-тест межі: llm-parameter-choice після додавання Кроку 6 містить слова eval/golden set/прод — не має красти загальний дизайн сплітів."
-  },
-  {
-   "id": "t83",
-   "prompt": "Яку метрику взяти для пошуку релевантних документів, якщо релевантних лише 2%?",
-   "expected": "ml-metric-choice",
-   "acceptable_alt": null,
-   "fixture_note": "Стрес-тест межі: лексика ретриву проти вибору метрики під дисбаланс."
-  },
-  {
-   "id": "t84",
-   "prompt": "Який базовий Docker-образ обрати для Python-застосунку і як зменшити його розмір?",
-   "expected": "none",
-   "acceptable_alt": null,
-   "fixture_note": "Негативний: Крок 6 llm-parameter-choice згадує Docker, але контейнеризація сама по собі поза зоною пака."
-  }
- ]
+  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11).",
+  "items": [
+    {
+      "id": "t01",
+      "prompt": "Яку метрику обрати, якщо позитивного класу лише 3%?",
+      "expected": "ml-metric-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t02",
+      "prompt": "Чому accuracy 97%, а модель жодного хворого не знаходить?",
+      "expected": "ml-metric-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t03",
+      "prompt": "Де поставити поріг класифікатора, щоб precision був не нижче 0.9?",
+      "expected": "ml-decision-threshold",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t04",
+      "prompt": "predict_proba дає хороший ранжир, а predict — погані мітки. Що робити?",
+      "expected": "ml-decision-threshold",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t05",
+      "prompt": "Які втрата й метрика для лічильної цілі з купою нулів?",
+      "expected": "ml-distribution-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t06",
+      "prompt": "Poisson чи негативний біноміальний для кількості звернень на годину?",
+      "expected": "ml-distribution-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t07",
+      "prompt": "Train AUC 0.99, test 0.71 — що це означає і що робити?",
+      "expected": "ml-overfitting-diagnosis",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t08",
+      "prompt": "Модель у проді значно гірша, ніж була в крос-валідації. Чому?",
+      "expected": "ml-validation-design",
+      "acceptable_alt": "ml-overfitting-diagnosis",
+      "fixture_note": "Виправлено 2026-07-18 після Tier B на 21 скілі: очікування ml-overfitting-diagnosis суперечило ТІЛУ пака — 'в CV 0.95, у проді 0.6' явно належить ml-validation-design (Режими відмови), а ml-overfitting-diagnosis слова 'прод' не містить узагалі. Описи обох скілів заявляли той самий тригер; межу розведено в описі ml-overfitting-diagnosis."
+    },
+    {
+      "id": "t09",
+      "prompt": "GridSearchCV чи Optuna, якщо 6 гіперпараметрів і 2 години бюджету?",
+      "expected": "ml-search-strategy",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t10",
+      "prompt": "Як побудувати крос-валідацію, щоб скейлер не підглядав у валідаційні фолди?",
+      "expected": "ml-search-strategy",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t11",
+      "prompt": "Random Forest перенавчився — які саме параметри крутити?",
+      "expected": "ml-tree-ensemble-params",
+      "acceptable_alt": "ml-overfitting-diagnosis"
+    },
+    {
+      "id": "t12",
+      "prompt": "Збільшувати learning_rate чи n_estimators у градієнтному бустингу?",
+      "expected": "ml-tree-ensemble-params",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t13",
+      "prompt": "Коефіцієнти логістичної регресії міняють знак між фолдами.",
+      "expected": "ml-linear-regularization",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t14",
+      "prompt": "Порахуй VIF і скажи, що викинути з корельованих ознак.",
+      "expected": "ml-linear-regularization",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t15",
+      "prompt": "Скільки кластерів узяти для сегментації клієнтів?",
+      "expected": "ml-clustering-k",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t16",
+      "prompt": "Elbow каже 3 кластери, silhouette каже 2 — кому вірити?",
+      "expected": "ml-clustering-k",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t17",
+      "prompt": "У датасеті 400 ознак — як зменшити розмірність?",
+      "expected": "ml-dimensionality-features",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t18",
+      "prompt": "RandomForest поставив службову колонку-вагу на перше місце важливості. Це нормально?",
+      "expected": "ml-dimensionality-features",
+      "acceptable_alt": "ml-overfitting-diagnosis"
+    },
+    {
+      "id": "t19",
+      "prompt": "Обери γ і ε для Q-learning у FrozenLake.",
+      "expected": "rl-hyperparameters",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t20",
+      "prompt": "SARSA чи Q-learning, якщо важлива безпека під час навчання?",
+      "expected": "rl-hyperparameters",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t21",
+      "prompt": "Яку temperature поставити для Claude Opus 4.8?",
+      "expected": "llm-parameter-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t22",
+      "prompt": "Як удвічі здешевити виклики LLM без помітної втрати якості?",
+      "expected": "llm-parameter-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t23",
+      "prompt": "Допоможи повністю налаштувати модель для прогнозу відтоку клієнтів.",
+      "expected": "ml-tuning-workflow",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t24",
+      "prompt": "Є дані, немає ні моделі, ні метрики. З чого почати?",
+      "expected": "ml-tuning-workflow",
+      "acceptable_alt": "ml-task-framing"
+    },
+    {
+      "id": "t25",
+      "prompt": "Which metric should I optimise on a 2% positive-rate dataset?",
+      "expected": "ml-metric-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t26",
+      "prompt": "How do I pick the probability cutoff to guarantee 90% recall?",
+      "expected": "ml-decision-threshold",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t27",
+      "prompt": "My CV score went UP after adding random noise features. Is that good?",
+      "expected": "ml-overfitting-diagnosis",
+      "acceptable_alt": "ml-dimensionality-features"
+    },
+    {
+      "id": "t28",
+      "prompt": "Grid vs random vs Bayesian search for 8 hyperparameters?",
+      "expected": "ml-search-strategy",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t29",
+      "prompt": "Is gini or entropy better for my decision tree?",
+      "expected": "ml-tree-ensemble-params",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t30",
+      "prompt": "What loss should I train on for insurance claim amounts with many zeros?",
+      "expected": "ml-distribution-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n01",
+      "prompt": "Як змерджити два DataFrame у pandas за ключем?",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n02",
+      "prompt": "Напиши SQL-запит із LEFT JOIN і GROUP BY.",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n03",
+      "prompt": "Як задеплоїти FastAPI-застосунок у Docker?",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n04",
+      "prompt": "Поясни різницю між list і tuple у Python.",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n05",
+      "prompt": "Як виправити merge conflict у git?",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n06",
+      "prompt": "Прочитай Excel-файл із трьома аркушами в Python.",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n07",
+      "prompt": "Порадь хорошу книжку з машинного навчання.",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t31",
+      "prompt": "У мене купа даних про клієнтів, хочу щось передбачати, але навіть не знаю, що вважати одним рядком і що буде ціллю.",
+      "expected": "ml-task-framing",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t32",
+      "prompt": "Business asked me to 'build a model for churn' — where do I even start, what's the target?",
+      "expected": "ml-task-framing",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t33",
+      "prompt": "Обираю між логістичною регресією, Random Forest і градієнтним бустингом для табличних даних — як обґрунтувати вибір сімейства?",
+      "expected": "ml-model-selection",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t34",
+      "prompt": "Should I use a neural network or gradient boosting for this 50k-row tabular dataset?",
+      "expected": "ml-model-selection",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t35",
+      "prompt": "У мене повторні виміри тих самих пацієнтів у різні дні — як розбити на train/test, щоб не було витоку між ними?",
+      "expected": "ml-validation-design",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t36",
+      "prompt": "What K should I use for cross-validation, and is nested CV needed for an honest number here?",
+      "expected": "ml-validation-design",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t37",
+      "prompt": "Моя нейромережа взагалі не вчиться — loss не спадає жодну епоху. З чого почати?",
+      "expected": "nn-training-params",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t38",
+      "prompt": "How do I choose the learning rate and batch size for training my Keras model?",
+      "expected": "nn-training-params",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t39",
+      "prompt": "Тип задачі вже ясний — це бінарна класифікація відтоку. Яку модель узяти: логістичну, RF чи бустинг?",
+      "expected": "ml-model-selection",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t40",
+      "prompt": "Обрав градієнтний бустинг для табличних даних — тепер підкажи n_estimators і learning_rate.",
+      "expected": "ml-tree-ensemble-params",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t41",
+      "prompt": "У даних є групи — той самий клієнт трапляється кілька разів. Яку схему валідації використати: GroupKFold чи звичайний KFold?",
+      "expected": "ml-validation-design",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t42",
+      "prompt": "Схема валідації вже є (GroupKFold, 5 фолдів) — тепер обери Grid чи Random Search і бюджет.",
+      "expected": "ml-search-strategy",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t43",
+      "prompt": "Чи варто взагалі брати нейромережу для цієї табличної задачі на 500 рядках, чи краще градієнтний бустинг?",
+      "expected": "ml-model-selection",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t44",
+      "prompt": "Модель уже навчена, дає ймовірності — хочу підібрати поріг рішення.",
+      "expected": "ml-decision-threshold",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t45",
+      "prompt": "Скільки кластерів узяти для сегментації клієнтської бази?",
+      "expected": "ml-clustering-k",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t46",
+      "prompt": "Обираю між SARSA і Q-learning для навчання агента з небезпечним середовищем.",
+      "expected": "rl-hyperparameters",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t47",
+      "prompt": "Яку effort поставити для виклику Claude через API?",
+      "expected": "llm-parameter-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n08",
+      "prompt": "Напиши React-компонент форми логіну з валідацією полів.",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n09",
+      "prompt": "Explain what a REST API is and how HTTP verbs map to CRUD.",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t48",
+      "prompt": "Даних мало, а рішення дороге — хочу не точкову оцінку, а розподіл невизначеності параметра з пріором і постеріором. Як це зробити в PyMC?",
+      "expected": "ml-bayesian-inference",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t49",
+      "prompt": "My MCMC chains won't converge and I keep getting divergences — how do I diagnose what's wrong?",
+      "expected": "ml-bayesian-inference",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t50",
+      "prompt": "У мене вже є дві навчені PyMC-моделі з обчисленою log_likelihood — хочу порівняти їх через WAIC і обрати кращу.",
+      "expected": "ml-model-selection",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t51",
+      "prompt": "Яку правдоподібність обрати для лічильних даних із купою нулів — Пуассон чи негативний біноміальний?",
+      "expected": "ml-distribution-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t52",
+      "prompt": "У колонці доходу 18% пропусків. Видалити ці рядки чи імпутувати, і чим саме?",
+      "expected": "ml-missing-data",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t53",
+      "prompt": "Our dataset has NaNs scattered across several columns. How do we decide whether the missingness itself carries signal?",
+      "expected": "ml-missing-data",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t54",
+      "prompt": "Дані зібрані з 40 шкіл по 25 учнів у кожній. Чому довірчі інтервали, пораховані на 1000 рядках, надто вузькі?",
+      "expected": "ml-sampling-design",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t55",
+      "prompt": "We deliberately oversampled a rare region tenfold. Do I need to pass weights when fitting and when scoring?",
+      "expected": "ml-sampling-design",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t56",
+      "prompt": "Наша цільова змінна — витрати на лікування, але насправді нас цікавить тяжкість хвороби. Чи це проблема для моделі?",
+      "expected": "ml-label-quality",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t57",
+      "prompt": "Three annotators labelled our training set and raw percent agreement is 85%. Is that good enough to train on?",
+      "expected": "ml-label-quality",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t58",
+      "prompt": "Треба прогнозувати місячні продажі на 3 місяці вперед, є 4 роки історії. З якої моделі почати?",
+      "expected": "ml-forecasting-model",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t59",
+      "prompt": "Should I difference my series before fitting ARIMA, and how do I decide how many differences?",
+      "expected": "ml-forecasting-model",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t60",
+      "prompt": "У даних 40 шкіл. Який сплітер узяти, щоб одна школа не потрапила водночас у train і у val?",
+      "expected": "ml-validation-design",
+      "acceptable_alt": "ml-sampling-design"
+    },
+    {
+      "id": "t61",
+      "prompt": "Мітки про дефолт є лише по виданих кредитах — тим, кому відмовили, мітки немає. Чи можна на цьому вчити модель?",
+      "expected": "ml-task-framing",
+      "acceptable_alt": "ml-label-quality"
+    },
+    {
+      "id": "t62",
+      "prompt": "Чи підходить Cohen's kappa як метрика якості класифікатора при сильному дисбалансі?",
+      "expected": "ml-metric-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t63",
+      "prompt": "Що вважати відтоком — 30 днів без покупок чи 60? Від чого це залежить?",
+      "expected": "ml-task-framing",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t64",
+      "prompt": "Як побудувати backtest для часового ряду: які вікна брати і чи потрібен розрив між train і test?",
+      "expected": "ml-validation-design",
+      "acceptable_alt": "ml-forecasting-model"
+    },
+    {
+      "id": "t65",
+      "prompt": "У мене табличні дані, серед ознак є дата замовлення. Що взяти — випадковий ліс чи логістичну регресію?",
+      "expected": "ml-model-selection",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t66",
+      "prompt": "MAPE чи MASE брати для оцінки якості прогнозу продажів?",
+      "expected": "ml-forecasting-model",
+      "acceptable_alt": "ml-metric-choice"
+    },
+    {
+      "id": "t67",
+      "prompt": "Імп'ютер треба фітити на всьому датасеті чи всередині кожного фолду?",
+      "expected": "ml-missing-data",
+      "acceptable_alt": "ml-validation-design"
+    },
+    {
+      "id": "n10",
+      "prompt": "Як налаштувати GitHub Actions, щоб запускати тести на кожен пуш?",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "n11",
+      "prompt": "Which vector database should we pick for storing embeddings — Pinecone or pgvector?",
+      "expected": "none",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t79",
+      "prompt": "Чанки по 800 символів з перекриттям 100 — звідки ці числа і як підібрати їх для мого RAG?",
+      "expected": "llm-parameter-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t80",
+      "prompt": "RAG-бот вигадує відповіді. Правити промпт чи щось інше?",
+      "expected": "llm-parameter-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t81",
+      "prompt": "Виніс LLM-прототип із ноутбука в Docker і ngrok — що ще треба, щоб це був справжній прод?",
+      "expected": "llm-parameter-choice",
+      "acceptable_alt": null
+    },
+    {
+      "id": "t82",
+      "prompt": "Як розбити дані на train/test, щоб оцінка перенеслась у прод?",
+      "expected": "ml-validation-design",
+      "acceptable_alt": null,
+      "fixture_note": "Стрес-тест межі: llm-parameter-choice після додавання Кроку 6 містить слова eval/golden set/прод — не має красти загальний дизайн сплітів."
+    },
+    {
+      "id": "t83",
+      "prompt": "Яку метрику взяти для пошуку релевантних документів, якщо релевантних лише 2%?",
+      "expected": "ml-metric-choice",
+      "acceptable_alt": null,
+      "fixture_note": "Стрес-тест межі: лексика ретриву проти вибору метрики під дисбаланс."
+    },
+    {
+      "id": "t84",
+      "prompt": "Який базовий Docker-образ обрати для Python-застосунку і як зменшити його розмір?",
+      "expected": "none",
+      "acceptable_alt": null,
+      "fixture_note": "Негативний: Крок 6 llm-parameter-choice згадує Docker, але контейнеризація сама по собі поза зоною пака."
+    }
+  ]
 }

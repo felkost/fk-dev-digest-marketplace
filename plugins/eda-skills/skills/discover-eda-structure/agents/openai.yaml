@@ -9,8 +9,8 @@ interface:
     dimensionality-reduction, and time-series analyses; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true

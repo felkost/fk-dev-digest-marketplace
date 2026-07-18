@@ -4,8 +4,8 @@ interface:
   default_prompt: Use $ml-dimensionality-features to choose dimensionality reduction and feature selection with injected-noise canaries; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true

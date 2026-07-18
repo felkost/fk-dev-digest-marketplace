@@ -4,8 +4,8 @@ interface:
   default_prompt: Use $nn-training-params to set neural network training hyperparameters — learning rate threshold procedure, early stopping, batch size, regularization; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true

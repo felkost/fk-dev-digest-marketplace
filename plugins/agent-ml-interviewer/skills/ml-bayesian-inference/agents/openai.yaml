@@ -4,8 +4,8 @@ interface:
   default_prompt: Use $ml-bayesian-inference to run the Bayesian inference workflow — prior choice, PyMC/MCMC, convergence diagnostics, posterior predictive checks, credible intervals; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true

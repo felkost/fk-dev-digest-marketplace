@@ -4,8 +4,8 @@ interface:
   default_prompt: Use $ml-sampling-design to turn the sampling scheme into modelling consequences — target population versus frame, strata and clusters, sampling and non-response weights, getting weights into fit AND the metric via metadata routing, design effect and effective n; answer in Ukrainian.
 policy:
   products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+    - chatgpt
+    - codex
+    - api
+    - atlas
   allow_implicit_invocation: true
