@@ -86,6 +86,24 @@
         "openrouter",
         "langgraph"
       ]
+    },
+    {
+      "name": "agent-database",
+      "source": "./plugins/agent-database",
+      "description": "Teacher/analyst agent with 7 linked skills for database coursework: task-condition analysis, SQL/CQL review across six dialects, SQLite and MongoDB, connectivity and cloud, vector databases, ETL and lakehouse, DWH design, and BI analytics. Content is in Ukrainian — quarantined from the marketplace's English-only content checks (see validate-marketplace.mjs).",
+      "category": "knowledge",
+      "keywords": [
+        "sql",
+        "postgresql",
+        "mysql",
+        "clickhouse",
+        "mongodb",
+        "data-warehouse",
+        "etl",
+        "lakehouse",
+        "vector-database",
+        "power-bi"
+      ]
     }
   ],
   "renames": {}

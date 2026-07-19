@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-19T12:56:43.046Z",
+  "generatedAt": "2026-07-19T13:21:44.567Z",
   "marketplace": {
     "name": "fk-dev-digest-marketplace",
     "displayName": "Dev Digest",
@@ -496,6 +496,78 @@
         {
           "name": "ai-gen-mentor",
           "description": "Senior generative-AI developer and mentor. Analyzes a task statement and justifies which model class fits (generative, computer vision, tree-based, regression, time series, deep learning architecture), designs LLM/VLM/agent systems (ReAct, RAG, multi-agent, human-in-the-loop) with MCP tools, short/long-term memory and vector databases, advises on OpenRouter model choice, deployment (local, Docker, AWS, GCP, Azure), evaluation and token/latency/cost optimization, and builds worked examples on Python + LangChain/LangGraph + Docker + React 19 with OpenRouter and Tavily. Explains every recommendation with trade-offs and risks, mentors rather than dictates. Responds in Ukrainian unless asked otherwise.",
+          "model": "inherit"
+        }
+      ],
+      "commands": [],
+      "hookEvents": []
+    },
+    {
+      "name": "agent-database",
+      "displayName": "Database Mentor",
+      "version": "1.0.0",
+      "description": "Teacher/analyst agent with 7 linked skills for database coursework: task-condition analysis, SQL/CQL example review across MySQL, MS SQL (T-SQL), PostgreSQL, PL/pgSQL, Cassandra (CQL) and ClickHouse, query building in SQLite and MongoDB, Python/Docker/AWS/GCP/Azure connectivity with GraphQL, Redis and vector databases (pgvector, ANN, RAG), ETL and lakehouse projects (Delta Lake, Databricks, AWS Glue), DWH schema design to DMBOK/Kimball standards with data quality, and BI analytics in Power BI and Tableau. Every answer follows a fixed 7-block output contract with grading criteria. Skill content and worked examples are in Ukrainian.",
+      "category": "knowledge",
+      "keywords": [
+        "sql",
+        "postgresql",
+        "mysql",
+        "tsql",
+        "clickhouse",
+        "cassandra",
+        "sqlite",
+        "mongodb",
+        "data-warehouse",
+        "etl",
+        "lakehouse",
+        "delta-lake",
+        "vector-database",
+        "power-bi",
+        "tableau",
+        "teaching",
+        "ukrainian"
+      ],
+      "author": {
+        "name": "Fel Kost",
+        "email": "teacherfkv@gmail.com"
+      },
+      "license": "MIT",
+      "repository": null,
+      "dependencies": [],
+      "skills": [
+        {
+          "name": "analyze-sql-examples",
+          "description": "Review an existing SQL or CQL query for a specific dialect — MySQL, Microsoft SQL Server (T-SQL), PostgreSQL, PL/pgSQL, Cassandra (CQL), or ClickHouse. Use when the user supplies a query and it must be judged for correctness, scanned for errors (semantic ones included), explained in terms of dialect-specific behaviour, risks, and performance, or rewritten as a corrected reference solution. Always cross-check against the shared catalogue of common cross-dialect mistakes. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "analyze-task-conditions",
+          "description": "Analyze a database task statement (exercise, homework, or interview problem) before writing any query. Use when the user supplies the text of a task and the goal, input tables and schema, expected result, constraints, edge cases, target DBMS, and grading criteria must be extracted from it, or when the statement is incomplete and business-analysis elicitation techniques (BABOK) are needed to close the gaps. DBMS-agnostic stage that precedes writing the solution. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "bi-analytics",
+          "description": "Analyze and visualize data in Power BI and Tableau on top of databases. Use when the user asks about Power Query (M) and data preparation, the Power BI data model (star schema, relationships, Import vs DirectQuery, many-to-many and bridge tables, role-playing dimensions, aggregations), measures and DAX (CALCULATE, filter/row context and context transition, time intelligence, why a measure shows the wrong numbers), Python/R inside Power BI, connecting Power BI or Tableau to PostgreSQL/MySQL/ClickHouse, Tableau (Live vs Extract, LOD expressions, dashboard design), or which BI tool to choose. Explains the whole chain: database/DWH to model to visualization. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "build-data-projects",
+          "description": "Explain how to get from standalone SQL queries to a real application or project — an ETL/analytics pipeline, a data mart, a data service. Use when the user asks how to build an end-to-end project on a database, how to do ETL (pull from an API, transform, load into PostgreSQL, feed a BI dashboard), how to set up incremental report refresh, whether to use SQL or Python, how to read real analytics/ETL repositories as examples, or about the lakehouse stack — Delta Lake, Databricks, Spark, AWS Glue/Athena, Parquet/ORC formats, partitioning and file compaction in a data lake. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "db-connectivity-cloud",
+          "description": "Connect to databases from Python, run them locally in Docker, deploy them on managed cloud services (AWS, Google Cloud, Azure), and put a basic GraphQL layer on top. Use when the user asks about Python drivers and libraries for MySQL, PostgreSQL, MS SQL, Cassandra, ClickHouse, SQLite, or MongoDB, about connection strings, pooling, or secret storage, about running databases in containers, about picking a managed cloud service (RDS/Aurora, Cloud SQL, Azure SQL, DynamoDB, Cosmos DB and the like), about a GraphQL layer over a database, about Redis as a cache or key-value store beside the main database, or about vector databases — embeddings, semantic search, ANN indexes (HNSW/IVF), pgvector, RAG, and the vector capabilities of the course DBMSs. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "design-dwh-etl",
+          "description": "Design database and data-warehouse schemas to recognised standards (DAMA-DMBOK, Kimball/Inmon), and build ETL/ELT processes with data-quality control. Use when the user asks how to design a database or DWH schema for a business process, how to choose between star, snowflake, and Data Vault, how to fix facts, dimensions, and grain, whether to use ETL or ELT, how to design a pipeline with CDC, incremental loads, or streaming, how to organise conceptual/logical/physical model layers, or how to verify data quality (profiling, business rules, metrics and thresholds, quarantine, root-cause analysis). DDL examples are given for PostgreSQL, MySQL, and ClickHouse. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "explain-sqlite-mongodb",
+          "description": "Teach how SQLite and MongoDB work and build queries in them from scratch. Use when the user asks how to construct a query in SQLite (embedded SQL database) or MongoDB (document database), how either one is designed internally, how to map familiar SQL onto a MongoDB aggregation pipeline, or asks for a teaching explanation with worked examples and common mistakes. Unlike reviewing an existing query, the emphasis here is on teaching and building the query step by step. Respond in Ukrainian unless the user requests another language."
+        }
+      ],
+      "agents": [
+        {
+          "name": "sql-mentor",
+          "description": "Database teacher and analyst. Use when the user supplies a database task statement, an SQL/CQL query to review, or asks how to write queries in SQLite or MongoDB, how to connect to a database from Python, how to run one in Docker or deploy it to the cloud (AWS/GCP/Azure), about a basic GraphQL layer over a database, how to build a real ETL/analytics project or a lakehouse (Delta Lake, Databricks, AWS Glue), how to design a database or DWH schema to standards (star schema, DMBOK, ETL/ELT, CDC), about vector databases and semantic search (embeddings, pgvector, RAG), or how to analyze data in Power BI/Tableau (Power Query, DAX, LOD). Covers MySQL, Microsoft SQL Server (T-SQL), PostgreSQL, PL/pgSQL, Cassandra (CQL), ClickHouse, SQLite, and MongoDB. Answers follow a fixed seven-block output contract. Responds in Ukrainian unless the user requests another language.",
           "model": "inherit"
         }
       ],
