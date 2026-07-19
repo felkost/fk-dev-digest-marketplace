@@ -9,6 +9,7 @@
 | Soft / overlapping segments | Gaussian Mixture | ellipsoidal overlapping groups, membership probabilities, `k` via BIC/AIC | very large data, plainly spherical clusters, tight compute |
 | Density + noise | DBSCAN / HDBSCAN / OPTICS | arbitrary shapes with a meaningful noise class | strongly varying density (plain DBSCAN) |
 | Compression / decorrelation | PCA | many correlated numeric features, denoising, reproducibility | raw-feature interpretability matters, nonlinear structure, very few features |
+| Latent construct behind a block | Common factor model (PAF) | the columns are indicators of something unobserved and the loadings will be interpreted | you only need compression — then PCA, see `factor-structure.md` |
 | Source separation | ICA | signal-like data (sensors, EEG, audio mixtures), statistically independent non-Gaussian sources | Gaussian components (unidentifiable); component order/sign/scale is arbitrary — interpret by content, not index |
 | Supervised projection | LDA | class separation for classification | regression, single class, strong imbalance — fit **inside the fold only**, never as unsupervised EDA |
 
@@ -85,7 +86,7 @@ Use for nested exploration or moderate data size. Choose linkage to match the di
 
 ## Dimensionality reduction
 
-- PCA: inspect explained variance, loadings, reconstruction error, and stability; standardize when units should have equal influence.
+- PCA: inspect explained variance, loadings, reconstruction error, and stability; standardize when units should have equal influence. PCA is **not** the common factor model — it assumes no measurement error and inflates loadings (a true 0.40 indicator reads 0.5023; inflation +0.1602 on a 3-column block). When the columns are indicators of an unobserved construct and the loadings will be interpreted, use `factor_analysis.py`; see `factor-structure.md`, which also has the measured case for parallel analysis over the eigenvalue>1 rule and for oblique over orthogonal rotation.
 - ICA: independent (not merely uncorrelated) components for mixed signals; requires non-Gaussian sources, and recovered components have arbitrary order/sign/scale — validate against known source semantics.
 - Truncated SVD: sparse counts/TF-IDF; components still need semantic review.
 - MCA/FAMD: categorical/mixed data; inspect category contributions.

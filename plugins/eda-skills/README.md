@@ -354,7 +354,7 @@ selection, sampling, diagnostic, dataset card) — див. `plan-eda-dataset/scr
 ## Перевірка, що все працює
 
 ```bash
-python tests/smoke_test.py     # 71/71 перевірок leakage-safe інваріантів
+python tests/smoke_test.py     # 76/76 перевірок leakage-safe інваріантів
 ```
 
 Розповсюджувані архіви кожного скіла — у `dist/`.
