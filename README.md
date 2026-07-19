@@ -25,13 +25,14 @@ sdd-engineering@1.0.0
 ```
 
 You can also install any plugin standalone — `engineering-paved-path` and `research-tools` have
-no dependencies; `architecture-review` depends only on `engineering-paved-path`. `agent-ml-interviewer`
-and `eda-skills` are standalone too:
+no dependencies; `architecture-review` depends only on `engineering-paved-path`. `agent-ml-interviewer`,
+`eda-skills`, and `ai-gen` are standalone too:
 
 ```
 /plugin marketplace add felkost/fk-dev-digest-marketplace
 /plugin install agent-ml-interviewer@fk-dev-digest-marketplace
 /plugin install eda-skills@fk-dev-digest-marketplace
+/plugin install ai-gen@fk-dev-digest-marketplace
 ```
 
 To make the marketplace available to your whole team automatically, add it to your project's
@@ -60,9 +61,11 @@ To make the marketplace available to your whole team automatically, add it to yo
 | [`sdd-engineering`](plugins/sdd-engineering/README.md) | The full spec → plan → implement → verify → retro pipeline: 5 agents, 5 skills, 1 command, 1 hook | `engineering-paved-path`, `research-tools`, `architecture-review` |
 | [`agent-ml-interviewer`](plugins/agent-ml-interviewer/README.md) | 21 decision-procedure skills for classical ML, Bayesian inference, forecasting, and LLM/RL parameter choice | — |
 | [`eda-skills`](plugins/eda-skills/README.md) | 4 linked skills that turn raw data into a documented, leakage-safe, validated dataset | — |
+| [`ai-gen`](plugins/ai-gen/README.md) | Senior-developer/mentor agent + 6 linked skills for generative-AI engineering: model-class choice, OpenRouter selection, agent architectures, deployment, evaluation, worked examples | — |
 
-`agent-ml-interviewer` and `eda-skills` are vendored as-is from a Ukrainian-language course project —
-see [Note on Ukrainian-language plugins](#note-on-ukrainian-language-plugins).
+`agent-ml-interviewer` and `eda-skills` are vendored as-is from a Ukrainian-language course project;
+`ai-gen` continues that Ukrainian-language line — see
+[Note on Ukrainian-language plugins](#note-on-ukrainian-language-plugins).
 
 ## Dependency graph
 
@@ -113,10 +116,11 @@ first release, because they need network access or credentials this repository d
 
 ## Note on Ukrainian-language plugins
 
-`agent-ml-interviewer` and `eda-skills` were merged in from a separate course project and are
-written in Ukrainian (SKILL.md bodies, README, HANDOFF). Each plugin's own `SKILL.md` frontmatter
+`agent-ml-interviewer` and `eda-skills` were merged in from a separate course project, and
+`ai-gen` was authored directly in this repo following the same conventions; all three are
+written in Ukrainian (SKILL.md bodies, README). Each plugin's own `SKILL.md` frontmatter
 (`name`/`description` — what the catalog site and Claude's skill matching actually read) is in
-English; only the prose body is not. `scripts/validate-marketplace.mjs` quarantines both plugin
+English; only the prose body is not. `scripts/validate-marketplace.mjs` quarantines these plugin
 names out of the repo's usual English-only / no-Cyrillic content checks (see `QUARANTINED_PLUGINS`
 in that script) rather than requiring a translation. Each also ships its own `chatgpt/` + `dist/`
 folder for a separate custom-GPT packaging pipeline unrelated to Claude Code; the root `.gitignore`'s

@@ -1,0 +1,27 @@
+{
+  "name": "ai-gen",
+  "displayName": "AI Gen Advisor",
+  "version": "0.0.1",
+  "description": "Senior-developer/mentor agent with 6 linked skills for generative-AI engineering: task-to-model-class selection (generative, CV, trees, regression, time series, deep learning), LLM/VLM/encoder landscape and OpenRouter model choice, agent architectures (ReAct, RAG, multi-agent, human-in-the-loop) with MCP tools, memory and vector databases, deployment on local/Docker/AWS/GCP/Azure, model evaluation and token/latency/cost optimization, and worked examples on Python + LangChain/LangGraph + Docker + React 19 with OpenRouter and Tavily. Skill content and worked examples are in Ukrainian.",
+  "author": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "generative-ai",
+    "llm",
+    "vlm",
+    "rag",
+    "react-agent",
+    "multi-agent",
+    "mcp",
+    "vector-database",
+    "openrouter",
+    "langchain",
+    "langgraph",
+    "evaluation",
+    "deployment",
+    "ukrainian"
+  ]
+}

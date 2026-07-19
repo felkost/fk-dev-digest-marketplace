@@ -1,0 +1,12 @@
+interface:
+  display_name: "Планувальник AI-рішення"
+  short_description: "Обирає клас моделі та планує AI-систему"
+  default_prompt: Use $plan-ai-solution to analyze the task, justify the model class, and plan
+    the AI system; answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true

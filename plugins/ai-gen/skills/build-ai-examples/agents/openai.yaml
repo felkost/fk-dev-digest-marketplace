@@ -1,0 +1,12 @@
+interface:
+  display_name: "Робочі AI-приклади"
+  short_description: "Python+LangGraph+Docker+React 19, OpenRouter+Tavily"
+  default_prompt: Use $build-ai-examples to build a runnable example app on the reference stack
+    (LangGraph + OpenRouter + Tavily + React 19); answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true

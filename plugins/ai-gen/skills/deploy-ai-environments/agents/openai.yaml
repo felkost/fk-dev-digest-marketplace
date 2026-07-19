@@ -1,0 +1,12 @@
+interface:
+  display_name: "Розгортання AI-середовищ"
+  short_description: "Локально, Docker, AWS/GCP/Azure"
+  default_prompt: Use $deploy-ai-environments to set up local/Docker/cloud environments for the
+    AI app with secrets and cost guardrails; answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true

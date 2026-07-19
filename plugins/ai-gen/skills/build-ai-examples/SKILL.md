@@ -1,0 +1,53 @@
+---
+name: build-ai-examples
+description: Build worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
+---
+
+# Робочі приклади застосунків
+
+Показувати «як» кодом, що запускається: еталонний стек — **Python + LangChain/LangGraph +
+Docker + React 19** (+ бібліотеки візуалізації Python), моделі через **OpenRouter**, веб-пошук
+через **Tavily**. Кожен приклад пояснює, що робить кожна частина і що змінити для продакшену.
+
+## Довідки
+
+- [references/stack-langgraph-openrouter.md](references/stack-langgraph-openrouter.md) —
+  бекенд: структура проєкту, LangGraph-агент з інструментом Tavily поверх OpenRouter,
+  FastAPI зі стрімінгом, Docker/compose.
+- [references/react19-frontend.md](references/react19-frontend.md) — фронтенд: React 19 чат зі
+  стрімінгом токенів, обробка станів агента, безпека ключів (ключі лише на бекенді).
+- [references/python-visualization.md](references/python-visualization.md) — візуалізація для
+  AI-задач: криві якості eval, вартість/латентність, embedding-проєкції; matplotlib/plotly/
+  seaborn — коли що.
+
+## Обов'язкові правила
+
+- **Приклад мусить запускатись**: повні файли з імпортами й командою запуску, не фрагменти в
+  вакуумі; версії залежностей пінити; `.env.example` з переліком потрібних ключів
+  (`OPENROUTER_API_KEY`, `TAVILY_API_KEY`) — без значень.
+- **Ключі лише на бекенді**: фронтенд ніколи не тримає API-ключів і не викликає OpenRouter/
+  Tavily напряму; браузер розмовляє лише з власним бекендом.
+- **Кожен приклад — з розділом «що змінити для продакшену»**: ліміти, ретраї, логування,
+  таймаути, оцінка якості (посилання на `evaluate-optimize-models`).
+- Пояснювати вибір: чому LangGraph, а не ланцюжок викликів; чому стрімінг; чому цей патерн
+  агента (посилання на `design-agent-architecture`).
+
+## Типовий маршрут прикладу
+
+1. **Скелет**: `backend/` (FastAPI + LangGraph), `frontend/` (Vite + React 19),
+   `docker-compose.yml`, `.env.example` — за
+   [references/stack-langgraph-openrouter.md](references/stack-langgraph-openrouter.md).
+2. **Агент**: модель з OpenRouter (`ChatOpenAI` з `base_url`), інструмент Tavily, LangGraph
+   ReAct-граф з лімітом ітерацій; спершу перевірити агент у консолі, потім вішати HTTP.
+3. **API**: один POST-ендпоінт зі стрімінгом (SSE); health-check; CORS лише на свій фронтенд.
+4. **UI**: React 19 чат зі стрімінгом, індикатором кроків агента (які інструменти викликано)
+   — за [references/react19-frontend.md](references/react19-frontend.md).
+5. **Візуалізація**: якщо приклад аналітичний — графіки якості/вартості за
+   [references/python-visualization.md](references/python-visualization.md).
+6. **Перевірка**: `docker compose up` → тестовий запит → показати результат користувачеві.
+
+## Межі
+
+- Приклади демонструють патерн, а не заміняють проєктування: вибір моделі —
+  `select-genai-models`, архітектура — `design-agent-architecture`, продакшн-розгортання —
+  `deploy-ai-environments`, метрики — `evaluate-optimize-models`.

@@ -1,0 +1,12 @@
+interface:
+  display_name: "Оцінка та оптимізація моделей"
+  short_description: "Метрики якості; токени, час, вартість"
+  default_prompt: Use $evaluate-optimize-models to design evaluation and optimize tokens, latency
+    and cost with before/after measurement; answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true

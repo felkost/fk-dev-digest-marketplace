@@ -1,0 +1,12 @@
+interface:
+  display_name: "Архітектура агентів"
+  short_description: "ReAct/RAG/multi-agent, MCP, пам'ять, векторні БД"
+  default_prompt: Use $design-agent-architecture to design the agent system (pattern choice, MCP
+    tools, memory, vector DB) with risks named; answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true

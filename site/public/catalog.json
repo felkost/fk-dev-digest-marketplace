@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-18T21:47:42.240Z",
+  "generatedAt": "2026-07-19T12:56:43.046Z",
   "marketplace": {
     "name": "fk-dev-digest-marketplace",
     "displayName": "Dev Digest",
@@ -434,6 +434,71 @@
         }
       ],
       "agents": [],
+      "commands": [],
+      "hookEvents": []
+    },
+    {
+      "name": "ai-gen",
+      "displayName": "AI Gen Advisor",
+      "version": "0.0.1",
+      "description": "Senior-developer/mentor agent with 6 linked skills for generative-AI engineering: task-to-model-class selection (generative, CV, trees, regression, time series, deep learning), LLM/VLM/encoder landscape and OpenRouter model choice, agent architectures (ReAct, RAG, multi-agent, human-in-the-loop) with MCP tools, memory and vector databases, deployment on local/Docker/AWS/GCP/Azure, model evaluation and token/latency/cost optimization, and worked examples on Python + LangChain/LangGraph + Docker + React 19 with OpenRouter and Tavily. Skill content and worked examples are in Ukrainian.",
+      "category": "knowledge",
+      "keywords": [
+        "generative-ai",
+        "llm",
+        "vlm",
+        "rag",
+        "react-agent",
+        "multi-agent",
+        "mcp",
+        "vector-database",
+        "openrouter",
+        "langchain",
+        "langgraph",
+        "evaluation",
+        "deployment",
+        "ukrainian"
+      ],
+      "author": {
+        "name": "Fel Kost",
+        "email": "teacherfkv@gmail.com"
+      },
+      "license": "MIT",
+      "repository": null,
+      "dependencies": [],
+      "skills": [
+        {
+          "name": "build-ai-examples",
+          "description": "Build worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, and visualizing agent/eval results with matplotlib/plotly. Use for \"show me a working example\", demo app scaffolds, LangGraph agent code, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "deploy-ai-environments",
+          "description": "Set up and deploy environments for running models and agent applications — locally, in Docker, and on AWS, Google Cloud, or Azure. Covers local inference (Ollama/vLLM class), containerizing Python agent apps, choosing between serverless, container services and GPU instances in each cloud, secrets and API-key hygiene, and cost guardrails. Use for \"how do I run this locally\", Docker setup for LLM apps, cloud deployment choice, and environment configuration best practices. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "design-agent-architecture",
+          "description": "Design LLM/agent system architecture with explicit trade-offs and risks. Covers ReAct, RAG, multi-agent, and human-in-the-loop (agent-in-the-loop) patterns, connecting models to MCP servers and tools, short-term and long-term memory design, and vector databases for retrieval. Use for agent architecture decisions, RAG pipeline design, tool integration via MCP, memory/state design, and vector store selection. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "evaluate-optimize-models",
+          "description": "Measure model quality correctly and optimize efficiency. Covers choosing evaluation metrics per task class (generation, classification, retrieval, agents), building eval sets, LLM-as-judge with its biases, and optimizing tokens, latency, cost and throughput (prompt budgeting, caching, batching, model right-sizing, quantization). Use for \"how do I know it works\", eval design, quality regressions, token/cost reduction, and latency tuning. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "plan-ai-solution",
+          "description": "Orchestrate the design of an AI solution end to end. Analyze a task statement and justify which model class fits — generative (LLM/VLM), computer vision, tree-based, regression, time series, or a deep-learning architecture — then plan the system and coordinate the companion skills select-genai-models, design-agent-architecture, deploy-ai-environments, evaluate-optimize-models, and build-ai-examples. Use for \"which model should I use\", solution architecture plans, AI feasibility analysis, and session handoff. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "select-genai-models",
+          "description": "Choose concrete generative models and their combinations. Covers the LLM/VLM/transformer/encoder landscape, build-vs-use decision (train, fine-tune, or use a ready model), selecting models from the OpenRouter catalog by task, quality, context, latency and price, and combining models (encoder + generator, router + specialists, draft + verifier). Use for \"which LLM should I pick\", model comparison, fine-tune vs prompt decisions, and OpenRouter model selection. Respond in Ukrainian unless the user requests another language."
+        }
+      ],
+      "agents": [
+        {
+          "name": "ai-gen-mentor",
+          "description": "Senior generative-AI developer and mentor. Analyzes a task statement and justifies which model class fits (generative, computer vision, tree-based, regression, time series, deep learning architecture), designs LLM/VLM/agent systems (ReAct, RAG, multi-agent, human-in-the-loop) with MCP tools, short/long-term memory and vector databases, advises on OpenRouter model choice, deployment (local, Docker, AWS, GCP, Azure), evaluation and token/latency/cost optimization, and builds worked examples on Python + LangChain/LangGraph + Docker + React 19 with OpenRouter and Tavily. Explains every recommendation with trade-offs and risks, mentors rather than dictates. Responds in Ukrainian unless asked otherwise.",
+          "model": "inherit"
+        }
+      ],
       "commands": [],
       "hookEvents": []
     }

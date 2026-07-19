@@ -1,0 +1,12 @@
+interface:
+  display_name: "Вибір GenAI-моделей"
+  short_description: "Обирає LLM/VLM/енкодери та їх поєднання"
+  default_prompt: Use $select-genai-models to choose concrete models (build vs use, OpenRouter
+    catalog, combinations) with justification; answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true
