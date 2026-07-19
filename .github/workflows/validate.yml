@@ -42,20 +42,22 @@ jobs:
         id: install_cli
         # Best-effort: the official validator is a stronger check than the linter above, but this
         # step depends on an external package staying installable on the runner. If it ever
-        # becomes flaky, this step is intentionally non-blocking (continue-on-error below) — the
-        # marketplace linter above is the CI-authoritative gate; `claude plugin validate` stays a
-        # required LOCAL check before every release (see CONTRIBUTING.md).
+        # becomes flaky, this step is intentionally non-blocking (continue-on-error below) and the
+        # validate step below is skipped, leaving the marketplace linter above as the gate. When
+        # the CLI *does* install, the validate step is blocking (see CONTRIBUTING.md).
         continue-on-error: true
         run: npm install -g @anthropic-ai/claude-code
 
       - name: claude plugin validate (marketplace + every plugin)
         if: steps.install_cli.outcome == 'success'
-        continue-on-error: true
-        run: |
-          claude plugin validate . --strict
-          for d in plugins/*/; do
-            claude plugin validate "$d" --strict
-          done
+        # Blocking on purpose. The wrapper runs `claude plugin validate --strict` over the
+        # marketplace and every plugin, then drops exactly one known-accepted warning (a CLAUDE.md
+        # at a plugin root, and only where that file actually exists — see CONTRIBUTING.md).
+        # A bare --strict loop is permanently red for the four plugins that carry one, which is
+        # why this step used to be continue-on-error — and that masked real findings. Tolerance
+        # for a flaky CLI install stays where it belongs: on the install step above, which this
+        # step is gated on.
+        run: node scripts/validate-plugins.mjs
 
       - name: Install eval dependencies
         working-directory: evals

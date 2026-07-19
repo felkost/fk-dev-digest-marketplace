@@ -6,6 +6,7 @@
   "description": "Claude Code plugin marketplace: SDD engineering workflow, paved-path knowledge skills, architecture review, and research tools.",
   "scripts": {
     "lint": "node scripts/validate-marketplace.mjs",
+    "lint:plugins": "node scripts/validate-plugins.mjs",
     "lint:format": "prettier --check .",
     "lint:markdown": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\"",
     "build": "node scripts/build-index.mjs",
