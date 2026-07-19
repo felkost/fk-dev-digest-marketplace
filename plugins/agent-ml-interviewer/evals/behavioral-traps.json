@@ -3,7 +3,10 @@
     {
       "id": "b1",
       "skill": "llm-parameter-choice",
-      "files": ["llm-parameter-choice/SKILL.md", "llm-parameter-choice/references/api-2026.md"],
+      "files": [
+        "llm-parameter-choice/SKILL.md",
+        "llm-parameter-choice/references/api-2026.md"
+      ],
       "prompt": "Я викликаю Claude Opus 4.8 через API. Яку temperature і top_p поставити для збалансованої креативності? Дай конкретні значення і фрагмент коду виклику.",
       "correct_any": [
         "видален",
@@ -14,24 +17,36 @@
         "effort",
         "adaptive"
       ],
-      "wrong_any": ["temperature\\s*[=:]\\s*0?\\.\\d", "top_p\\s*[=:]\\s*0?\\.\\d"],
+      "wrong_any": [
+        "temperature\\s*[=:]\\s*0?\\.\\d",
+        "top_p\\s*[=:]\\s*0?\\.\\d"
+      ],
       "note": "на Opus 4.8 temperature/top_p видалені -> 400; правильно вести до effort/thinking"
     },
     {
       "id": "b2",
       "skill": "ml-decision-threshold",
-      "files": ["ml-decision-threshold/SKILL.md", "ml-decision-threshold/references/api-2026.md"],
+      "files": [
+        "ml-decision-threshold/SKILL.md",
+        "ml-decision-threshold/references/api-2026.md"
+      ],
       "prompt": "Маю навчений класифікатор sklearn і хочу підібрати поріг ймовірності, що максимізує balanced accuracy. Напиши код.",
-      "correct_any": ["TunedThresholdClassifierCV"],
+      "correct_any": [
+        "TunedThresholdClassifierCV"
+      ],
       "wrong_any": [],
       "note": "канон sklearn>=1.5 замість ручного перебору roc_curve"
     },
     {
       "id": "b3",
       "skill": "ml-search-strategy",
-      "files": ["ml-search-strategy/references/api-2026.md"],
+      "files": [
+        "ml-search-strategy/references/api-2026.md"
+      ],
       "prompt": "Напиши приклад створення Optuna study з TPESampler, налаштованим під відтворюваність і спільний розподіл параметрів (версія Optuna 4.9).",
-      "correct_any": ["TPESampler"],
+      "correct_any": [
+        "TPESampler"
+      ],
       "wrong_any": [
         "gamma\\s*=",
         "\\bweights\\s*=",
@@ -45,10 +60,16 @@
     {
       "id": "b4",
       "skill": "ml-tree-ensemble-params",
-      "files": ["ml-tree-ensemble-params/references/api-2026.md"],
+      "files": [
+        "ml-tree-ensemble-params/references/api-2026.md"
+      ],
       "prompt": "Дай стартову конфігурацію GradientBoostingRegressor у сучасному sklearn з усіма важливими параметрами, включно з критерієм розбиття.",
-      "correct_any": ["GradientBoosting"],
-      "wrong_any": ["criterion\\s*=\\s*['\\\"]friedman_mse"],
+      "correct_any": [
+        "GradientBoosting"
+      ],
+      "wrong_any": [
+        "criterion\\s*=\\s*['\\\"]friedman_mse"
+      ],
       "note": "criterion deprecated (1.9)"
     },
     {
@@ -59,36 +80,59 @@
         "ml-linear-regularization/references/api-2026.md"
       ],
       "prompt": "Напиши код розрахунку VIF для матриці ознак X (pandas DataFrame) через statsmodels.",
-      "correct_any": ["add_constant"],
+      "correct_any": [
+        "add_constant"
+      ],
       "wrong_any": [],
       "note": "без add_constant VIF тихо хибний (17.6 замість 1.0)"
     },
     {
       "id": "b6",
       "skill": "ml-decision-threshold",
-      "files": ["ml-decision-threshold/SKILL.md", "ml-decision-threshold/references/api-2026.md"],
+      "files": [
+        "ml-decision-threshold/SKILL.md",
+        "ml-decision-threshold/references/api-2026.md"
+      ],
       "prompt": "Мені потрібні калібровані ймовірності від SVC у sklearn. Як їх отримати правильно в актуальній версії?",
-      "correct_any": ["CalibratedClassifierCV"],
+      "correct_any": [
+        "CalibratedClassifierCV"
+      ],
       "wrong_any": [],
       "note": "SVC(probability=True) застаріле"
     },
     {
       "id": "b7",
       "skill": "ml-metric-choice",
-      "files": ["ml-metric-choice/SKILL.md"],
+      "files": [
+        "ml-metric-choice/SKILL.md"
+      ],
       "prompt": "Порівнюю два детектори шахрайства на датасеті з 1% позитивних. Яку одну криву/метрику взяти для порівняння і чому?",
-      "correct_any": ["PR[- ]?AUC", "average.?precision", "precision.?recall"],
+      "correct_any": [
+        "PR[- ]?AUC",
+        "average.?precision",
+        "precision.?recall"
+      ],
       "wrong_any": [],
       "note": "при величезному TN ROC маскує різницю"
     },
     {
       "id": "b8",
       "skill": "ml-tree-ensemble-params",
-      "files": ["ml-tree-ensemble-params/references/api-2026.md"],
+      "files": [
+        "ml-tree-ensemble-params/references/api-2026.md"
+      ],
       "prompt": "Створи AdaBoostClassifier зі слабким учнем-пеньком глибини 1 у сучасному sklearn. Покажи точний виклик з усіма параметрами, які варто задати явно.",
-      "correct_any": ["estimator\\s*="],
-      "wrong_any": ["base_estimator\\s*=", "algorithm\\s*="],
-      "negation_extra": ["прибер", "прибрат"],
+      "correct_any": [
+        "estimator\\s*="
+      ],
+      "wrong_any": [
+        "base_estimator\\s*=",
+        "algorithm\\s*="
+      ],
+      "negation_extra": [
+        "прибер",
+        "прибрат"
+      ],
       "note": "base_estimator видалено; у 1.9 БУДЬ-ЯКИЙ algorithm= кидає TypeError, тому маркер ловить параметр цілком, а не лише SAMME.R (до 2026-07-18 ловив лише SAMME.R — базлайн з algorithm='SAMME' діставав хибний PASS)"
     },
     {
@@ -135,25 +179,40 @@
     {
       "id": "b11",
       "skill": "nn-training-params",
-      "files": ["nn-training-params/SKILL.md", "nn-training-params/references/api-2026.md"],
+      "files": [
+        "nn-training-params/SKILL.md",
+        "nn-training-params/references/api-2026.md"
+      ],
       "prompt": "Налаштуй у Keras callback EarlyStopping, щоб навчання зупинялось, коли валідаційна похибка перестає покращуватись, і щоб МОДЕЛЯ ПІСЛЯ ЗУПИНКИ мала ваги саме найкращої епохи, а не останньої. Покажи точний виклик.",
-      "correct_any": ["restore_best_weights\\s*=\\s*True"],
+      "correct_any": [
+        "restore_best_weights\\s*=\\s*True"
+      ],
       "wrong_any": [],
       "note": "restore_best_weights НЕ дефолт у Keras 3.12 EarlyStopping; без нього лишаються ваги останньої, а не найкращої епохи"
     },
     {
       "id": "b12",
       "skill": "ml-model-selection",
-      "files": ["ml-model-selection/SKILL.md", "ml-model-selection/references/api-2026.md"],
+      "files": [
+        "ml-model-selection/SKILL.md",
+        "ml-model-selection/references/api-2026.md"
+      ],
       "prompt": "У мене таблиця з категоріальними колонками і пропущеними значеннями. Який найшвидший спосіб натренувати градієнтний бустинг у sklearn БЕЗ ручного кодування категорій і без ручної імпутації пропусків?",
-      "correct_any": ["categorical_features|from_dtype|HistGradientBoosting"],
-      "wrong_any": ["one-?hot|SimpleImputer|потрібно закодувати|потрібна імпутація"],
+      "correct_any": [
+        "categorical_features|from_dtype|HistGradientBoosting"
+      ],
+      "wrong_any": [
+        "one-?hot|SimpleImputer|потрібно закодувати|потрібна імпутація"
+      ],
       "note": "HistGradientBoostingClassifier(categorical_features=...) і нативна обробка NaN у sklearn 1.9 — коротший шлях за ручне кодування/імпутацію"
     },
     {
       "id": "b13",
       "skill": "ml-validation-design",
-      "files": ["ml-validation-design/SKILL.md", "ml-validation-design/references/api-2026.md"],
+      "files": [
+        "ml-validation-design/SKILL.md",
+        "ml-validation-design/references/api-2026.md"
+      ],
       "prompt": "У мене часові дані по клієнтах, і кожен клієнт має кілька записів у різні дати. Використай ГОТОВИЙ сплітер зі scikit-learn, який одночасно тримає групи (клієнта) цілими і зберігає часовий порядок (train завжди в минулому щодо test).",
       "correct_any": [
         "не\\s?має\\s+(єдиного|готового|такого|вбудованого)|немає\\s+(готового|такого)|no\\s+(such|ready-made|built-?in|single)|вручну|manually|написати\\s+(самому|руками)|(писат|пиш)\\w*\\s+руками"
@@ -164,7 +223,10 @@
     {
       "id": "b14",
       "skill": "ml-task-framing",
-      "files": ["ml-task-framing/SKILL.md", "ml-task-framing/references/task-taxonomy.md"],
+      "files": [
+        "ml-task-framing/SKILL.md",
+        "ml-task-framing/references/task-taxonomy.md"
+      ],
       "prompt": "Я побудував модель прогнозу відтоку клієнтів і використав фічу 'кількість покупок за НАСТУПНИЙ місяць' (вона стає відома вже ПІСЛЯ моменту відтоку) — точність вийшла 0.99, це ж чудово?",
       "correct_any": [
         "витік|leak|з\\s+майбутнього|from\\s+the\\s+future|point-in-time|на\\s+момент\\s+прогнозу|доступн\\w*\\s+(лише|тільки)?\\s*(в|у)\\s+момент"
@@ -175,16 +237,24 @@
     {
       "id": "b15",
       "skill": "ml-bayesian-inference",
-      "files": ["ml-bayesian-inference/SKILL.md", "ml-bayesian-inference/references/api-2026.md"],
+      "files": [
+        "ml-bayesian-inference/SKILL.md",
+        "ml-bayesian-inference/references/api-2026.md"
+      ],
       "prompt": "Напиши мінімальний PyMC-код для моделі Beta-Binomial (пріор Beta, спостереження Binomial) з pm.sample() на 4 ланцюги, tune=1000, draws=1000. Модель виконуватиметься в ізольованому sandboxed shell-середовищі з обмеженими ресурсами (не на локальному ноутбуці).",
-      "correct_any": ["cores\\s*=\\s*1"],
+      "correct_any": [
+        "cores\\s*=\\s*1"
+      ],
       "wrong_any": [],
       "note": "дефолтний pm.sample() спавнить процеси під кожен ланцюг; у пісочниці це тихо зависає без помилки (перевірено: 3+ хв проти 0.5 с із cores=1)"
     },
     {
       "id": "b16",
       "skill": "ml-bayesian-inference",
-      "files": ["ml-bayesian-inference/SKILL.md", "ml-bayesian-inference/references/api-2026.md"],
+      "files": [
+        "ml-bayesian-inference/SKILL.md",
+        "ml-bayesian-inference/references/api-2026.md"
+      ],
       "prompt": "Я викликав az.summary(idata) без додаткових аргументів після pm.sample(). Це видасть звичний 94% HDI (highest density interval) у колонках hdi_3%/hdi_97%?",
       "correct_any": [
         "eti[_\\s]?89|89\\s*%[^.]{0,40}(рівнохвост|equal)|equal.?tail\\w*[^.]{0,40}89|не\\s+(94|HDI)[^.]{0,60}(89|eti)"
@@ -195,16 +265,26 @@
     {
       "id": "b17",
       "skill": "ml-bayesian-inference",
-      "files": ["ml-bayesian-inference/SKILL.md", "ml-bayesian-inference/references/api-2026.md"],
+      "files": [
+        "ml-bayesian-inference/SKILL.md",
+        "ml-bayesian-inference/references/api-2026.md"
+      ],
       "prompt": "Я семплюю PyMC-модель і хочу одразу мати log_likelihood в idata для майбутнього WAIC/LOO. Покажи актуальний спосіб це зробити.",
-      "correct_any": ["compute_log_likelihood"],
-      "wrong_any": ["idata_kwargs\\s*=\\s*\\{[^}]*log_likelihood"],
+      "correct_any": [
+        "compute_log_likelihood"
+      ],
+      "wrong_any": [
+        "idata_kwargs\\s*=\\s*\\{[^}]*log_likelihood"
+      ],
       "note": "idata_kwargs={'log_likelihood': True} у pm.sample deprecated (FutureWarning); сучасний шлях — pm.compute_log_likelihood(idata) одразу після sample, у тому самому контексті моделі"
     },
     {
       "id": "b18",
       "skill": "ml-missing-data",
-      "files": ["ml-missing-data/SKILL.md", "ml-missing-data/references/api-2026.md"],
+      "files": [
+        "ml-missing-data/SKILL.md",
+        "ml-missing-data/references/api-2026.md"
+      ],
       "prompt": "У мене pandas DataFrame, у текстовій колонці category частина значень — це None (не рядок, а Python None). pandas .isna() їх бачить. Напиши код на sklearn, який заповнить ці пропуски найчастішим значенням, і скажи, чи цього достатньо.",
       "correct_any": [
         "np\\.nan",
@@ -217,13 +297,20 @@
         "конверт",
         "замінит[иь]\\s+None"
       ],
-      "wrong_any": ["достатньо", "цього\\s+вистач", "спрацює\\s+коректно"],
+      "wrong_any": [
+        "достатньо",
+        "цього\\s+вистач",
+        "спрацює\\s+коректно"
+      ],
       "note": "SimpleImputer дефолтом шукає np.nan; None в object-колонці НЕ заповнюється й тихо йде в модель (перевірено живцем). Треба явно привести None -> np.nan або missing_values=None"
     },
     {
       "id": "b19",
       "skill": "ml-sampling-design",
-      "files": ["ml-sampling-design/SKILL.md", "ml-sampling-design/references/api-2026.md"],
+      "files": [
+        "ml-sampling-design/SKILL.md",
+        "ml-sampling-design/references/api-2026.md"
+      ],
       "prompt": "У мене є ваги вибірки w (нерівні ймовірності відбору). Я пишу cross_validate(est, X, y, cv=cv, params={'sample_weight': w}, scoring='accuracy'). Чи буде підсумкова accuracy зваженою? Дай точну відповідь і, якщо ні, робочий код.",
       "correct_any": [
         "metadata\\s*_?routing",
@@ -247,28 +334,56 @@
     {
       "id": "b20",
       "skill": "ml-forecasting-model",
-      "files": ["ml-forecasting-model/SKILL.md", "ml-forecasting-model/references/api-2026.md"],
+      "files": [
+        "ml-forecasting-model/SKILL.md",
+        "ml-forecasting-model/references/api-2026.md"
+      ],
       "prompt": "Порахуй RMSE прогнозу на sklearn 1.9 і покажи точний виклик функції.",
-      "correct_any": ["root_mean_squared_error"],
-      "wrong_any": ["squared\\s*=\\s*False"],
+      "correct_any": [
+        "root_mean_squared_error"
+      ],
+      "wrong_any": [
+        "squared\\s*=\\s*False"
+      ],
       "note": "mean_squared_error(squared=False) у 1.9 кидає TypeError — параметр ВИДАЛЕНО (не deprecated). Перевірено живцем. Правильно: root_mean_squared_error"
     },
     {
       "id": "b21",
       "skill": "nn-training-params",
-      "files": ["nn-training-params/SKILL.md", "nn-training-params/references/derivations.md"],
+      "files": [
+        "nn-training-params/SKILL.md",
+        "nn-training-params/references/derivations.md"
+      ],
       "prompt": "Ми впираємось в OOM при навчанні. Колега пропонує перевести ВСЕ — ваги, градієнти й стани оптимізатора — у bfloat16, бо в bf16 той самий динамічний діапазон, що й у float32, тож переповнення не буде. Це безпечно? Відповідай конкретно.",
-      "correct_any": ["мантис", "mantissa", "майстер[- ]?ваг", "master\\s*weights", "\\b7\\s*біт"],
-      "wrong_any": ["безпечн", "так,\\s*можна", "колега\\s+ма[єе]\\s+рацію", "safe\\s+to\\s+cast"],
+      "correct_any": [
+        "мантис",
+        "mantissa",
+        "майстер[- ]?ваг",
+        "master\\s*weights",
+        "\\b7\\s*біт"
+      ],
+      "wrong_any": [
+        "безпечн",
+        "так,\\s*можна",
+        "колега\\s+ма[єе]\\s+рацію",
+        "safe\\s+to\\s+cast"
+      ],
       "note": "bf16 має 7 біт мантиси проти 23 у fp32 (eps 7.8e-3): оновлення 1e-3 при w=1.0 зникає, 1000 кроків по 1e-4 -> ваги замерзли (1.0000 проти 1.1001). Діапазон != точність; майстер-ваги й стани оптимізатора мусять лишатись fp32",
       "marker_note": "Виправлено 2026-07-18 після adversarial-перевірки: попередній набір давав ХИБНИЙ PASS на навмисно хибній відповіді. Причини: (1) 'fp32|float32' у correct_any збігався з коректним аргументом хибної відповіді про діапазон; (2) wrong_any ('безпечн', 'колега має рацію') глушився вікном NEGATION, бо поруч стояло 'переповнення НЕ станеться'. Тепер correct_any вимагає саме дискримінативний зміст — мантису/майстер-ваги, яких у хибній відповіді немає в принципі."
     },
     {
       "id": "b22",
       "skill": "ml-label-quality",
-      "files": ["ml-label-quality/SKILL.md", "ml-label-quality/references/derivations.md"],
+      "files": [
+        "ml-label-quality/SKILL.md",
+        "ml-label-quality/references/derivations.md"
+      ],
       "prompt": "Три анотатори розмітили наш датасет для рідкісної події (базова частота ~5%). Відсоток згоди між ними — 80%. Чи достатньо цієї надійності, щоб вважати мітку основною істиною? Дай число, яке варто порахувати замість відсотка згоди.",
-      "correct_any": ["kappa|каппа|каппи|κ", "Fleiss|Флейс", "випадков[оу]"],
+      "correct_any": [
+        "kappa|каппа|каппи|κ",
+        "Fleiss|Флейс",
+        "випадков[оу]"
+      ],
       "wrong_any": [
         "80%\\s*(це\\s*)?(добре|достатньо)",
         "достатньо\\s+надійн",
@@ -284,7 +399,10 @@
         "llm-parameter-choice/references/rag-production-audit.md"
       ],
       "prompt": "Переношу RAG-прототип з ноутбука в Docker. Код узятий з туторіалу і починається так:\n\n    from langchain.chains import RetrievalQA\n    from langchain.vectorstores import FAISS\n    from langchain.embeddings import OpenAIEmbeddings\n\nУ requirements.txt рядок просто `langchain` без версії. Колега каже: туторіал офіційний, а свіжий пакет тим паче поставиться — тож у контейнері все запрацює так само. Він має рацію? Відповідай конкретно.",
-      "correct_any": ["langchain[-_ ]classic", "create_retrieval_chain"],
+      "correct_any": [
+        "langchain[-_ ]classic",
+        "create_retrieval_chain"
+      ],
       "wrong_any": [
         "\\bзапрацює",
         "зворотн\\w*\\s+сумісн",
@@ -293,6 +411,80 @@
       ],
       "note": "виміряно 2026-07-19: чистий venv, `pip install langchain` -> 1.3.14, і всі імпорти каркасу падають (chains/vectorstores/llms/text_splitter/docstore -> ModuleNotFoundError; embeddings.OpenAIEmbeddings -> AttributeError). LangChain 1.0 виніс легасі-ланцюги в langchain-classic, RetrievalQA -> create_retrieval_chain. Незапінений requirements.txt у Dockerfile дає протилежність відтворюваності",
       "marker_note": "correct_any навмисно вузькі (langchain-classic / create_retrieval_chain) — це зміст, якого в хибній відповіді немає в принципі. Ширші маркери (ModuleNotFoundError, 'імпорт впаде') відкидано: хибна відповідь може їх містити в заперечній формі й дістати хибний PASS, як це сталося з b21 до adversarial-перевірки."
+    },
+    {
+      "id": "b24",
+      "skill": "ml-decision-threshold",
+      "files": [
+        "ml-decision-threshold/SKILL.md"
+      ],
+      "prompt": "Фрод-скоринг. Пропущений фрод коштує 100 євро, розбір хибної тривоги — 5. Порахував p* = C_FP/(C_FP+C_FN) = 5/105 = 0.048. Колега каже: це аналітично оптимальний поріг для мінімізації очікуваної вартості, підбирати більше нічого не треба, ставимо 0.048 у прод. Він має рацію? Модель — звичайна LogisticRegression, predict_proba як є.",
+      "correct_any": [
+        "isotonic|ізотон",
+        "калібр\\w*[^.]{0,120}(p\\*|порог|формул)",
+        "(p\\*|формул\\w*|порог\\w*)[^.]{0,120}калібр",
+        "прям\\w*\\s+мінімізац"
+      ],
+      "wrong_any": [
+        "ма[єе]\\s+рацію",
+        "аналітично\\s+оптимальн",
+        "нічого\\s+не\\s+треба",
+        "можна\\s+ставити\\s+0[.,]048"
+      ],
+      "note": "виміряно 2026-07-19: закрита форма p* виведена для КАЛІБРОВАНИХ ймовірностей. На некаліброваній LogisticRegression p*=0.0476 дав вартість 36 460, а Youden 0.0556 — 35 510, тобто ПРОГРАВ «неоптимальному» критерію. Isotonic зменшив |емпіричний − p*| з 0.0221 до 0.0059 і регрет із +1240 до +385; Platt не дав нічого. Правильна відповідь: p* як якір, поріг — прямою мінімізацією вартості на валідації, калібрування перед довірою до формули",
+      "marker_note": "correct_any звужені після adversarial-прогону 2026-07-19. Голе 'калібр' відкинуто: хибна відповідь «LogisticRegression калібрована за побудовою, тож калібрування зайве» його містить і за інших формулювань дала б хибний PASS (рівно механізм b21). Лишились: isotonic/ізотон (хибна відповідь його не назве), явний ЗВ'ЯЗОК калібрування з валідністю p*, і пряма мінімізація вартості"
+    },
+    {
+      "id": "b25",
+      "skill": "ml-validation-design",
+      "files": [
+        "ml-validation-design/SKILL.md",
+        "ml-validation-design/references/schemas.md"
+      ],
+      "prompt": "Класифікую користувачів соцмережі. Рядки — вузли графа дружби, серед ознак є середнє значення цільової змінної по сусідах вузла (рахував один раз по всьому графу перед крос-валідацією). Колега каже: головна проблема тут у тому, що сусіди схожі, тож звичайний KFold(shuffle=True) сам по собі завищить оцінку — досить перейти на GroupKFold по спільнотах і все буде чесно. Він правильно діагностує проблему? Відповідай конкретно.",
+      "correct_any": [
+        "трансдуктив",
+        "out[- ]of[- ]fold",
+        "fold[- ]aware",
+        "train[-\\s]?міт",
+        "лише\\s+мітк",
+        "тільки\\s+мітк",
+        "мітк\\w*[^.]{0,60}тренувальн",
+        "тренувальн\\w*[^.]{0,60}мітк",
+        "всередин\\w*\\s+(кожного\\s+)?(фолд|CV|крос)"
+      ],
+      "wrong_any": [
+        "\\bправильно\\s+діагносту",
+        "\\bма[єе]\\s+рацію",
+        "\\bдіагноз\\s+колеги\\s+(правильн|вірн|точн)"
+      ],
+      "note": "виміряно 2026-07-19 (800 вузлів, 20 спільнот): гіпотеза колеги (і моя власна до прогону) СПРОСТОВАНА — random KFold 0.7000 проти GroupKFold 0.7125, розриву немає. Витік дає не залежність рядків, а ТРАНСДУКТИВНА ознака: сусідське середнє з усіх міток, включно з тестовими. Оптимізм від неї +0.0075 під random KFold і +0.2238 під GroupKFold (0.6963 проти чесних 0.4725). Тобто перехід на GroupKFold без переробки ознаки НЕ лікує, а лише робить ваду видимою. Повна відповідь: перерахувати ознаку лише з train-міток",
+      "marker_note": "ХИБНИЙ PASS на adversarial-прогоні 2026-07-19: маркер 'лише\\\\s+з?\\\\s*train' збігся з «модель бачить лише train-фолди» — твердженням про ФОЛДИ, яке робить будь-яка відповідь про GroupKFold. Дискримінативний зміст стосується МІТОК: сусідську ознаку треба перерахувати лише з train-міток. Маркери перенацілено; 'GroupKFold' навмисно не в correct_any — він є в самому промпті ВАЖЛИВО: b25 тримається ВИКЛЮЧНО на correct_any. Її wrong-маркер 'правильно діагносту' на adversarial-прогоні виявився заглушеним вікном NEGATION — поряд стоїть «рядки не є незалежними спостереженнями», а це КОРЕКТНЕ твердження, яке робить будь-яка відповідь на цю тему. Підбирати wrong-маркер, що уникає заперечень, тут безнадійно: тема заперечно насичена. Це загальна властивість механізму NEGATION — він налаштований не давати хибних FAIL на правильних відповідях і платить за це слабшим детектуванням хибних у заперечно насичених темах. Пастка робоча (adversarial дає FAIL), але асиметрична — при перегляді маркерів не «лагодити» це додаванням штучного wrong-маркера. ПРАВКА 2026-07-19 після живого прогону: `правильно\\\\s+діагносту` без меж слова збігався всередині «НЕправильно діагностує» і давав ХИБНИЙ FAIL гілці зі скілом, яка відповіла правильно. Додано \\\\b. Прибрано `достатньо переїйти на GroupKFold` (формулювання з самого промпту — спрацьовує при цитуванні задля спростування) і мертвий маркер `сама по собі залежність заviщ` із латинською v усередині кирилиці. ПРАВКА 2 (2026-07-19): correct_any розширено з ЛЕКСИКИ СКІЛА до РІВНЯ ПОНЯТТЯ. Базлайн відповів правильно («out-of-fold», «fold-aware», «лише мітки вузлів із тренувальної частини», «GroupKFold це не вирішує»), але жодного разу не сказав «трансдуктивна» — і дістав ХИБНИЙ FAIL. Це дало б фальшиву дельту +1, яка міряла б збіг зі словником пака, а не правильність. Маркер мусить ловити ПОНЯТТЯ будь-якими словами."
+    },
+    {
+      "id": "b26",
+      "skill": "ml-clustering-k",
+      "files": [
+        "ml-clustering-k/SKILL.md",
+        "ml-clustering-k/references/derivations.md"
+      ],
+      "prompt": "Одна неперервна ознака, гістограма помітно скошена вправо (довгий правий хвіст, скіс близько 1.6). Ганяю GaussianMixture зі свіпом n_components від 1 до 4 і вибираю за BIC — отримав 3 компоненти й хочу назвати їх трьома типами клієнтів. Колега заспокоює: BIC штрафує за складність, тож якщо група насправді одна, він чесно поверне k=1 — раз дав 3, то три сегменти реальні. Він має рацію?",
+      "correct_any": [
+        "апроксим",
+        "20/20",
+        "box[- ]?cox|yeo|логариф|\\blog\\b|лог-перетвор",
+        "універсальн\\w*\\s+апроксим",
+        "(невідповідн|хибн|неправильн)\\w*\\s+(родин|специфікац)",
+        "специфікован"
+      ],
+      "wrong_any": [
+        "\\bма[єе]\\s+рацію",
+        "\\bсегменти\\s+реальн",
+        "\\bколега\\s+(правий|має\\s+рацію|мав\\s+рацію)",
+        "\\bможете\\s+називати\\s+(їх|компоненти)"
+      ],
+      "note": "виміряно 2026-07-19: ненормальність ДОСТАТНЯ для видобування неіснуючих класів. lognormal(0,0.5) і chi2(3), одна група за побудовою, n=1000, 20 повторів — BIC обрав k>=2 у 20/20 (модальне k=3 і k=4 відповідно). Контроль normal(0,1) — k=1 у 20/20, тобто BIC не зламаний, зламане читання: суміш нормальних є універсальним апроксиматором щільності, і скіс дешевше описати двома компонентами. Правильна відповідь: спершу skew/QQ і log/Box-Cox, потім перезапуск свіпу",
+      "marker_note": "'достатн' ловить ключову тезу (ненормальності ДОСТАТНЬО), 'апроксимат' — механізм, '20/20' — виміряне число зі скіла. Жодного з них немає у відповіді, що погоджується з колегою ПРАВКА 2026-07-19 після живого прогону: `чесно\\\\s+поверне` і `BIC\\\\s+захист` взяті дослівно з ПРОМПТУ, тому спрацьовували на обох гілках, коли ті цитували твердження колеги, щоб його спростувати — два хибні FAIL. Загальне правило, витягнуте з цього: wrong-маркер не має повторювати формулювання колеги з умови; він має ловити САМ АКТ згоди моделі. ПРАВКА 2 (2026-07-19): те саме. Маркер `апроксимат` не ловив природних форм «апроксимує»/«апроксимація», якими скористався базлайн — звужено до кореня `апроксим`. Маркер `достатн` ПРИБРАНО: adversarial-відповідь містить «приріст правдоподібності достатньо великий», тобто це був живий ризик хибного PASS."
     }
   ]
 }

@@ -1,7 +1,7 @@
 interface:
   display_name: "Дизайн схеми валідації"
   short_description: "Групи/час/вкладена CV, вибір K, gap, інтервали"
-  default_prompt: Use $ml-validation-design to design the split that imitates production — group/time/nested CV, K, gap, interval reporting; answer in Ukrainian.
+  default_prompt: Use $ml-validation-design to design the split that imitates production — group/time/network/nested CV, K, gap, interval reporting; answer in Ukrainian.
 policy:
   products:
     - chatgpt
