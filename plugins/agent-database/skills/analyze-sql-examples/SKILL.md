@@ -51,3 +51,5 @@ description: Review an existing SQL or CQL query for a specific dialect — MySQ
 - [ ] Ранжування: `ROW_NUMBER`/`RANK`/`DENSE_RANK` обрано свідомо; фільтр за вікном — через підзапит/CTE.
 - [ ] Немає зайвого `SELECT *` у продуктовому коді.
 - [ ] Задача взагалі виразна в цьому діалекті (особливо Cassandra CQL).
+- [ ] **ClickHouse:** ключ партиціювання низькокардинальний; немає `OPTIMIZE FINAL` і частих мутацій; вставки батчами (10k–100k рядків).
+- [ ] **Cassandra:** розмір партиції пораховано, а не вгадано; немає `ALLOW FILTERING`, мультипартиційних `BATCH` і `NULL` у біндах.
