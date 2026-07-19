@@ -29,6 +29,12 @@ asked to touch another plugin or the marketplace root.
   they enter a reference; dialect-specific claims are checked against official documentation. Do
   not fabricate syntax, version numbers, or product behaviour — vendor lakehouse and vector-DB
   APIs move fast (`APPLY CHANGES INTO` → `AUTO CDC INTO` is a worked example of exactly this).
+- **Editing a `description:` frontmatter line: if it contains a colon followed by a space, the value MUST be double-quoted.**
+  An unquoted colon-space inside a YAML plain scalar is invalid and makes `gray-matter` throw, failing
+  `evals`' `eval:quality` gate. Claude Code itself and `scripts/build-index.mjs` (which has its own
+  naive frontmatter reader) both tolerate it, so nothing local flags it — this reached CI once
+  already. `build-index.mjs` strips the surrounding quotes, so `catalog.json` is unaffected. See
+  `HANDOFF.md` § «Гейти CI» for the one-liner that checks every file at once.
 - After changing any `SKILL.md` or `references/*.md`, rebuild the ChatGPT knowledge bundle:
   `powershell -ExecutionPolicy Bypass -File chatgpt\build_gpt_package.ps1`. The script also checks
   `gpt_instructions.md` against ChatGPT's **8000 UTF-8 byte** limit — Cyrillic is 2 bytes/letter,

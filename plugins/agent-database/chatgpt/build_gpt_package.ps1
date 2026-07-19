@@ -8,6 +8,11 @@ $root = Split-Path -Parent $PSScriptRoot   # agent-database/ (this script lives 
 $dist = Join-Path $root "dist"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
+$skillsRoot = Join-Path $root "skills"
+if (-not (Test-Path $skillsRoot)) {
+    $skillsRoot = $root
+}
+
 # 1. Stage exactly what the GPT needs: SKILL.md + references/ per skill. Excluded on purpose:
 #    the plugin-level agents/, README.md, HANDOFF.md, CLAUDE.md, dist/, chatgpt/ itself.
 $stage = Join-Path $env:TEMP "agent_database_knowledge_stage"
@@ -17,7 +22,7 @@ New-Item -ItemType Directory -Force -Path $stage | Out-Null
 $skills = "analyze-task-conditions", "analyze-sql-examples", "explain-sqlite-mongodb",
           "db-connectivity-cloud", "build-data-projects", "design-dwh-etl", "bi-analytics"
 foreach ($s in $skills) {
-    $srcSkill = Join-Path (Join-Path $root "skills") $s
+    $srcSkill = Join-Path $skillsRoot $s
     if (-not (Test-Path $srcSkill)) { throw "Missing skill directory: $srcSkill" }
     $dstSkill = Join-Path $stage $s
     New-Item -ItemType Directory -Force -Path $dstSkill | Out-Null
