@@ -1,0 +1,30 @@
+{
+  "name": "agent-database",
+  "displayName": "Database Mentor",
+  "version": "1.0.0",
+  "description": "Teacher/analyst agent with 7 linked skills for database coursework: task-condition analysis, SQL/CQL example review across MySQL, MS SQL (T-SQL), PostgreSQL, PL/pgSQL, Cassandra (CQL) and ClickHouse, query building in SQLite and MongoDB, Python/Docker/AWS/GCP/Azure connectivity with GraphQL, Redis and vector databases (pgvector, ANN, RAG), ETL and lakehouse projects (Delta Lake, Databricks, AWS Glue), DWH schema design to DMBOK/Kimball standards with data quality, and BI analytics in Power BI and Tableau. Every answer follows a fixed 7-block output contract with grading criteria. Skill content and worked examples are in Ukrainian.",
+  "author": {
+    "name": "Fel Kost",
+    "email": "teacherfkv@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sql",
+    "postgresql",
+    "mysql",
+    "tsql",
+    "clickhouse",
+    "cassandra",
+    "sqlite",
+    "mongodb",
+    "data-warehouse",
+    "etl",
+    "lakehouse",
+    "delta-lake",
+    "vector-database",
+    "power-bi",
+    "tableau",
+    "teaching",
+    "ukrainian"
+  ]
+}

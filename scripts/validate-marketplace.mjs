@@ -215,7 +215,12 @@ const TOP_LEVEL_DOC_NAMES = new Set(["README.md", "CHANGELOG.md", "COMPATIBILITY
 // Plugins vendored as-is from non-English sources. Their content predates and is independent of
 // this marketplace's English-only convention (see CONTRIBUTING.md) — quarantined from section (c)
 // entirely rather than translated, by explicit decision. Do not add to this list casually.
-const QUARANTINED_PLUGINS = new Set(["agent-ml-interviewer", "eda-skills", "ai-gen"]);
+const QUARANTINED_PLUGINS = new Set([
+  "agent-ml-interviewer",
+  "eda-skills",
+  "ai-gen",
+  "agent-database",
+]);
 
 function isTopLevelPluginDoc(filePath, pluginDir) {
   return (
