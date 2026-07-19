@@ -31,7 +31,7 @@ import pandas as pd
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 for sub in ("audit-eda-data-quality", "discover-eda-structure",
             "engineer-select-eda-features", "plan-eda-dataset"):
-    sys.path.insert(0, str(ROOT / sub / "scripts"))
+    sys.path.insert(0, str(ROOT / "skills" / sub / "scripts"))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -1496,6 +1496,103 @@ def _():
     assert SPD.purge_and_embargo(tr, [], 10)["n_purged"] == 0
     assert SPD.purge_and_embargo(tr, te, 0)["n_purged"] == 0
     assert SPD.purge_and_embargo([], te, 10)["n_purged"] == 0
+
+
+def _er_edges(n: int, p: float, seed: int = 7):
+    rng = np.random.default_rng(seed)
+    iu = np.triu_indices(n, k=1)
+    keep = rng.random(iu[0].size) < p
+    return iu[0][keep], iu[1][keep]
+
+
+@check("graph_profile: mirrored storage, loops, duplicates, isolates-are-invisible")
+def _():
+    import graph_profile as GP
+
+    # an UNDIRECTED graph stored as both (a,b) and (b,a): the classic silent defect
+    i, j = _er_edges(300, 0.02)
+    mirrored = pd.DataFrame({"src": np.concatenate([i, j]), "dst": np.concatenate([j, i])})
+    pr = GP.profile_graph(mirrored)
+    assert pr["n_edges_raw"] == 2 * pr["n_edges_simple"], "mirror not collapsed"
+    assert pr["directedness"]["perfectly_mirrored"] and pr["directedness"]["reciprocity"] > 0.999
+    assert any("UNDIRECTED" in f for f in pr["findings"])
+    # the mirror must NOT also be reported as duplicate edges -- one fact, one finding
+    assert not any("duplicate edges" in f for f in pr["findings"])
+
+    # a genuinely dirty list: self-loop, a real duplicate, a disconnected pair
+    dirty = pd.DataFrame({"src": [0, 1, 2, 2, 5], "dst": [1, 2, 0, 0, 5]})
+    pd_ = GP.profile_graph(dirty, directed=False)
+    assert pd_["self_loops"] == 1 and pd_["duplicate_edges"]["undirected_key"] == 1
+    assert pd_["components"]["count"] == 2
+    assert any("duplicate edges" in f for f in pd_["findings"])
+    # isolates cannot appear in an edge list -> the caveat must always be raised
+    assert any("isolates are invisible" in f for f in pd_["findings"])
+
+
+@check("split_designer.graph_split: node-disjoint arithmetic, and no node crosses the split")
+def _():
+    import split_designer as SPD
+
+    i, j = _er_edges(1200, 0.01)
+    e = pd.DataFrame({"src": i, "dst": j})
+    for q in (0.1, 0.2, 0.447):
+        r = SPD.graph_split(e, mode="inductive", test_size=q, seed=1)
+        mf = r["manifest"]
+        # edges divide as (1-q)^2 / q^2 / 2q(1-q); measured 0.040 test + 0.318 dropped at q=0.2
+        assert abs(mf["edge_test_share"] - q ** 2) < 0.012, (q, mf["edge_test_share"])
+        assert abs(mf["cross_edge_share"] - 2 * q * (1 - q)) < 0.012, (q, mf["cross_edge_share"])
+        # the guarantee that makes it inductive at all
+        assert mf["overlap_checks"]["node_overlap"] == 0, "a node appears on both sides"
+        assert mf["endpoints_seen_in_train"] == 0.0
+        assert r["train_idx"].size + r["test_idx"].size + r["dropped_idx"].size == len(e)
+
+    with_bad_mode = dict(edges=e, mode="nope")
+    try:
+        SPD.graph_split(**with_bad_mode)
+        raise AssertionError("unknown mode must raise")
+    except ValueError:
+        pass
+
+
+@check("split_designer.graph_split: transductive test edges are not new (measured ~1.000)")
+def _():
+    import split_designer as SPD
+
+    # floors are the measured worst case over 20 random graphs, not one lucky draw:
+    # mean 0.9818 / 0.9999 / 1.0000, min 0.9664 / 0.9986 / 1.0000
+    for p, floor in ((0.005, 0.95), (0.01, 0.995), (0.05, 0.9999)):
+        i, j = _er_edges(1200, p)
+        r = SPD.graph_split(pd.DataFrame({"src": i, "dst": j}),
+                            mode="transductive", test_size=0.2, seed=1)
+        seen = r["manifest"]["endpoints_seen_in_train"]
+        assert seen >= floor, (p, seen)
+        assert r["dropped_idx"].size == 0, "transductive drops nothing"
+        assert abs(r["manifest"]["edge_test_share"] - 0.2) < 0.01
+
+
+@check("sampling_design.dyadic_design_effect: n_eff scales with nodes, not edges")
+def _():
+    import sampling_design as SD
+
+    rng = np.random.default_rng(11)
+    n = 200
+    i, j = _er_edges(n, 0.10, seed=11)
+    z = rng.normal(size=n)
+    y = z[i] + z[j] + rng.normal(size=i.size)      # dependence is node-level by construction
+    res = SD.dyadic_design_effect(pd.DataFrame({"src": i, "dst": j, "y": y}), value="y")
+    # measured: true deff 14.80, jackknife 14.93, n_eff/nodes ~0.66 at this design
+    assert res["deff"] > 5.0, res["deff"]
+    assert res["n_eff"] < 0.25 * res["n_edges"], (res["n_eff"], res["n_edges"])
+    assert 0.2 < res["n_eff"] / n < 1.5, res["n_eff"] / n
+    assert res["verdict"] == "substantial"
+
+    # independent dyad values carry no node-level dependence -> deff near 1
+    y0 = rng.normal(size=i.size)
+    flat = SD.dyadic_design_effect(pd.DataFrame({"src": i, "dst": j, "y": y0}), value="y")
+    assert flat["deff"] < 3.0, flat["deff"]
+
+    tiny = SD.dyadic_design_effect(pd.DataFrame({"src": [0], "dst": [1], "y": [1.0]}), value="y")
+    assert tiny["verdict"] == "undetermined"
 
 
 @check("consistency.proxy_label_diagnostics: base-rate arithmetic")

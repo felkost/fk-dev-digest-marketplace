@@ -88,12 +88,12 @@ say(f"    cited paths resolvable in the zip: {resolvable}")
 src = ""
 for skill in ("audit-eda-data-quality", "discover-eda-structure",
               "engineer-select-eda-features", "plan-eda-dataset"):
-    for f in sorted((ROOT / skill / "scripts").glob("*.py")):
+    for f in sorted((ROOT / "skills" / skill / "scripts").glob("*.py")):
         src += f.read_text(encoding="utf-8")
 
 modules = {f.stem for skill in ("audit-eda-data-quality", "discover-eda-structure",
                                 "engineer-select-eda-features", "plan-eda-dataset")
-           for f in (ROOT / skill / "scripts").glob("*.py")}
+           for f in (ROOT / "skills" / skill / "scripts").glob("*.py")}
 # Tokens that legitimately look like identifiers but are not code: the readiness
 # verdicts from contracts.py and the knowledge archive's filename.
 NON_FUNCTIONS = {"ready", "not_ready", "ready_with_accepted_limitations",
@@ -143,6 +143,47 @@ if knames:
         PROBLEMS.append("knowledge zip contains a README (should be excluded)")
     if not any(n.endswith(".ipynb") for n in knames):
         PROBLEMS.append("knowledge zip is missing the workflow notebook")
+
+
+# --------------------------------------------------------------------------- #
+# 6. Modality routing is deliberately duplicated: the expanded table lives in
+#    plan-eda-dataset/references/modality-routing.md (which the ChatGPT package
+#    points at, because its 8000-byte instruction budget cannot hold the table)
+#    and a condensed twin lives in plan-eda-dataset/SKILL.md for Claude. Keeping
+#    both was an explicit decision; this check is what makes it safe. It has
+#    already caught one real drift: the graph branch was added to SKILL.md while
+#    the ChatGPT copy silently stayed on five modalities.
+# --------------------------------------------------------------------------- #
+ROUTING = ROOT / "skills" / "plan-eda-dataset" / "references" / "modality-routing.md"
+SKILL = ROOT / "skills" / "plan-eda-dataset" / "SKILL.md"
+REF_RE = re.compile(r"`?([A-Za-z0-9_./-]*references/([a-z0-9-]+\.md))`?")
+
+
+def cited_refs(text: str) -> set[str]:
+    return {m.group(2) for m in REF_RE.finditer(text)}
+
+
+if not ROUTING.exists():
+    PROBLEMS.append("plan-eda-dataset/references/modality-routing.md is missing")
+else:
+    routing_txt = ROUTING.read_text(encoding="utf-8")
+    skill_txt = SKILL.read_text(encoding="utf-8")
+    # the SKILL.md twin is the "Маршрутизація ..." section only
+    sec = re.search(r"(?ms)^## Маршрутизація за модальністю.*?(?=^## |\Z)", skill_txt)
+    skill_refs = cited_refs(sec.group(0)) if sec else set()
+    routing_refs = cited_refs(routing_txt)
+    say(f"[6] modality routing: {len(routing_refs)} references in the table, "
+        f"{len(skill_refs)} in the SKILL.md twin")
+    if sec is None:
+        PROBLEMS.append("plan-eda-dataset/SKILL.md has no 'Маршрутизація за модальністю' section")
+    for missing in sorted(skill_refs - routing_refs):
+        PROBLEMS.append(f"modality-routing.md never routes to `{missing}`, but SKILL.md does")
+    for extra in sorted(routing_refs - skill_refs):
+        PROBLEMS.append(f"modality-routing.md routes to `{extra}`, but the SKILL.md twin does not")
+
+    all_refs = {p.name for p in ROOT.glob("skills/*/references/*.md")}
+    for dangling in sorted(routing_refs - all_refs):
+        PROBLEMS.append(f"modality-routing.md cites `{dangling}` which does not exist on disk")
 
 
 # --------------------------------------------------------------------------- #

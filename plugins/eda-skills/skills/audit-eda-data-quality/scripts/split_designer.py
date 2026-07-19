@@ -174,4 +174,100 @@ def purge_and_embargo(
     }
 
 
-__all__ = ["make_split", "purge_and_embargo"]
+def graph_split(
+    edges: pd.DataFrame,
+    src: str = "src",
+    dst: str = "dst",
+    mode: str = "inductive",
+    test_size: float = 0.2,
+    seed: int = 42,
+) -> dict:
+    """Split an edge list so the split matches the question being asked.
+
+    A random split of *edges* is not automatically wrong -- but it answers a
+    different question from a split of *nodes*, and the usual error is not
+    knowing which one was answered:
+
+    - ``transductive`` -- edges are held out, every node stays visible. This is
+      "a new link appears among people we already know" (friend recommendation,
+      a new transaction between existing accounts). Legitimate, and it must be
+      declared, because node-level features computed on the training graph
+      legitimately see both endpoints of every test edge.
+    - ``inductive`` -- whole nodes are held out; a test edge has **both**
+      endpoints unseen. This is "a new user/device/account arrives". It is the
+      only honest setting when the model must generalise to new entities.
+
+    The arithmetic nobody expects, and the reason this needs a function: hold
+    out a fraction ``q`` of nodes and the edges divide as ``(1-q)^2`` train,
+    ``q^2`` test, ``2q(1-q)`` **cross-boundary and unusable**. At ``q = 0.2``
+    that is 64% / 4% / **32%** -- holding out a fifth of the nodes yields a test
+    set of 4% of the edges while discarding a third of them. To reach a 20% edge
+    test share you must hold out ``sqrt(0.2) ~ 45%`` of nodes and throw away
+    ~49% of the edges. Cross edges are dropped rather than assigned: an edge
+    with one endpoint in train and one in test belongs to neither question.
+
+    ``test_size`` is the fraction of **nodes** in ``inductive`` mode and the
+    fraction of **edges** in ``transductive`` mode; the achieved shares of both
+    are reported either way, so the trade is visible instead of assumed.
+
+    Returns ``{'train_idx', 'test_idx', 'dropped_idx', 'manifest'}`` with
+    positional indices into ``edges``.
+    """
+    if mode not in ("inductive", "transductive"):
+        raise ValueError(f"unknown mode: {mode} (use 'inductive' or 'transductive')")
+
+    rng = np.random.default_rng(seed)
+    s = edges[src].to_numpy()
+    d = edges[dst].to_numpy()
+    pos = np.arange(len(edges))
+    node_labels = pd.Index(pd.unique(np.concatenate([s, d])))
+    n_nodes = len(node_labels)
+
+    manifest: dict = {"strategy": f"graph_{mode}", "seed": seed,
+                      "n_nodes": int(n_nodes), "n_edges": int(len(edges))}
+
+    if mode == "transductive":
+        te_mask = np.zeros(len(edges), bool)
+        te_mask[rng.choice(len(edges), size=int(round(len(edges) * test_size)), replace=False)] = True
+        tr, te, dropped = pos[~te_mask], pos[te_mask], pos[:0]
+        train_nodes = set(np.concatenate([s[~te_mask], d[~te_mask]]).tolist())
+        both_seen = float(np.mean([
+            (u in train_nodes) and (v in train_nodes) for u, v in zip(s[te_mask], d[te_mask])
+        ])) if te.size else float("nan")
+        manifest["endpoints_seen_in_train"] = both_seen
+        manifest["rationale"] = (
+            "New links among known nodes. Node-level features see both endpoints of "
+            "every test edge by design - this is the assumption, not a leak, and it "
+            "is only valid if deployment also scores known nodes.")
+    else:
+        held = np.zeros(n_nodes, bool)
+        held[rng.choice(n_nodes, size=int(round(n_nodes * test_size)), replace=False)] = True
+        is_held = pd.Series(held, index=node_labels)
+        s_held = is_held.reindex(s).to_numpy()
+        d_held = is_held.reindex(d).to_numpy()
+        te_mask = s_held & d_held
+        tr_mask = ~s_held & ~d_held
+        cross = ~te_mask & ~tr_mask
+        tr, te, dropped = pos[tr_mask], pos[te_mask], pos[cross]
+        manifest["held_out_node_share"] = float(held.mean())
+        manifest["cross_edges_dropped"] = int(cross.sum())
+        manifest["cross_edge_share"] = float(cross.mean())
+        manifest["endpoints_seen_in_train"] = 0.0
+        manifest["rationale"] = (
+            "New entities arrive: both endpoints of every test edge are unseen. "
+            "Cross-boundary edges are discarded because they answer neither question.")
+
+    manifest["row_counts"] = {"train": int(tr.size), "test": int(te.size),
+                              "dropped": int(dropped.size)}
+    manifest["edge_test_share"] = float(te.size / len(edges)) if len(edges) else float("nan")
+    manifest["overlap_checks"] = {
+        "index_overlap": int(len(set(tr.tolist()) & set(te.tolist()))),
+        "node_overlap": int(len(
+            set(np.concatenate([s[tr], d[tr]]).tolist()) &
+            set(np.concatenate([s[te], d[te]]).tolist())
+        )) if tr.size and te.size else 0,
+    }
+    return {"train_idx": tr, "test_idx": te, "dropped_idx": dropped, "manifest": manifest}
+
+
+__all__ = ["make_split", "purge_and_embargo", "graph_split"]

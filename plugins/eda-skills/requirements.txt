@@ -20,6 +20,8 @@ hdbscan>=0.8             # HDBSCAN in clustering.py (KMeans/GMM/DBSCAN work with
 kmodes>=0.12             # K-Modes / K-Prototypes in clustering.py
 prince>=0.13             # MCA / FAMD in dim_reduction.py
 shap>=0.44               # SHAP diagnostics in wrapper_embedded.py
+networkx>=3.0            # degree assortativity in graph_profile.py; the rest of the graph
+                         # audit (profile, split, dyadic deff) runs on scipy.sparse alone
 
 # --- notebook execution (only for running assets/eda_workflow_template.ipynb) ---
 jupyter

@@ -8,6 +8,11 @@ $root = Split-Path -Parent $PSScriptRoot   # eda_skills/ (this script lives in e
 $dist = Join-Path $root "dist"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
+$skillsRoot = Join-Path $root "skills"
+if (-not (Test-Path $skillsRoot)) {
+    $skillsRoot = $root
+}
+
 # 1. Clean bytecode caches so they don't bloat the archive.
 Get-ChildItem -Path $root -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue |
     Remove-Item -Recurse -Force
@@ -22,7 +27,8 @@ New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
 $skills = "plan-eda-dataset", "audit-eda-data-quality", "discover-eda-structure", "engineer-select-eda-features"
 foreach ($s in $skills) {
-    $srcSkill = Join-Path $root $s
+    $srcSkill = Join-Path $skillsRoot $s
+    if (-not (Test-Path $srcSkill)) { throw "Missing skill directory: $srcSkill" }
     $dstSkill = Join-Path $stage $s
     New-Item -ItemType Directory -Force -Path $dstSkill | Out-Null
     Copy-Item (Join-Path $srcSkill "SKILL.md") $dstSkill

@@ -421,4 +421,85 @@ __all__ = [
     "label_concurrency",
     "effective_n_for_association",
     "design_effect_report",
+    "dyadic_design_effect",
 ]
+
+
+def dyadic_design_effect(
+    edges: pd.DataFrame,
+    value: str,
+    src: str = "src",
+    dst: str = "dst",
+) -> dict:
+    """Effective sample size for a statistic computed over DYADS (edges).
+
+    An edge list looks like a large sample and is not one. Every edge touching
+    node ``i`` carries whatever ``i`` is, so the information scales with the
+    number of **nodes**, not the number of dyads -- a graph on 1000 nodes has
+    499,500 possible dyads and the precision of roughly a four-figure sample.
+
+    The estimator is a delete-one-**node** jackknife: drop node ``k`` together
+    with every edge touching it, recompute the mean, and take the jackknife
+    variance over the ``n`` leave-one-node-out replicates. Deleting nodes rather
+    than rows is the whole point -- deleting rows assumes the independence that
+    is missing.
+
+    ``deff = var_jackknife / var_naive`` where ``var_naive = var(value)/n_edges``
+    is what every off-the-shelf CI, t-test and bootstrap on the edge table
+    silently assumes.
+
+    Verified against a design with known dependence (dyad value = ``z_i + z_j +
+    noise``, so the truth is analytic): see the measured table in
+    ``references/graph-network.md``. Read ``n_eff``, not ``n_edges``, into any
+    downstream interval, p-value or PSI reliability guard.
+    """
+    y = pd.to_numeric(edges[value], errors="coerce").to_numpy(float)
+    ok = np.isfinite(y)
+    y, s, d = y[ok], edges[src].to_numpy()[ok], edges[dst].to_numpy()[ok]
+    m = y.size
+    if m < 3:
+        return {"n_edges": int(m), "deff": float("nan"), "n_eff": float(m),
+                "verdict": "undetermined", "note": "fewer than 3 usable edges"}
+
+    labels = pd.Index(pd.unique(np.concatenate([s, d])))
+    code = pd.Series(np.arange(len(labels)), index=labels)
+    i = code.reindex(s).to_numpy()
+    j = code.reindex(d).to_numpy()
+    n = len(labels)
+
+    total, tot_cnt = y.sum(), float(m)
+    # per-node sums of incident edges (a self-loop must not be counted twice)
+    inc_sum = np.bincount(i, weights=y, minlength=n) + np.bincount(j, weights=y, minlength=n)
+    inc_cnt = np.bincount(i, minlength=n) + np.bincount(j, minlength=n)
+    loops = i == j
+    if loops.any():
+        inc_sum -= np.bincount(i[loops], weights=y[loops], minlength=n)
+        inc_cnt -= np.bincount(i[loops], minlength=n)
+
+    kept_cnt = tot_cnt - inc_cnt
+    with np.errstate(invalid="ignore", divide="ignore"):
+        theta_k = np.where(kept_cnt > 0, (total - inc_sum) / kept_cnt, np.nan)
+    good = np.isfinite(theta_k)
+    if good.sum() < 2:
+        return {"n_edges": int(m), "deff": float("nan"), "n_eff": float(m),
+                "verdict": "undetermined", "note": "jackknife degenerate (too few nodes)"}
+
+    tk = theta_k[good]
+    n_good = tk.size
+    var_jack = float((n_good - 1) / n_good * ((tk - tk.mean()) ** 2).sum())
+    var_naive = float(np.var(y, ddof=1) / m)
+    deff = float(var_jack / var_naive) if var_naive > 0 else float("nan")
+    n_eff = float(m / deff) if np.isfinite(deff) and deff > 0 else float("nan")
+
+    return {
+        "n_edges": int(m),
+        "n_nodes": int(n),
+        "var_naive": var_naive,
+        "var_jackknife_nodes": var_jack,
+        "deff": deff,
+        "n_eff": n_eff,
+        "n_eff_per_node": float(n_eff / n) if np.isfinite(n_eff) else float("nan"),
+        "verdict": _verdict(deff),
+        "note": ("Dyads are not independent observations; use n_eff for intervals, "
+                 "tests and any minimum-rows guard."),
+    }
