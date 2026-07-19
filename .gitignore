@@ -5,5 +5,12 @@ dist/
 __pycache__/
 *.pyc
 
-# Local Claude Code settings (personal, per-machine — never shared)
-.claude/settings.local.json
+# Local Claude Code directory (personal, per-machine — never shared by default).
+# Default-deny rather than naming settings.local.json alone: a single-filename
+# rule only protects the exact file named today, not whatever Claude Code or a
+# tool creates under .claude/ tomorrow (launch.json, mcp.json, a cache, a
+# session log) — and this repo's own content-safety scan in
+# scripts/validate-marketplace.mjs only walks plugins/, so nothing dropped
+# here would ever be caught by it. Un-ignore explicitly (!.claude/whatever) if
+# the team ever wants a specific file shared project-wide.
+.claude/*
