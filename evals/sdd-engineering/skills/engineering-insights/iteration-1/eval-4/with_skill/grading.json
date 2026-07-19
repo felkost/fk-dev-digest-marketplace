@@ -1,0 +1,32 @@
+{
+  "eval_id": 4,
+  "config": "with_skill",
+  "summary": {
+    "pass_rate": 1.0,
+    "passed": 4,
+    "failed": 0,
+    "total": 4
+  },
+  "expectations": [
+    {
+      "text": "original entry struck through (supersession, not deletion or Write)",
+      "passed": true,
+      "evidence": "server/insights.md contains '~~': True"
+    },
+    {
+      "text": "struck entry carries the (superseded YYYY-MM-DD) marker",
+      "passed": true,
+      "evidence": "server/insights.md contains 'superseded': True"
+    },
+    {
+      "text": "two bullets present: the struck original + the correction below it",
+      "passed": true,
+      "evidence": "server/insights.md entry bullets=2 (expected 2)"
+    },
+    {
+      "text": "footer not incremented on supersession (Entries: 1)",
+      "passed": true,
+      "evidence": "server/insights.md footer Entries=1 (expected 1)"
+    }
+  ]
+}
