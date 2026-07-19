@@ -52,4 +52,5 @@ description: Review an existing SQL or CQL query for a specific dialect — MySQ
 - [ ] Немає зайвого `SELECT *` у продуктовому коді.
 - [ ] Задача взагалі виразна в цьому діалекті (особливо Cassandra CQL).
 - [ ] **ClickHouse:** ключ партиціювання низькокардинальний; немає `OPTIMIZE FINAL` і частих мутацій; вставки батчами (10k–100k рядків).
+- [ ] **ClickHouse — бюджет і типи:** партів/с пораховано проти порогів (`parts_to_delay_insert` 1000 / `parts_to_throw_insert` 3000 **на партицію**); гроші в `Decimal`, не `Float64`; масовий перерахунок через `REPLACE PARTITION`, а не мутацією; другий порядок рядків — `PROJECTION`, а не друга таблиця.
 - [ ] **Cassandra:** розмір партиції пораховано, а не вгадано; немає `ALLOW FILTERING`, мультипартиційних `BATCH` і `NULL` у біндах.
