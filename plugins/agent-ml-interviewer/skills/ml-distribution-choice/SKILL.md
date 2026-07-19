@@ -62,7 +62,7 @@ description: Identifies the probability distribution behind a variable or target
 | Нулів більше за exp(−µ): «немає фічі» + «не скористався» | zero-inflated / hurdle | розділити структурні нулі; окрема модель для «чи взагалі» |
 | Додатна неперервна, CV ≈ const: вартість збитку, тривалість | Gamma | `GammaRegressor` / HGBR(loss="gamma"); `mean_gamma_deviance` |
 | Мультиплікативний механізм: доходи, ціни, розміри | Lognormal | лог-трансформація → лінійна/деревна на лог-шкалі; метрики на лог-шкалі |
-| Додатна з точною масою в нулі: страхові виплати за полісом | Tweedie, 1<p<2 | `TweedieRegressor(power≈1.5)`; `d2_tweedie_score` |
+| Додатна з точною масою в нулі: страхові виплати, переміжний попит | Tweedie, 1<p<2 | `TweedieRegressor(power≈1.5)`; для forecasting-цілі — `LGBMRegressor(objective="tweedie")`, див. `ml-forecasting-model` Крок 2a |
 | Час до події, є цензуровані: відтік у часі, наробіток | Exponential / Weibull | survival-аналіз (lifelines), НЕ RMSE; C-index. Exponential лише якщо процес без пам'яті — це властивість F, вона перевіряється |
 | Важкі хвости: дохідності, збитки, затримки | t / Pareto / GPD | MSE може бути безглуздою (нескінченна дисперсія!); MAE / Huber / `QuantileRegressor`; хвіст окремо через POT→GPD |
 | Максимуми за блок: повені, пікові навантаження | GEV (Extreme value) | `scipy.stats.genextreme`; квантилі/return levels, не середнє |

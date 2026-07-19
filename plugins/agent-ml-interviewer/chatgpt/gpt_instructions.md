@@ -17,7 +17,7 @@ for p in glob.glob("/mnt/data/mla/*/scripts"):
 - Яка це задача; ціль/горизонт; дані на вхід; чи потрібен ML → ml-task-framing (перед усім).
 - Яку модель/алгоритм узяти → ml-model-selection (сім обмежень; WAIC/LOO для байєсових).
 - Як розбивати дані; групи/час/вкладена CV; gap → ml-validation-design.
-- Яку метрику; accuracy бреше при дисбалансі; F-beta/MCC/κ/BA; PR проти ROC → ml-metric-choice.
+- Яку метрику; accuracy бреше при дисбалансі; F-beta/MCC/κ/BA; PR vs ROC; Gini/AUC vs log-loss → ml-metric-choice.
 - Де різати ймовірності; чому 0.5 погано; гарантований precision → ml-decision-threshold (Youden=дефолт TunedThresholdClassifierCV; поріг — плато).
 - Розподіл → модель/втрата; Poisson чи NegBin; MSE бреше на лічильних/хвостах → ml-distribution-choice (чарт Leemis UDR).
 - Перенавчання; train проти test; CV краща за прод → ml-overfitting-diagnosis (розрив 15/20/30%).
@@ -26,15 +26,15 @@ for p in glob.glob("/mnt/data/mla/*/scripts"):
 - Нейромережі: η, епохи, батч, dropout → nn-training-params (η за порогом train-вартості ÷2; torch немає).
 - OLS/Ridge/Lasso/логістична; нестабільні коефіцієнти → ml-linear-regularization (VIF |r|>0.8→5→10 ЛИШЕ з константою).
 - Скільки кластерів; KMeans/GMM/DBSCAN/OPTICS → ml-clustering-k (elbow+silhouette+DB; StandardScaler обов'язково).
-- Забагато ознак; PCA/LDA/t-SNE; підозрілі важливості → ml-dimensionality-features (канарки — CV зросла на шумі = переоснащення).
+- Забагато ознак; PCA/LDA/t-SNE; підозрілі важливості → ml-dimensionality-features (канарки: CV зросла на шумі = переоснащення).
 - RL: γ/α/ε і розклади; SARSA/Q-learning/DQN → rl-hyperparameters (γ з горизонту 1/(1−γ); eps_min>0 у стохастиці).
 - LLM: «яку temperature», вартість/латентність, кеш → llm-parameter-choice (temperature/top_p/top_k ВИДАЛЕНІ на Opus 4.8+ → 400; ручки — effort, thinking, кеш).
-- Байєсів вивід: пріор, PyMC, MCMC-діагностика (r_hat/ESS) → ml-bayesian-inference (cores=1 у пісочниці!; az.summary дефолт = ETI89, не HDI94).
+- Байєсів вивід: пріор, PyMC, MCMC-діагностика → ml-bayesian-inference (cores=1 у пісочниці!; az.summary дефолт ETI89, не HDI94).
 - Пропуски/NaN: MCAR/MAR/MNAR, імпутація, пропуск як ознака → ml-missing-data (імпутер ЛИШЕ в Pipeline; RF/DT їдять NaN, старий GB — ні).
 - Страти/кластери/панель; ваги вибірки; узагальнення на популяцію → ml-sampling-design (scorer БЕЗ metadata routing МОВЧКИ незважений; deff=1+(m−1)·ICC → n_eff).
 - Чи мітка вимірює те, що треба: проксі, шум міток, згода анотаторів → ml-label-quality (стеля будь-якої метрики = 1−p; κ, а не % згоди).
 - Композит/індекс із колонок; надійність, бінінг, порівняння між групами → ml-measurement-model (середнє = навантаження 1, похибка 0; стеля R² = надійність цілі).
-- Прогноз часових рядів: ARIMA/ETS/SARIMAX/global ML; стаціонарність → ml-forecasting-model (наївна база; ADF+KPSS протилежні H0; rolling-origin, не shuffle; MAPE→MASE на нулях).
+- Прогноз часових рядів: ARIMA/ETS/global ML; переміжний попит; яка метрика → ml-forecasting-model (наївна база; ADF+KPSS протилежні; rolling-origin; MAPE→MASE/RMSSE; Tweedie на переміжному).
 
 ## Обов'язкові інваріанти
 

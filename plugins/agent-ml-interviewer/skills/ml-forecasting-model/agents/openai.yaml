@@ -1,7 +1,7 @@
 interface:
   display_name: "Прогноз часових рядів (модель)"
-  short_description: "Наївна база→ETS→ARIMA→global ML; стаціонарність ADF+KPSS; MASE"
-  default_prompt: Use $ml-forecasting-model to choose a time-series forecasting model — is it forecasting versus feature regression, stationarity via ADF and KPSS read together, the ladder from naive/seasonal-naive through ETS and ARIMA/SARIMAX to global gradient boosting on lags, local versus global, rolling-origin validation, and MASE over MAPE; answer in Ukrainian.
+  short_description: "Наївна база→ETS→ARIMA→global ML; ADF+KPSS; MASE/RMSSE; Tweedie на переміжному"
+  default_prompt: Use $ml-forecasting-model to choose a time-series forecasting model — is it forecasting versus feature regression, stationarity via ADF and KPSS read together, the ladder from naive/seasonal-naive through ETS and ARIMA/SARIMAX to global gradient boosting on lags, Tweedie loss for intermittent (many-zero) demand, direct per-horizon versus recursive multi-step, local versus global, rolling-origin validation, and MASE/RMSSE/WRMSSE over MAPE; answer in Ukrainian.
 policy:
   products:
     - chatgpt

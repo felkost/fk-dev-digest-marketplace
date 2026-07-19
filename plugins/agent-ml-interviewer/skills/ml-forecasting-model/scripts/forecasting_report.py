@@ -70,6 +70,25 @@ def mase(y_true, y_pred, y_train, season: int = 1) -> float:
     return mean_absolute_error(y_true, y_pred) / denom if denom > 0 else np.inf
 
 
+def rmsse(y_true, y_pred, y_train, season: int = 1) -> float:
+    """Root Mean Squared Scaled Error (метрика M5): квадратний двійник MASE.
+
+    Знаменник — MSE наївного season-крокового прогнозу на train. Визначена при
+    нулях (на відміну від MAPE), масштабонезалежна.
+    """
+    y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)
+    d2 = (np.asarray(y_train[season:]) - np.asarray(y_train[:-season])) ** 2
+    denom = d2.mean()
+    num = np.mean((y_true - y_pred) ** 2)
+    return float(np.sqrt(num / denom)) if denom > 0 else np.inf
+
+
+def wrmsse(rmsses, weights) -> float:
+    """Зважений RMSSE (M5): ваги = доларовий обсяг ряду, нормовані до суми 1."""
+    rmsses, weights = np.asarray(rmsses, float), np.asarray(weights, float)
+    return float((weights / weights.sum() * rmsses).sum())
+
+
 def ladder(train, test, season: int) -> dict:
     """Проганяє драбину й повертає MASE кожного щабля (наївний = база)."""
     from sklearn.metrics import mean_absolute_error
@@ -191,6 +210,34 @@ def self_test() -> int:
     # 9. сезонний-наївний MASE проти себе на сезонному наївному знаменнику ≈ 1
     chk(f"сезонний-наївний MASE={lad['seasonal_naive_MASE']:.3f} (база порівняння)",
         lad["seasonal_naive_MASE"] > 0)
+
+    # 10. RMSSE визначена при нулях (де MAPE вибухає) і масштабонезалежна
+    ytr = np.abs(rng.normal(5, 2, 200))
+    yt0 = np.array([3.0, 0, 4, 2, 0, 5]); yp0 = np.array([2.5, 0.4, 3.8, 2.1, 0.3, 4.7])
+    r0 = rmsse(yt0, yp0, ytr)
+    r_scaled = rmsse(yt0 * 1000, yp0 * 1000, ytr * 1000)
+    chk(f"RMSSE визначена при нулях = {r0:.4f} і масштабонезалежна "
+        f"(×1000 → {r_scaled:.4f})", np.isfinite(r0) and abs(r0 - r_scaled) < 1e-9)
+
+    # 11. RMSSE карає викиди сильніше за MASE (квадрат проти модуля)
+    base = np.array([5.0, 5, 5, 5]); unif = np.array([4.0, 6, 4, 6]); outl = np.array([5.0, 5, 5, 1])
+    yr = np.abs(rng.normal(5, 1.5, 100))
+    r_unif, r_outl = rmsse(base, unif, yr), rmsse(base, outl, yr)
+    m_unif, m_outl = mase(base, unif, yr), mase(base, outl, yr)
+    chk(f"один викид: RMSSE {r_unif:.3f}→{r_outl:.3f} росте, MASE {m_unif:.3f}→{m_outl:.3f} ні",
+        r_outl > r_unif and abs(m_outl - m_unif) < 0.05)
+
+    # 12. WRMSSE-концентрація: покращення топ-обсягових рухає метрику у рази більше
+    r2 = np.random.default_rng(7)
+    vol = np.exp(r2.normal(0, 2.2, 100))
+    order = np.argsort(vol)
+    base_r = np.ones(100)
+    top = base_r.copy(); top[order[-10:]] -= 0.3       # −0.3 на 10 топ-обсягових
+    bot = base_r.copy(); bot[order[:10]] -= 0.3        # −0.3 на 10 дрібних
+    d_top = wrmsse(base_r, vol) - wrmsse(top, vol)
+    d_bot = wrmsse(base_r, vol) - wrmsse(bot, vol)
+    chk(f"WRMSSE: топ-обсягові Δ={d_top:.4f} >> дрібні Δ={d_bot:.4f} (≥20×)",
+        d_top > 20 * max(d_bot, 1e-9))
 
     print(f"\n=== {ok}/{total} {'УСПІХ' if ok == total else 'Є ПОМИЛКИ'} ===")
     return 0 if ok == total else 1

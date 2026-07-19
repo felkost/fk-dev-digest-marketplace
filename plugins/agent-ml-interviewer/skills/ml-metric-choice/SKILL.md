@@ -1,6 +1,6 @@
 ---
 name: ml-metric-choice
-description: Selects the evaluation metric for a classification problem from class balance and the relative cost of false positives versus false negatives — accuracy and why it fails under imbalance, precision, recall, F-beta including how to pick beta, MCC, Cohen's kappa, balanced accuracy, PR-AUC versus ROC-AUC, and the None/macro/weighted/micro averaging choice for multiclass. Also covers what resampling does to the numbers — oversampling or SMOTE shifts predicted probabilities away from the true base rate, which breaks Brier, log-loss and any threshold while leaving ROC-AUC untouched, and is undone by correcting to the a-priori class distribution. Use when asked which metric to optimise or report, when predicted probabilities look inflated after balancing the training set, why accuracy looks suspiciously high, what F1 or MCC or kappa actually measure, or which curve to plot on imbalanced data. Does NOT choose the operating threshold (use ml-decision-threshold) and does NOT diagnose why a model underperforms (use ml-overfitting-diagnosis).
+description: Selects the evaluation metric for a classification problem from class balance and the relative cost of false positives versus false negatives — accuracy and why it fails under imbalance, precision, recall, F-beta including how to pick beta, MCC, Cohen's kappa, balanced accuracy, PR-AUC versus ROC-AUC, and the None/macro/weighted/micro averaging choice for multiclass. Also covers what resampling does to the numbers — oversampling or SMOTE shifts predicted probabilities away from the true base rate, which breaks Brier, log-loss and any threshold while leaving ROC-AUC untouched, and is undone by correcting to the a-priori class distribution — and the rank-metric versus training-loss split, where ROC-AUC and the normalized Gini (= 2·AUC − 1) are pure ranking metrics invariant to any monotone transform, so you train a differentiable surrogate (log-loss) and use the non-differentiable rank metric only for evaluation and early stopping. Use when asked which metric to optimise or report, when predicted probabilities look inflated after balancing the training set, why accuracy looks suspiciously high, what F1 or MCC or kappa actually measure, whether to optimise AUC or log-loss, what the normalized Gini is, or which curve to plot on imbalanced data. Does NOT choose the operating threshold (use ml-decision-threshold) and does NOT diagnose why a model underperforms (use ml-overfitting-diagnosis).
 ---
 
 # Вибір метрики якості класифікації
@@ -86,12 +86,10 @@ F1 — гармонійне середнє, а не арифметичне, са
 ## Крок 4 — яку криву будувати
 
 **Дисбаланс → PR, не ROC.** ROC майже не реагує на зміну частки класів, PR —
-сильно. Приклад Лекції 2 (спам, 10⁶ листів): алгоритм 1 має FP=10 → FPR=0.00001,
-precision=0.9; алгоритм 2 має FP=1910 → FPR=0.00191 (ROC ледь ворухнулась), але
-precision падає до **0.045**. ROC показала б їх майже однаковими.
-
-Правило: якщо TN величезний і нецікавий — беріть PR. Джерело: Saito & Rehmsmeier,
-*PLoS One* 2015.
+сильно. Приклад Лекції 2 (спам, 10⁶ листів): алгоритм 1 FP=10 → FPR=0.00001,
+precision=0.9; алгоритм 2 FP=1910 → FPR=0.00191 (ROC ледь ворухнулась), але
+precision падає до **0.045**. Правило: TN величезний і нецікавий → PR. Джерело:
+Saito & Rehmsmeier, *PLoS One* 2015.
 
 ## Крок 4a — precision залежить від поширеності, а не лише від моделі
 
@@ -111,30 +109,28 @@ PPV = sens·prev / (sens·prev + (1−spec)·(1−prev))
 | 5% | **0.321** |
 | 2% | **0.155** |
 
-Симуляція підтверджує тотожність precision=PPV, recall=sens до третього знака.
-При 2% поширеності «90%-точна» модель на позитивному прогнозі права лише в 15%
-випадків — і recall/specificity тут ні до чого.
+Симуляція підтверджує precision=PPV, recall=sens до третього знака. При 2%
+поширеності «90%-точна» модель на позитивному прогнозі права лише в 15% випадків
+— і recall/specificity тут ні до чого.
 
 Практичні наслідки:
 
-- **recall = sensitivity, а `1−specificity` = помилка I роду** — ті самі величини,
-  що й у решті пака, лише мовою діагностики. «Тест 93% точний» майже завжди
-  означає sensitivity, а не PPV, і **нічого не каже** про шанс справжнього
-  позитиву без поширеності.
-- **Precision, виміряна на валідації, не переноситься в прод, якщо поширеність
-  інша.** Модель, підібрана на 20% позитивів, у проді з 2% матиме precision у ~4
-  рази гіршу — без жодної зміни моделі. Звітуйте precision РАЗОМ із поширеністю,
-  на якій вона отримана (перегук із `ml-sampling-design`: надвибірка рідкісного
-  класу теж змінює поширеність у train).
-- **Recall, specificity, ROC-AUC від поширеності НЕ залежать** — тому їх безпечно
-  переносити між середовищами; precision і PR-AUC — ні.
+- **recall = sensitivity, `1−specificity` = помилка I роду** — ті самі величини
+  мовою діагностики. «Тест 93% точний» майже завжди означає sensitivity, не PPV, і
+  **нічого не каже** про шанс справжнього позитиву без поширеності.
+- **Precision з валідації не переноситься в прод при іншій поширеності** — модель
+  із 20% позитивів у проді з 2% матиме precision у ~4× гіршу без зміни моделі.
+  Звітуйте precision РАЗОМ із поширеністю (перегук `ml-sampling-design`: надвибірка
+  рідкісного класу теж змінює поширеність у train).
+- **Recall, specificity, ROC-AUC від поширеності НЕ залежать** — безпечні для
+  перенесення; precision і PR-AUC — ні.
 
 ## Крок 4b — ресемплінг ламає ймовірності (а не лише поширеність)
 
 Крок 4a показав, що precision залежить від поширеності. Ресемплінг **змінює
-поширеність навмисно** — і тим самим псує самі ймовірності, а не тільки метрику.
-Модель, навчена на збалансованому train, оцінює `P(y=1 | x, prevalence=0.5)`, а
-не `P(y=1 | x)`. Ця пастка тиха: `predict` і ранжування виглядають нормально.
+поширеність навмисно** — і псує самі ймовірності, не лише метрику. Модель на
+збалансованому train оцінює `P(y=1 | x, prevalence=0.5)`, не `P(y=1 | x)`.
+Пастка тиха: `predict` і ранжування виглядають нормально.
 
 **Живий прогін** (40 000 об'єктів, істинна частка 3.46%; oversampling меншості
 до 50/50; логістична регресія):
@@ -156,15 +152,20 @@ P'+ = [P+ · (po+/pt+)] / [P+ · (po+/pt+) + (1−P+) · ((1−po+)/(1−pt+))]
 **Що корекція НЕ змінює:** перетворення монотонне, тож **ROC-AUC не рухається
 взагалі** — виміряно 0.859614 до і 0.859614 після. Отже:
 
-- **ранжувальні метрики** (ROC-AUC, recall@k, lift) від ресемплінгу як такого не
-  страждають — їх можна порівнювати й без корекції;
-- **ймовірнісні** (Brier, log-loss, калібраційна крива) і **все, що спирається на
-  абсолютний рівень** (поріг, очікувана вартість, precision) — брехатимуть, доки
-  корекцію не застосовано.
+- **ранжувальні** (ROC-AUC, recall@k, lift) від ресемплінгу не страждають;
+- **ймовірнісні** (Brier, log-loss, калібрація) і **все на абсолютному рівні**
+  (поріг, очікувана вартість, precision) брешуть, доки корекцію не застосовано.
 
 **Порядок робіт:** корекція йде **перед** підбором порогу (`ml-decision-threshold`,
 Крок 1a), інакше поріг підбирається під зміщену шкалу. Альтернатива — не ресемплити
 зовсім: `class_weight="balanced"` або дисбаланс + поріг.
+
+**Рангова метрика ≠ втрата, яку тренуєш** (Porto Seguro Gini). ROC-AUC і
+нормалізований Gini **чисто рангові** — незмінні під монотонним перетворенням
+(`exp(score)` дає той самий Gini), і `Gini = 2·AUC − 1` точно. Обидві
+**недиференційовні**: тренуй сурогат (log-loss), а рангову метрику став на eval /
+раннє спинення. Вони байдужі до калібрування (AUC сирого = каліброваного), log-loss
+— ні, тож max log-loss ≠ max AUC; звітуй ту, що в ТЗ.
 
 ## Крок 5 — режими відмови
 
@@ -178,8 +179,8 @@ P'+ = [P+ · (po+/pt+)] / [P+ · (po+/pt+) + (1−P+) · ((1−po+)/(1−pt+))]
 **κ ділиться на нуль у вироджених випадках.** Коли `pₑ = 1`, `κ = 0/0`. sklearn 1.9
 додав `cohen_kappa_score(replace_undefined_by=...)`; на 1.6 обробляйте вручну.
 
-**Одна цифра ніколи не достатня.** Завжди подавайте матрицю плутанини поруч.
-Метрика — це стиснення матриці 2×2 в скаляр, і стиснення завжди щось втрачає.
+**Одна цифра ніколи не достатня.** Подавайте матрицю плутанини поруч — метрика
+є стисненням матриці 2×2 в скаляр, і стиснення завжди щось втрачає.
 
 ## Крок 6 — що повідомити
 
