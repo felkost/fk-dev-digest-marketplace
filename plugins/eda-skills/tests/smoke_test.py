@@ -1767,6 +1767,158 @@ def _():
         pass
 
 
+def _factor_data(loadings, phi, n, seed):
+    """Rows from a common-factor model with known loadings and factor correlations."""
+    rng = np.random.default_rng(seed)
+    L = np.asarray(loadings, dtype=float)
+    F = rng.multivariate_normal(np.zeros(L.shape[1]), np.asarray(phi, dtype=float), size=n)
+    uniq = np.clip(1.0 - np.sum((L @ phi) * L, axis=1), 1e-6, None)
+    return F @ L.T + rng.standard_normal((n, L.shape[0])) * np.sqrt(uniq)
+
+
+@check("factor_analysis: rotation preserves fit; oblique recovers what orthogonal hides")
+def _():
+    import factor_analysis as FA
+
+    L = np.zeros((10, 2)); L[:5, 0] = 0.7; L[5:, 1] = 0.7
+    phi = np.array([[1.0, 0.6], [0.6, 1.0]])
+    X = _factor_data(L, phi, 800, seed=3)
+    R, _, _ = FA.correlation_matrix(X)
+    ext = FA.principal_axis_factoring(R, 2)
+    assert not ext["heywood"], ext["heywood_columns"]
+
+    # rotation is a change of basis: communalities and the reproduced correlation
+    # matrix are untouched (measured 6.7e-16 / 7.8e-16), only the loadings move
+    obl = FA.rotate_loadings(ext["loadings"], "promax")
+    ort = FA.rotate_loadings(ext["loadings"], "varimax")
+    assert obl["verdict"] == "fit_preserved" and ort["verdict"] == "fit_preserved"
+    assert obl["fit_preserved_max_diff"] < 1e-8, obl["fit_preserved_max_diff"]
+    assert max(abs(a - b) for a, b in
+               zip(obl["communalities"], ort["communalities"])) < 1e-8
+
+    # measured: promax |r| ~0.585 against a true 0.6; varimax reports 0 by construction
+    assert abs(obl["factor_correlations"][0]) > 0.35, obl["factor_correlations"]
+    assert ort["factor_correlations"] == [0.0], ort["factor_correlations"]
+
+    # the price of the right angle is fake cross-loadings (measured 0.221 vs 0.037).
+    # Factor order/sign are arbitrary after rotation, so score order-free: on a pure
+    # design the smaller |loading| of each row IS the cross-loading.
+    cross_o = float(np.mean(np.min(np.abs(np.asarray(ort["pattern"])), axis=1)))
+    cross_p = float(np.mean(np.min(np.abs(np.asarray(obl["pattern"])), axis=1)))
+    assert cross_o > 2 * cross_p, (cross_o, cross_p)
+
+
+@check("factor_analysis: parallel analysis refuses noise where the eigenvalue>1 rule invents factors")
+def _():
+    import factor_analysis as FA
+
+    rng = np.random.default_rng(5)
+    Xn = rng.standard_normal((300, 20))
+    pa = FA.parallel_analysis(Xn, n_iter=60, random_state=5)
+    # measured: Kaiser claims ~10 factors here, parallel analysis 0
+    assert pa["n_factors"] == 0, pa["n_factors"]
+    assert pa["kaiser_count"] >= 6, pa["kaiser_count"]
+    rep = FA.factor_structure_report(Xn, n_iter=60, random_state=5)
+    assert rep["verdict"] == "no_common_factor_supported", rep["verdict"]
+
+    # the two identities on a correlation matrix: eigenvalues sum to p, and their
+    # product is the determinant (which is why a redundant column zeroes both)
+    er = FA.eigenvalue_report(Xn)
+    assert abs(er["sum_eigenvalues"] - 20.0) < 1e-6, er["sum_eigenvalues"]
+    prod = float(np.prod(np.asarray(er["eigenvalues"], dtype=float)))
+    assert abs(prod - er["determinant"]) < 1e-6 * max(1.0, abs(er["determinant"]))
+
+    dup = np.column_stack([Xn, Xn[:, 0]])
+    er2 = FA.eigenvalue_report(dup)
+    assert er2["verdict"] == "singular_or_near_singular", er2["verdict"]
+    assert abs(er2["determinant"]) < 1e-10, er2["determinant"]
+
+
+@check("factor_analysis: Heywood cases are reported, never clipped")
+def _():
+    import factor_analysis as FA
+
+    L = np.array([[.75, 0.], [.75, 0.], [0., .75], [0., .75]])
+    phi = np.array([[1.0, .25], [.25, 1.0]])
+    hits = 0
+    for s in range(40):                      # 2 indicators/factor, n=45: measured ~0.30
+        X = _factor_data(L, phi, 45, seed=100 + s)
+        R, _, _ = FA.correlation_matrix(X)
+        res = FA.principal_axis_factoring(R, 2)
+        if res["heywood"]:
+            hits += 1
+            assert res["verdict"] == "improper_solution_heywood"
+            assert max(res["communalities"]) >= 1.0      # surfaced, not clipped to 1
+            assert min(res["uniquenesses"]) <= 0.0       # the negative variance is visible
+    assert hits > 0, "no improper solution in a design measured to produce ~25-30%"
+
+    # 6 indicators/factor with enough rows: measured 0.000 over 300 reps
+    L6 = np.zeros((12, 2)); L6[:6, 0] = .7; L6[6:, 1] = .7
+    X6 = _factor_data(L6, phi, 600, seed=9)
+    R6, _, _ = FA.correlation_matrix(X6)
+    ok = FA.principal_axis_factoring(R6, 2)
+    assert not ok["heywood"] and ok["verdict"] == "proper", ok["verdict"]
+
+
+@check("factor_analysis: a causal chain is caught by the residual matrix, not by variance explained")
+def _():
+    import factor_analysis as FA
+
+    def chain(b, n=3000, seed=21):
+        rng = np.random.default_rng(seed)
+        Z = np.zeros((n, 6)); Z[:, 0] = rng.standard_normal(n)
+        for j in range(1, 6):                # no common cause anywhere in this
+            Z[:, j] = b * Z[:, j - 1] + np.sqrt(1 - b ** 2) * rng.standard_normal(n)
+        return Z
+
+    Z8 = chain(0.8)
+    er = FA.eigenvalue_report(Z8)            # measured 0.680 -- reads as unidimensional
+    assert er["explained_variance_ratio"][0] > 0.55, er["explained_variance_ratio"][0]
+    c8 = FA.factor_structure_report(Z8, n_factors=1, n_iter=60)
+    assert c8["verdict"] == "factor_model_does_not_reproduce_correlations", c8["verdict"]
+    assert c8["rms_residual_correlation"] > 0.08, c8["rms_residual_correlation"]
+
+    # A tighter chain hides better, and this is the honest limit of the absolute
+    # threshold: at path 0.9 the residual is ~0.077, i.e. BELOW the 0.08 convention,
+    # so the verdict alone reads "clean". What still separates it from a real
+    # one-factor dataset is the comparison -- a 25-50x gap, not a cutoff.
+    Z9 = chain(0.9)
+    c9 = FA.factor_structure_report(Z9, n_factors=1, n_iter=60)
+    assert FA.eigenvalue_report(Z9)["explained_variance_ratio"][0] > 0.75
+    assert c9["rms_residual_correlation"] < 0.08, c9["rms_residual_correlation"]
+
+    # genuine one-factor data at a comparable first-component share: measured 0.0015
+    Xt = _factor_data(np.full((6, 1), 0.9), np.eye(1), 3000, seed=22)
+    true1 = FA.factor_structure_report(Xt, n_factors=1, n_iter=60)
+    assert true1["rms_residual_correlation"] < 0.02, true1["rms_residual_correlation"]
+    assert true1["rms_residual_correlation"] * 10 < c9["rms_residual_correlation"]
+
+
+@check("factor_structure_report: orphan columns surface, and PCA inflates the loadings")
+def _():
+    import factor_analysis as FA
+
+    L = np.zeros((12, 2)); L[:6, 0] = .65; L[6:, 1] = .65
+    phi = np.array([[1.0, .35], [.35, 1.0]])
+    X = _factor_data(L, phi, 700, seed=13)
+    rng = np.random.default_rng(13)
+    df = pd.DataFrame(np.column_stack([X, rng.standard_normal(700), np.ones(700)]),
+                      columns=[f"item{i}" for i in range(12)] + ["junk", "const"])
+
+    rep = FA.factor_structure_report(df, n_iter=60)
+    assert rep["dropped_constant_columns"] == ["const"], rep["dropped_constant_columns"]
+    # measured: an injected noise column lands at communality 0.0129 vs a 0.4772 median
+    assert rep["orphan_columns"] == ["junk"], rep["orphan_columns"]
+    assert rep["communalities"]["junk"] < 0.05, rep["communalities"]["junk"]
+    assert sum(len(v) for v in rep["assignment"].values()) == 12
+    assert rep["fit_preserved_max_diff"] < 1e-8
+
+    # PCA credits each column's measurement error to the component: +0.0567 at a 0.60 loading
+    cmp = FA.pca_vs_fa(X, 2)
+    assert cmp["loading_inflation"] > 0.01, cmp["loading_inflation"]
+    assert cmp["mean_communality_pca"] > cmp["mean_communality_fa"]
+
+
 @check("contracts manifests serialize")
 def _():
     import contracts as ct

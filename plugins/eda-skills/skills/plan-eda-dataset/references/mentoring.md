@@ -125,6 +125,31 @@ and do not make it a lesson unless trigger 2 above actually fired.
   `x ≈ w + z` every pairwise `|r| ≈ 0.7`, below the usual 0.8 threshold, while
   VIF is in the hundreds. Run VIF always, not only when a correlation looks
   high. → `discover-eda-structure/references/associations.md`
+- **"PCA is factor analysis."** Two different models: components are functions
+  *of* the columns, factors are what the columns are functions *of*. PCA puts
+  1.0 on the diagonal, so it credits each column's measurement error to the
+  component and inflates the loadings — it reads a true 0.40 indicator as
+  **0.5023**, and inflation reaches **+0.1602** on a 3-column block. The honest
+  other half: for *scores* the two are interchangeable (r = 0.9994–0.99997), and
+  a plain unit-weighted mean matches both. →
+  `discover-eda-structure/references/factor-structure.md`
+- **"Keep factors with an eigenvalue above 1."** On 300 rows of pure
+  independent noise that rule claims **4.83 / 9.45 / 18.38** factors at p =
+  10 / 20 / 40 — about p/2 dimensions in data with no structure at all. Parallel
+  analysis returns 0. The two rules fail in opposite directions: Kaiser
+  over-extracts, parallel analysis under-extracts on weak loadings. Same file.
+- **"Rotate with varimax."** Orthogonal rotation does not discover uncorrelated
+  factors, it imposes them, and the factor correlation reappears as fake
+  cross-loadings: measured 0.029 → **0.312** as the true factor correlation goes
+  0.0 → 0.8, on indicators that are pure by construction. When factors really
+  are uncorrelated an oblique rotation costs nothing (0.026 vs 0.029), so it is
+  the safer default. Same file.
+- **"A high first eigenvalue means one underlying dimension."** A causal chain
+  with no common cause anywhere in it puts **82.9%** of the variance on the
+  first component. The residual correlation matrix is what tells them apart —
+  RMS 0.0773 for the chain vs **0.0015** for genuine one-factor data at the same
+  first-component share. Report the residual, not the variance explained. Same
+  file.
 
 ## What not to do
 

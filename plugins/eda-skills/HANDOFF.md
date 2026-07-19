@@ -1,6 +1,6 @@
 # Session handoff — eda_skills
 
-Written 2026-07-19 at the end of a working session (rounds 25-26 were URL-driven), for a fresh Claude session with no conversation history. Read this whole file before touching anything.
+Written 2026-07-19, last updated at the end of round 28 (latent factor structure), for a fresh Claude session with no conversation history. Read this whole file before touching anything. Newest round first: 28 is the top section, 27 (the marketplace migration) below it.
 
 ## What this project is
 
@@ -16,10 +16,103 @@ Each has `SKILL.md` (Ukrainian body, Claude-facing) + `references/*.md` (English
 ## Current verified state (as of this handoff)
 
 - `tests/check_docs.py`: **passes** (`python tests/check_docs.py`, exit 0). Round 27 added check `[6]`: a drift guard between the modality-routing table (`plan-eda-dataset/references/modality-routing.md`) and its condensed twin in `plan-eda-dataset/SKILL.md` — the two are a deliberate duplication (see round 27), and this guard is what makes duplicating them safe.
-- `tests/smoke_test.py`: **71/71 checks pass** (up from 67/67 — round 27 added 4: mirrored-edge-list detection, node-disjoint split arithmetic, transductive-split-is-not-new measurement, dyadic design effect). **Round 27 also fixed a path bug that had made all 67 pre-existing checks fail on import** (`ModuleNotFoundError`) since the migration into the monorepo — see round 27 below before trusting any check count from before it.
-- `dist/eda_skills_knowledge.zip`: rebuilt after the round-27 path fix — **24 references + 28 scripts** (the previously-committed zip showed 21/27 because `chatgpt/build_gpt_package.ps1` had the same path bug and was silently packaging a stale pre-migration snapshot). The five per-skill `dist/<name>.zip` files are a pre-migration artifact of the standalone-repo build pattern (see "No per-skill build script exists" further down) and were not part of this fix.
+- `tests/smoke_test.py`: **76/76 checks pass** (up from 71/71 — round 28 added 5 for the new factor-structure module). **Round 27 also fixed a path bug that had made all 67 pre-existing checks fail on import** (`ModuleNotFoundError`) since the migration into the monorepo — see round 27 below before trusting any check count from before it.
+- `dist/eda_skills_knowledge.zip`: rebuilt in round 28 — **25 references + 29 scripts**, up from the 24 + 28 that round 27 established. (Round 27 is where those counts became trustworthy at all: the previously-committed zip showed 21/27 because `chatgpt/build_gpt_package.ps1` had the same path bug and was silently packaging a stale pre-migration snapshot.) The five per-skill `dist/<name>.zip` files are a pre-migration artifact of the standalone-repo build pattern (see "No per-skill build script exists" further down) and were not part of this fix.
 - **`chatgpt/gpt_instructions.md` is at 7,014 / 8,000 UTF-8 bytes** (986 B headroom, up from 20 B). Round 27 moved the modality-routing table out of the instructions and into `plan-eda-dataset/references/modality-routing.md`, leaving only a branch index + pointer inline — freeing ~1,000 bytes that had been the single largest non-procedural section. Every modality added from now on costs 0 instruction bytes.
 - **The authoritative history for rounds 1–26 is `MEMORY.md` → `eda-skills-deliverable.md`**, but that auto-memory account key was tied to the pre-migration working directory (`...F--Data-Neoversity-ai-eda-skills...`). Post-migration, auto-memory is keyed to `C:\Users\felko\.claude\projects\F--Data-Neoversity-ai-fk-dev-digest-marketplace\memory\` — a **different** memory scope with no round history of its own yet. If the old memory file is still reachable, it has one dense paragraph per round (26 rounds) with exact measured numbers and reasoning for every pre-migration design decision; if not, this HANDOFF plus round 27 below is what a fresh session has to work from.
+
+## What just happened (round 28 — latent factor structure, 2026-07-19, branch `feat/eda`)
+
+Five Quantitude transcripts on factor analysis (S1E22 good/bad/ugly, S3E03 PCA, S3E15 Heywood cases,
+S5E06 advanced factor structures, S6E14 rotation). **Grep first, as always, and this time it came
+back genuinely empty**: `factor analysis`, `\bEFA\b`, `\bCFA\b`, `Heywood`, `varimax`, `oblique`,
+`communalit`, `bifactor`, `scree plot` had **zero** hits project-wide. (Watch the substring trap:
+a naive `EFA` grep "hits" in *bEFAre* and `scree` in *screening* — both were false. Use `-E` with
+`\b`.) So this is a gap like round 27's graph modality, not a correction round.
+
+**Why it belongs here at all**, since factor analysis reads as psychometrics: `associations.md`
+already ends its multicollinearity section with "the measurement-caused case is answered by **a scale
+or a factor**, not a race between the columns" — and nothing in the project said how to do that. This
+round is the missing counterpart to that line. The question is the one that follows every redundancy
+block: are these columns several noisy measurements of one thing, or distinct information that
+co-moves?
+
+New: `discover-eda-structure/scripts/factor_analysis.py` (`eigenvalue_report`, `parallel_analysis`,
+`principal_axis_factoring`, `varimax`, `promax`, `rotate_loadings`, `factor_structure_report`,
+`pca_vs_fa` — core stack only, no `factor_analyzer` dependency) + `references/factor-structure.md`,
+wired into `discover-eda-structure/SKILL.md` (new §5 subsection + scripts list + frontmatter
+description), `clustering-reduction.md` (method table row + the PCA bullet), the `associations.md`
+hook, and four new entries in `mentoring.md`. Smoke 71 → **76/76**.
+
+**Everything measured before it was written** (scratchpad, three passes; two of them existed because
+the first pass was wrong — see below):
+
+- **PCA inflates loadings because it assumes no measurement error.** One factor, 9 indicators,
+  n=500, 60 reps: mean |loading| PCA vs PAF = 0.9118/0.9002, 0.8236/0.7989, 0.7382/0.6987,
+  0.6555/0.5988, 0.5758/0.4984, **0.5023/0.4000** at true 0.90→0.40. Worse on small blocks: at a
+  fixed 0.60 loading, inflation **+0.1602/+0.0985/+0.0562/+0.0343/+0.0208** for p=3/5/9/15/25.
+- **…but the honest other half, which is why the file says so twice.** For *scores* the two are
+  interchangeable — factor vs component scores correlate **0.9994–0.99997**, and both track the true
+  latent variable identically (0.9362 vs 0.9365 at loading 0.8/4 items). The **plain unit-weighted
+  mean matched both** (0.9366). Weighting only pays with unequal indicators: loadings
+  0.8/0.7/0.6/0.5/0.4/0.3 + two junk columns at 0.05 gave **0.8915 / 0.8763 / 0.8124** (factor /
+  PCA / mean). Recommending the common-factor model without this would have oversold it.
+- **Kaiser (eigenvalue>1) vs parallel analysis, and the errors point in opposite directions.** On
+  300 rows of **pure noise** Kaiser claims **4.83 / 9.45 / 18.38** factors at p=10/20/40 (~p/2
+  dimensions in structureless data); parallel analysis 0.07/0.00/0.23. At 3 true factors and 0.45
+  loadings (p=15, n=300) Kaiser over-extracts in **94%** of reps, parallel analysis is exact in
+  100%. Parallel analysis never over-extracted in any cell and under-extracts on weak loadings
+  (0.35 loadings, n=200 → mean 1.98 vs true 3) — recorded as the honest answer at that noise floor,
+  not patched.
+- **Orthogonal rotation manufactures cross-loadings.** 5 pure indicators/factor, loading 0.70,
+  n=500: varimax mean |cross-loading| 0.029 / 0.066 / 0.138 / 0.221 / **0.312** as the true factor
+  correlation goes 0.0→0.8, on items that are pure by construction; promax holds 0.026–0.064 and
+  recovers |r| = 0.035/0.194/0.379/0.585/0.748. Decisive detail for the default: at a *true* zero
+  correlation oblique costs nothing (0.026 vs 0.029). Rotation invariance verified exactly —
+  communalities and reproduced R unchanged to **6.7e-16 / 7.8e-16** while loadings move by 1.03.
+- **A big first eigenvalue is not evidence of a common cause.** A causal chain x1→…→x6 (no common
+  cause anywhere) puts **47.3% / 68.0% / 82.9%** of variance on PC1 at paths 0.6/0.8/0.9. What
+  separates it from real one-factor data at the same PC1 share is the residual matrix: RMS
+  0.1612/0.1301/0.0773 vs **0.0052/0.0030/0.0015** — a 25–50× gap.
+- **Heywood frequency by design** (2 factors, loading 0.70, 200 reps/cell): 2 indicators/factor →
+  0.240/0.170/0.035/0.000 at n=50/100/300/1000; 3 → 0.085/0.005/0.000/0.000; 4 → 0.005 then 0;
+  6 → 0 everywhere. Three indicators/factor is where it mostly stops. Two indicators/factor is also
+  *empirically* under-identified: improper solutions rose 0.010 → 0.070 as the factor correlation
+  (the only thing identifying it) fell 0.60 → 0.05. The module **reports** Heywood cases and never
+  clips the communality to 1.0 — clipping silences the warning without touching the cause and biases
+  the remaining loadings.
+
+**Two measurement errors of mine, both caught by re-running rather than by review** — same class as
+round 23's mis-calibrated assertion, worth reading before trusting a first pass:
+1. The first cross-loading measurement reported varimax cross-loadings of **0.43 even at a true
+   factor correlation of 0.0**, which is impossible on a pure design. Cause: rotation returns factor
+   columns in arbitrary order and sign, and I was scoring a fixed mask. Fixed by aligning estimated
+   columns to the truth before scoring (and, in the smoke test, by scoring order-free: on a pure
+   design the smaller |loading| in each row *is* the cross-loading).
+2. The same arbitrariness silently destroyed the factor-correlation recovery: averaging the **signed**
+   phi across reps gave +0.001/−0.009/+0.083 for true 0.2/0.4/0.6, i.e. the signs cancelled. Only
+   |phi| is meaningful across reps.
+   A third framing died on contact with data: I expected to show factor-score *indeterminacy* by
+   disagreement between the regression and Bartlett estimators — measured, they correlate **0.99998**.
+   The claim was dropped rather than softened, and the "scores are interchangeable, loadings are not"
+   framing above is what replaced it.
+
+**A limitation the smoke test found, kept rather than tuned away.** The 0.08 residual convention
+flags the 0.6 and 0.8 chains but **not** the 0.9 one (0.0773 sits just under it), so `verdict` alone
+reads `clean_simple_structure` for the hardest case. The 50× gap against genuine one-factor data is
+still there, but it is a *comparison*, not a threshold. The test now asserts both branches and the
+reference plus the docstring both say "read the number, not only the verdict" — the honest statement
+is that a tight causal chain is genuinely hard to separate from a common factor by fit alone.
+
+**Deliberately out of scope, recorded so it is not re-mined.** CFA (fixing loadings to zero and
+testing the restriction) is modelling and needs an SEM package; the higher-order, bifactor and
+multitrait-multimethod structures of S5E06 are all CFA-only, as is the whole
+"exploratory/confirmatory is a continuum" reporting argument beyond the two paragraphs kept in the
+reference's scope-limits section. S3E15's regularization thread is a modelling remedy. What *was*
+kept from the CFA side is the EDA-relevant residue: naming discipline for factors (already the rule
+for clusters), and the established-instrument problem — a published subscale structure is a
+hypothesis about your sample, and re-deriving a bespoke structure per sample means every study uses
+a different ruler.
 
 ## What just happened (round 27 — marketplace migration, 2026-07-19)
 
@@ -238,7 +331,8 @@ For every external source (course PDFs, a chart+FAQ, podcast episodes): extract/
 
 ## Open threads / not done
 
-- Nothing is currently broken or half-finished as of round 27: 71/71 smoke checks, `check_docs.py` exits 0, `dist/eda_skills_knowledge.zip` rebuilt with correct paths.
+- Nothing is currently broken or half-finished as of round 28: 76/76 smoke checks, `check_docs.py` exits 0, `npm run lint` at the marketplace root passes (8 plugins, 0 warnings), `dist/eda_skills_knowledge.zip` rebuilt with correct paths.
+- **Round 28 lives on branch `feat/eda` (PR #3), not on `main`** — it is not merged as of this writing, so a fresh session on `main` will not see `factor_analysis.py` or `factor-structure.md`. Check the PR's state before assuming either exists.
 - **Two ideas from the round-27 KNIME/scoring-metrics PDF review were identified as worthwhile and NOT yet implemented:** a break-even classification threshold computed straight from the cost/profit matrix already gathered in the dataset contract (`p* = Cost_FN / (Cost_FN + Profit_TN)`, computable before any model exists), and the known-form correction to predicted probabilities after resampling (the ebook's prior-correction formula, p.27). Neither needed new measurement to justify — they were deprioritized in favor of the cheaper kappa fix and the larger graph-modality gap, not rejected.
 - **The graph modality's `discover` branch (centrality/community detection as features, latent-space vs. ERGM model families) is deliberately deferred** — round 27 shipped only the `audit` branch (profile/split/dyadic design effect), by explicit user agreement to split the work into two steps. The audit branch already closes the modality's worst leakage risk (features computed on the full graph), so the gap is real but not urgent.
 - **Nine round-21 transcripts are at `C:\Users\felko\Downloads\*.transcript.txt`** (S2E11, S2E12, S2E15, S2E25, S2E32, S2E33, S3E01, S3E07, S3E10). S2E32 (sampling) and S2E11 (replication) are fully mined; S2E12/S2E15/S2E25 were judged out of scope with reasons recorded above. S3E10 (Tukey) still has usable material on *plot-reading practice* if a future round wants to extend `visualization.md` — only its exploratory/confirmatory framing was taken. These files use the OpenRouter `whisper-large-v3` pipeline, so they repeat a 4-line header many times before the body: skip to the first `[00:00]`.
