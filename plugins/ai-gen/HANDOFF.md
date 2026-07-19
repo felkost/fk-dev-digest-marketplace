@@ -25,6 +25,12 @@ session-handoff protocol), `select-genai-models`, `design-agent-architecture`,
 - `chatgpt/build_gpt_package.ps1` builds `dist/ai_gen_knowledge.zip` and reports the
   `gpt_instructions.md` UTF-8 **byte** count against the 8000-byte budget (same byte-not-chars
   trap as eda-skills: Cyrillic is 2 bytes/letter).
+- **2026-07-19:** the script gained a `skillsRoot` fallback (checks `skills/` exists before
+  building paths from it, falls back to the plugin root otherwise) — the same fix applied to
+  `eda-skills`, `agent-database`, and `agent-ml-interviewer` after a cross-plugin audit found
+  their build scripts assumed skills lived at the plugin root, a pre-migration layout none of
+  the four still use. This plugin's own layout was already correct (skills always under
+  `skills/`), so the fallback here is precautionary, not a fix for an observed failure.
 - Version is `0.0.1` and **no release tag exists** — deliberately unreleased scaffold;
   `scripts/release.mjs` gates only its own plugin directory, so other plugins' releases are
   unaffected.
