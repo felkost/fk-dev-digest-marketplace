@@ -1,7 +1,7 @@
 interface:
   display_name: "Розмірність і відбір ознак"
   short_description: "PCA/LDA/t-SNE та канарковий аудит важливостей"
-  default_prompt: Use $ml-dimensionality-features to choose dimensionality reduction and feature selection with injected-noise canaries; answer in Ukrainian.
+  default_prompt: Use $ml-dimensionality-features to choose dimensionality reduction and feature selection, and to audit an implausible importance ranking with injected-noise canaries (including a RandomForest surfacing a junk column); answer in Ukrainian.
 policy:
   products:
     - chatgpt
