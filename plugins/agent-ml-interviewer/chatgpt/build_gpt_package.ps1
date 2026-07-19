@@ -8,6 +8,11 @@ $root = Split-Path -Parent $PSScriptRoot   # agent_ml_interviewer/ (скрипт
 $dist = Join-Path $root "dist"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
+$skillsRoot = Join-Path $root "skills"
+if (-not (Test-Path $skillsRoot)) {
+    $skillsRoot = $root
+}
+
 $skills = "ml-metric-choice", "ml-decision-threshold", "ml-distribution-choice",
           "ml-overfitting-diagnosis", "ml-search-strategy",
           "ml-tree-ensemble-params", "ml-linear-regularization",
@@ -29,7 +34,7 @@ if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
 foreach ($s in $skills) {
-    $src = Join-Path $root $s
+    $src = Join-Path $skillsRoot $s
     $dst = Join-Path $stage $s
     New-Item -ItemType Directory -Force -Path $dst | Out-Null
     Copy-Item (Join-Path $src "SKILL.md") $dst

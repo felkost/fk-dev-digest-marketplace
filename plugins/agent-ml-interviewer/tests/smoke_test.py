@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Смоук-тест пака: структура, конвенції, junction-и, самотести скриптів, байти GPT.
+"""Смоук-тест пака: структура, конвенції, самотести скриптів, байти GPT.
 
 Запуск із кореня пака:  python tests/smoke_test.py
 """
@@ -18,6 +18,15 @@ for _s in (sys.stdout, sys.stderr):
         pass
 
 ROOT = Path(__file__).resolve().parents[1]
+# Скіли лежать у ROOT/skills/<назва>. Коли пак переїхав у маркетплейс
+# (plugins/agent-ml-interviewer/), цей сегмент не додали, і кожна перевірка
+# мовчки провалювалась як «файлу немає» — 43 FAIL, які читались як проблема
+# контенту, а не шляху. Перевіряємо теку явно, щоб такий збій був одним
+# гучним падінням, а не сорока трьома тихими.
+SKILLS_DIR = ROOT / "skills"
+if not SKILLS_DIR.is_dir():
+    sys.exit(f"КОНФІГ: не знайдено теку скілів {SKILLS_DIR} — перевір розкладку пака")
+
 SKILLS = [
     "ml-metric-choice", "ml-decision-threshold", "ml-distribution-choice",
     "ml-overfitting-diagnosis", "ml-search-strategy",
@@ -56,7 +65,7 @@ def frontmatter(text: str) -> dict:
 
 # --- 1. Структура і конвенції кожного скіла --------------------------------
 for s in SKILLS:
-    d = ROOT / s
+    d = SKILLS_DIR / s
     skill_md = d / "SKILL.md"
     check(f"{s}/SKILL.md існує", skill_md.is_file())
     if not skill_md.is_file():
@@ -82,28 +91,26 @@ for s in SKILLS:
               re.search(r"20\d\d-\d\d-\d\d", api.read_text(encoding="utf-8")[:400]) is not None)
     check(f"{s}: agents/openai.yaml існує", (d / "agents" / "openai.yaml").is_file())
 
-# --- 2. Junction-и для Claude Code -----------------------------------------
-for s in SKILLS:
-    j = ROOT / ".claude" / "skills" / s / "SKILL.md"
-    c = ROOT / s / "SKILL.md"
-    ok = j.is_file() and c.is_file() and \
-        j.read_text(encoding="utf-8") == c.read_text(encoding="utf-8")
-    check(f".claude/skills/{s} читається крізь junction і збігається", ok)
+# Секції про junction-и тут більше немає. Вона перевіряла, що ROOT/.claude/skills/
+# дзеркалить кожен SKILL.md, — це домаркетплейсна розкладка, де пак тримав дерево
+# junction-ів, щоб Claude Code бачив скіли. У маркетплейсі механізмом дистрибуції
+# є сам плагін, теки .claude/ у паку немає, і відтворювати її не треба: це
+# повернуло б рівно ту дуплікацію, яку переїзд і прибрав.
 
-# --- 3. Самотести скриптів (аналітична основна істина) ---------------------
+# --- 2. Самотести скриптів (аналітична основна істина) ---------------------
 # Скрипти шукаються ГЛОБОМ, а не списком: інакше новий скіл мовчки лишається
 # неперевіреним (саме так ml-sampling-design і ml-label-quality спершу й
 # випали з прогону, показавши зелені 206 OK).
 _scripts = sorted(
     (s, p.name)
     for s in SKILLS
-    for p in sorted((ROOT / s / "scripts").glob("*.py"))
+    for p in sorted((SKILLS_DIR / s / "scripts").glob("*.py"))
     if p.name != "__init__.py"
 )
 check("знайдено скрипти для самотестів", len(_scripts) >= 10,
       f"знайдено лише {len(_scripts)}")
 for s, script in _scripts:
-    p = ROOT / s / "scripts" / script
+    p = SKILLS_DIR / s / "scripts" / script
     r = subprocess.run([sys.executable, str(p), "--self-test"],
                        capture_output=True, text=True, encoding="utf-8",
                        errors="replace", timeout=600)
@@ -111,7 +118,7 @@ for s, script in _scripts:
     check(f"{script} --self-test", r.returncode == 0 and "УСПІХ" in (r.stdout or ""),
           tail)
 
-# --- 4. Байтовий бюджет інструкцій GPT --------------------------------------
+# --- 3. Байтовий бюджет інструкцій GPT --------------------------------------
 instr = ROOT / "chatgpt" / "gpt_instructions.md"
 if instr.is_file():
     # СИРІ байти: read_text().encode() недораховує ~56 байтів, бо текстовий
@@ -119,8 +126,8 @@ if instr.is_file():
     n = len(instr.read_bytes())
     check(f"gpt_instructions.md ≤ 8000 сирих байтів (зараз {n})", n <= 8000)
 
-# --- 5. UDR-індекс узгоджений ------------------------------------------------
-idx = ROOT / "ml-distribution-choice" / "references" / "udr-index.md"
+# --- 4. UDR-індекс узгоджений ------------------------------------------------
+idx = SKILLS_DIR / "ml-distribution-choice" / "references" / "udr-index.md"
 if idx.is_file():
     t = idx.read_text(encoding="utf-8")
     n_dist = len(re.findall(r"^- ", t[t.find("## Картки"):t.find("## Докази стрілок")], re.M))
