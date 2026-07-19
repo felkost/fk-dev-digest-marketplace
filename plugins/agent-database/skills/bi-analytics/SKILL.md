@@ -1,6 +1,6 @@
 ---
 name: bi-analytics
-description: Analyze and visualize data in Power BI and Tableau on top of databases. Use when the user asks about Power Query (M) and data preparation, the Power BI data model (star schema, relationships, Import vs DirectQuery, many-to-many and bridge tables, role-playing dimensions, aggregations), measures and DAX (CALCULATE, filter/row context and context transition, time intelligence, why a measure shows the wrong numbers), Python/R inside Power BI, connecting Power BI or Tableau to PostgreSQL/MySQL/ClickHouse, Tableau (Live vs Extract, LOD expressions, dashboard design), or which BI tool to choose. Explains the whole chain: database/DWH to model to visualization. Respond in Ukrainian unless the user requests another language.
+description: "Analyze and visualize data in Power BI and Tableau on top of databases. Use when the user asks about Power Query (M) and data preparation, the Power BI data model (star schema, relationships, Import vs DirectQuery, many-to-many and bridge tables, role-playing dimensions, aggregations), measures and DAX (CALCULATE, filter/row context and context transition, time intelligence, why a measure shows the wrong numbers), Python/R inside Power BI, connecting Power BI or Tableau to PostgreSQL/MySQL/ClickHouse, Tableau (Live vs Extract, LOD expressions, dashboard design), or which BI tool to choose. Explains the whole chain: database/DWH to model to visualization. Respond in Ukrainian unless the user requests another language."
 ---
 
 # BI-аналітика: Power BI і Tableau поверх БД
