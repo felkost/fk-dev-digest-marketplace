@@ -79,9 +79,39 @@ Required: `name`. Every plugin in this marketplace also sets `version`, `descrip
 
 ```
 node scripts/validate-marketplace.mjs   # schema + cross-checks + forbidden markers + Cyrillic
-claude plugin validate .                # official validator, marketplace + every plugin
+node scripts/validate-plugins.mjs       # official validator, marketplace + every plugin
 node scripts/build-index.mjs            # confirm the catalog index builds cleanly
 ```
+
+`validate-plugins.mjs` wraps `claude plugin validate --strict` over the marketplace and each
+plugin. Run it rather than the bare command: `claude plugin validate .` on its own only checks
+the marketplace manifest and never descends into `plugins/`, so it passes while a broken plugin
+goes unnoticed.
+
+### Accepted `claude plugin validate` warning
+
+Four plugins — `eda-skills`, `agent-database`, `agent-ml-interviewer`, `ai-gen` — keep a
+`CLAUDE.md` at their plugin root, and `--strict` warns on each:
+
+```
+root: CLAUDE.md at the plugin root is not loaded as project context.
+      To ship context with your plugin, use a skill (skills/<name>/SKILL.md) instead.
+```
+
+**This is expected, not a regression.** The warning is about *installed* plugins, and it is right
+about them: an installed plugin's root `CLAUDE.md` does nothing for the person who installed it.
+These files are not trying to ship context to installers. They are nested-directory project
+context for maintainers editing this monorepo — Claude Code loads a directory's `CLAUDE.md` when
+the session works under that directory, and since this repo has no root `CLAUDE.md`, they are its
+only project context. Taking the warning's advice would ship maintainer-only rules ("don't run
+root scripts from here", the Ukrainian/English authoring split) to every end user, and would
+convert an always-on guardrail into a skill that loads only when the model decides it is
+relevant — the wrong failure mode for a rule whose whole job is to prevent an unprompted mass
+edit.
+
+`validate-plugins.mjs` therefore drops this one warning, and only for a plugin that actually has
+a root `CLAUDE.md`. Everything else fails. If the warning ever appears for a plugin *without* one,
+the script fails: that is new validator behavior, not this accepted case.
 
 Then, for the specific plugin you're releasing:
 
@@ -126,7 +156,7 @@ Paste this into your PR description and fill it in:
 
 ### Pre-release checks run
 - [ ] node scripts/validate-marketplace.mjs
-- [ ] claude plugin validate .
+- [ ] node scripts/validate-plugins.mjs
 - [ ] node scripts/build-index.mjs
 - [ ] Install test in a scratch project
 - [ ] evals: pnpm eval:quality (+ agents/skills evals if behavior changed)
