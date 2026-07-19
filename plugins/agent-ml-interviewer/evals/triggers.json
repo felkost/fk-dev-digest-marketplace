@@ -599,6 +599,62 @@
       "expected": "none",
       "acceptable_alt": null,
       "fixture_note": "слово 'вартість' без жодного ML — перевірка, що новий опис порогів не тягне на себе будь-яку згадку витрат"
+    },
+    {
+      "id": "t96",
+      "prompt": "Ознака сильно скошена вправо. Я прогнав GaussianMixture і BIC обрав 3 компоненти — чи це справжні сегменти клієнтів?",
+      "expected": "ml-clustering-k",
+      "acceptable_alt": null,
+      "fixture_note": "позитив на нову зону ml-clustering-k (Крок 0a)"
+    },
+    {
+      "id": "t97",
+      "prompt": "Після SMOTE передбачені ймовірності виглядають завищеними — середня 0.31 при реальній частці 3%. Що з цим робити?",
+      "expected": "ml-metric-choice",
+      "acceptable_alt": "ml-decision-threshold",
+      "fixture_note": "позитив на нову зону ml-metric-choice (Крок 4b)"
+    },
+    {
+      "id": "t98",
+      "prompt": "Ефект x1 вмикається лише коли x2 вище певного порогу, а добуток x1*x2 це погано ловить. Що робити з деревом?",
+      "expected": "ml-tree-ensemble-params",
+      "acceptable_alt": null,
+      "fixture_note": "позитив на нову зону ml-tree-ensemble-params (Крок 0a)"
+    },
+    {
+      "id": "t99",
+      "prompt": "Як пов'язані Ridge-регуляризація і байєсові пріори? Чи можна задати alpha з правдоподібної величини ефекту?",
+      "expected": "ml-bayesian-inference",
+      "acceptable_alt": "ml-linear-regularization",
+      "fixture_note": "позитив на місток регуляризація/пріори"
+    },
+    {
+      "id": "t100",
+      "prompt": "У мене нелінійний зв'язок і взаємодії. Що взяти — лінійну модель з поліномами чи градієнтний бустинг?",
+      "expected": "ml-model-selection",
+      "acceptable_alt": null,
+      "fixture_note": "СТРЕС: вибір СІМЕЙСТВА, не налаштування. Новий опис ml-tree-ensemble-params не має це вкрасти — там доданий явний Does NOT"
+    },
+    {
+      "id": "t101",
+      "prompt": "Модель погано калібрована — передбачені ймовірності не збігаються з фактичними частотами. Як це полагодити?",
+      "expected": "none",
+      "acceptable_alt": "ml-decision-threshold",
+      "fixture_note": "СТРЕС + ВИПРАВЛЕНА ФІКСТУРА (2026-07-19): первинне очікування ml-decision-threshold було моїм дефектом. Перевірка за ТІЛОМ пака (процедура t08): калібрування скрізь інструментальне — перед порогом (Крок 0), перед довірою до p* (Крок 1a), як наслідок ресемплінгу (ml-metric-choice 4b) — але ЖОДЕН скіл не володіє «полагодити калібрування» як самостійним питанням без контексту порога чи витрат. none — правильна відповідь роутера; ml-decision-threshold прийнятна альтернатива, бо інструмент (CalibratedClassifierCV/isotonic) описаний там. Калібрування як самостійна зона — кандидат на майбутнє розширення, поряд із RAG-ретривом і моделями мереж."
+    },
+    {
+      "id": "t102",
+      "prompt": "Скільки компонент брати в PCA і як зрозуміти, скільки дисперсії втрачаю?",
+      "expected": "ml-dimensionality-features",
+      "acceptable_alt": null,
+      "fixture_note": "СТРЕС: 'скільки компонент' звучить як ml-clustering-k, але це зниження розмірності"
+    },
+    {
+      "id": "t103",
+      "prompt": "Дані скошені — яку функцію втрат і який розподіл правдоподібності взяти для регресії?",
+      "expected": "ml-distribution-choice",
+      "acceptable_alt": null,
+      "fixture_note": "СТРЕС: 'скошені дані' тепер є в описі ml-clustering-k; межа з ml-distribution-choice має триматись"
     }
   ]
 }
