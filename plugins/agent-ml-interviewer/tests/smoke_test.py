@@ -63,6 +63,23 @@ def frontmatter(text: str) -> dict:
     return out
 
 
+def frontmatter_raw(text: str) -> str | None:
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    return m.group(1) if m else None
+
+
+# Парсер вище — наївний: бере ПЕРШУ двокрапку й решту рядка як значення, тому
+# `description: ... numbers: oversampling ...` для нього валідний, а для YAML —
+# ні (двокрапка з пробілом = вкладена мапа). Саме так двічі проходив смоук і
+# падав CI (`evals/ npm run eval:quality`, який вантажить frontmatter YAML-ом).
+# Тому тут — справжній парс. Якщо PyYAML немає, чесно кажемо, що не перевірено,
+# а не мовчки зараховуємо.
+try:
+    import yaml as _yaml
+except ImportError:
+    _yaml = None
+
+
 # --- 1. Структура і конвенції кожного скіла --------------------------------
 for s in SKILLS:
     d = SKILLS_DIR / s
@@ -74,6 +91,18 @@ for s in SKILLS:
     fm = frontmatter(text)
     check(f"{s}: frontmatter name == тека", fm.get("name") == s,
           f"name={fm.get('name')!r}")
+    if _yaml is not None:
+        raw = frontmatter_raw(text)
+        try:
+            parsed = _yaml.safe_load(raw) if raw else None
+            ok = isinstance(parsed, dict) and isinstance(
+                parsed.get("description"), str)
+            err = "" if ok else "description не є рядком після YAML-парсу"
+        except Exception as exc:                       # noqa: BLE001
+            ok, err = False, f"{type(exc).__name__}: {str(exc).splitlines()[0]}"
+        check(f"{s}: frontmatter парситься як YAML", ok, err)
+    else:
+        print("SKIP  YAML-перевірка frontmatter: немає PyYAML")
     desc = fm.get("description", "")
     check(f"{s}: description містить 'Use when'", "Use when" in desc)
     check(f"{s}: description містить негативне обмеження", "Does NOT" in desc)

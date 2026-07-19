@@ -1,6 +1,6 @@
 ---
 name: ml-clustering-k
-description: Selects the number of clusters and the algorithm-specific hyperparameters for unsupervised models — elbow on inertia with KneeLocator, silhouette and Davies-Bouldin sweeps that are read together and may disagree, k-means init/n_init/max_iter/tol, MiniBatch for large n, GaussianMixture covariance_type, DBSCAN eps and min_samples, OPTICS xi, and agglomerative linkage — with mandatory scaling before any of it. Use when choosing k, when clusters look wrong or unstable, when k-means is slow on big data, or when picking between k-means, GMM, DBSCAN, OPTICS and hierarchical clustering. Does NOT reduce dimensionality first (use ml-dimensionality-features) and does NOT pick supervised metrics (use ml-metric-choice).
+description: Selects the number of clusters and the algorithm-specific hyperparameters for unsupervised models — elbow on inertia with KneeLocator, silhouette and Davies-Bouldin sweeps that are read together and may disagree, k-means init/n_init/max_iter/tol, MiniBatch for large n, GaussianMixture covariance_type, DBSCAN eps and min_samples, OPTICS xi, and agglomerative linkage — with mandatory scaling before any of it. Covers spectral clustering when the objects are nodes of a graph and the question is how many groups the edge structure supports. Warns that non-normality alone is enough to manufacture clusters that do not exist — a skewed unimodal variable makes BIC pick k>1 essentially always — and separates claiming real subgroups from using components as points of support for a density. Use when choosing k, when clusters look wrong or unstable, when asked whether the clusters found are real or an artefact of a skewed distribution, when validating a clustering, when k-means is slow on big data, when grouping graph nodes by connection structure, or when picking between k-means, GMM, DBSCAN, OPTICS, spectral and hierarchical clustering. Does NOT reduce dimensionality first (use ml-dimensionality-features) and does NOT pick supervised metrics (use ml-metric-choice).
 ---
 
 # Скільки кластерів і які параметри кластеризації
@@ -18,12 +18,49 @@ description: Selects the number of clusters and the algorithm-specific hyperpara
 ## Крок 0 — передумови, без яких числа брехатимуть
 
 1. **Масштабування обов'язкове**: k-means та відстані живуть у евклідовій
-   метриці; ознака в гривнях задавить ознаку в частках. `StandardScaler` — дефолт.
+   метриці; ознака в гривнях задавить ознаку в частках. `StandardScaler` — дефолт,
+   але з застереженням: якщо підгрупи справді є, вони **самі роздувають** SD, тож
+   z-оцінка ділить на завищене число і стискає саме той сигнал, який шукаємо.
+   Розбіжність результатів під `StandardScaler` і `RobustScaler` — діагностична.
 2. **Форма кластерів = вибір алгоритму**: k-means шукає опуклі сфери однакового
    радіуса. Кільця/півмісяці/різні щільності — це DBSCAN/OPTICS/GMM/spectral,
    і жоден вибір k цього не полагодить.
 3. Категорії у k-means не живуть (середнє від one-hot — не центр) — k-modes або
    інша постановка.
+
+## Крок 0a — чи є взагалі кластери, чи ви ділите один скошений розподіл
+
+**Головна пастка всієї теми.** Ненормальність **достатня** для видобування
+неіснуючих класів — не лише необхідна. Скошений **унімодальний** розподіл, у
+якому підгруп немає за побудовою, суміш ріже на компоненти майже завжди
+(одна група, n=1000, 20 повторів, вибір за BIC):
+
+| Дані | Скіс | BIC обрав k≥2 | Модальне k |
+|---|---|---|---|
+| lognormal(0, 0.5) | 1.63 | **20/20** | 3 |
+| chi²(df=3) | 1.62 | **20/20** | 4 |
+| normal(0, 1) — контроль | 0.03 | 0/20 | 1 |
+
+Контроль чесно дає k=1 — BIC не зламаний, зламане читання. Суміш нормальних —
+універсальний апроксиматор щільності, тож скіс дешевше описати двома
+компонентами, ніж однією; те саме роблять нелінійність і помилка специфікації.
+
+**Перед тим як назвати компоненти «типами»:** `skew`/QQ по кожній ознаці → спроба
+`log`/Box-Cox → перезапуск свіпу. Класи зникли — вони були артефактом форми.
+
+**Direct проти indirect (Titterington; Bauer & Curran 2003)** — два різні
+використання того самого апарату; плутати їх — головна змістова помилка:
+
+| Режим | Твердження | Коли законно |
+|---|---|---|
+| **direct** | «існує три типи клієнтів» | лише за сильної теорії + зовнішнього підтвердження |
+| **indirect** | «три точки опори апроксимують щільність» | майже завжди; чесний дефолт |
+
+Компонент — **точка опори намету**, а не відкритий вид. Якщо єдиний доказ
+існування типів — те, що суміш їх видобула, доказу немає. **Cat's cradle**
+(Sher, Jackson & Steinley 2011): та сама четвірка форм відтворюється і на
+незалежних вибірках, і при викиданні різних хвиль з ОДНОГО набору — стійкість
+форми не є доказом існування. Розбір — `references/derivations.md`.
 
 ## Крок 1 — вибір k: три сигнали разом
 
@@ -67,6 +104,16 @@ python ml-clustering-k/scripts/cluster_k_report.py --self-test
 | потрібна ієрархія/дендрограма | **Agglomerative** | `linkage="ward"` (евклід); `connectivity=kneighbors_graph(...)` для локальності |
 | графова структура | Spectral | `eigen_solver="arpack"` |
 
+**Ієрархічна кластеризація міопічна: злиття незворотне.** Об'єднавши два об'єкти
+на кроці 1, алгоритм не роз'єднає їх ніколи — помилка йде каскадом. k-means
+переприсвоює на кожній ітерації, тому від ранньої помилки одужує; тому
+non-hierarchical нині дефолт, а дендрограма — інструмент огляду, не вибору.
+
+Виміряно (три блоби + пара «місткових» точок між двома з них, ARI): `single`
+**0.5625** проти `ward` 0.9900 і k-means 0.9900. **Уточнення проти джерела:**
+міопія кусає не «ієрархічну взагалі», а насамперед **single linkage** (ефект
+ланцюга); Ward не постраждав. Ризик — властивість linkage, не сімейства.
+
 GMM додатково: вибір `n_components` за **BIC/AIC** — законна альтернатива
 elbow, бо є правдоподібність.
 
@@ -82,19 +129,28 @@ elbow, бо є правдоподібність.
 | **класифікація** | підгрупи, всередині однорідні | **k-means, GMM, LCA/LPA** |
 | person-centered | кожен унікальний | dynamic/p-technique factor |
 
-- **LCA/LPA — це model-based двійник k-means** (латентні класи/профілі): ті самі
-  підгрупи, але через правдоподібність, тож `n_classes` обирається за BIC, а не
-  силуетом. GMM — окремий випадок LPA з нормальними компонентами.
-- **Пастка інтерпретації:** знайшовши кластери, їх майже завжди описують
-  **середніми ознак** (histogram/ANOVA по класах) — тобто повертаються до
-  variable-centered мислення. Це нормально, але усвідомлено: назвати кластер
-  «тривожні відторгнуті» — уже про змінні, не про людей.
-- **Ергодичність — прихована умова.** «Один β на всіх» законний лише якщо процес
-  однорідний і стаціонарний (ергодичний). У соцданих це майже ніколи не так — і
-  саме тому підгрупи або **параметрична модерація** (β як функція ознак,
-  високовимірна взаємодія) часто чесніші за єдиний центр.
+- **LCA/LPA — model-based двійник k-means**: ті самі підгрупи через
+  правдоподібність, тож `n_classes` за BIC, а не силуетом (GMM — окремий випадок
+  LPA). Але BIC тут вразливий рівно так, як показує Крок 0a.
+- **Пастка інтерпретації:** знайдені кластери майже завжди описують **середніми
+  ознак** — тобто повертаються до variable-centered мислення. Це нормально, але
+  усвідомлено: «тривожні відторгнуті» — уже про змінні, не про людей.
+- **Ергодичність — прихована умова.** «Один β на всіх» законний лише для
+  однорідного стаціонарного процесу. У соцданих це майже ніколи не так — тому
+  підгрупи або **параметрична модерація** часто чесніші за єдиний центр.
 
 ## Крок 4 — перевірка результату
+
+**Спершу — чого робити НЕ можна.** Найпоширеніша «валідація» — ANOVA/t-тест на
+тих самих ознаках, що подавались у кластеризацію. Це **циркулярно**: алгоритм
+максимізував саме міжкластерну відмінність за цими ознаками (`SS_total` фіксована,
+тож мінімізація within = максимізація between), і знайти її — тавтологія.
+
+Виміряно на **чистому шумі** (600×5 i.i.d. N(0,1), кластерів немає за побудовою),
+`KMeans(k=3)`: усі 5 ознак, що йшли **в** кластеризацію, значущі, F = 19.7…**223.9**,
+p до **3·10⁻⁷³**; зовнішня ознака — F = 1.16, p = 0.31, **ns**.
+
+**Чесна перевірка:** зовнішні змінні, відкладена вибірка або gap statistic.
 
 - **Silhouette-ножі по кластерах**: кластер із ножем нижче середнього і
   «від'ємним хвостом» — кандидат на злиття.
@@ -115,6 +171,16 @@ elbow, бо є правдоподібність.
 - **Повний silhouette на 100k+** — години; підвибірка або Davies-Bouldin.
 - **«k = кількість класів бізнесу»** — кластери відповідають структурі даних,
   а не оргструктурі; мапінг — окремий крок після.
+- **ANOVA на власних ознаках як доказ** — циркулярно (p~10⁻⁷³ на чистому шумі).
+- **Kitchen sink в unsupervised небезпечніший, ніж у регресії.** Зайвий предиктор
+  у регресії має відому ціну (VIF, втрата df); зайвий шумовий стовпець **зі
+  скосом** у суміші стає **ядром компонента** — жадібному алгоритму нічим це
+  заборонити. Склад ознак обирається змістовно, до запуску, і звітується разом
+  із результатом: прибрали ознаку — інші кластери.
+- **Нерепрезентативна вибірка** — зміщена вибірка дає зміщені «типи»
+  (`ml-sampling-design`); кластеризація не наводить лад у сміттi.
+- **Локальні мінімуми:** `n_init` — не косметика; Steinley рекомендує сотні
+  перезапусків, а не дефолтні 10, якщо результат піде в рішення.
 
 ## Що повідомити
 
@@ -128,6 +194,7 @@ elbow, бо є правдоподібність.
 | Файл | Коли читати |
 |---|---|
 | `references/api-2026.md` | точні виклики sklearn 1.6, сітка дефолтів нотбука, BIC для GMM |
+| `references/derivations.md` | користувач хоче назвати компоненти «типами», сперечається про кількість класів, або питає *чому* скіс дає хибні класи; повні прогони, gap statistic, direct/indirect |
 
 ## Джерела
 
@@ -135,3 +202,9 @@ elbow, бо є правдоподібність.
 Lance-Williams для ієрархічної. Нотбук кластеризації курсу (за VanderPlas):
 elbow+KneeLocator, silhouette-свіп і «106 хвилин», порівняльна сітка 10
 алгоритмів із дефолтами. Rousseeuw (1987) — silhouette; Davies & Bouldin (1979).
+
+Крок 0a і Крок 4 — Bauer & Curran (2003), *Psychological Methods*; Titterington
+et al. (1985) — direct/indirect; Sher, Jackson & Steinley (2011), *J. Abnormal
+Psychology* — cat's cradle; Tibshirani et al. (2001) — gap statistic. Quantitude
+S1E20 і S4E25 (Curran & Hancock) — постановка. Усі числа — власні живі прогони
+на sklearn 1.9, не переказ епізодів.

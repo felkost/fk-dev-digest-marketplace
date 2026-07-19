@@ -1,6 +1,6 @@
 ---
 name: ml-validation-design
-description: Designs the validation schema before any tuning — picks the split that imitates production (holdout vs K-fold vs Group vs TimeSeries vs combined), sizes K from the bias/variance/compute trade-off, adds gap/embargo and rolling-vs-expanding windows for temporal data, decides when nested CV is required for an honest number, checks train/test comparability with adversarial validation, reports metrics as intervals rather than point estimates, and sets the split-refresh policy. Use when choosing how to split data, when CV score does not transfer to production, when data has groups, panels, time or leakage risk, or when asked which k-fold variant to use. Does NOT choose the metric being validated (use ml-metric-choice) and does NOT run the hyperparameter search itself (use ml-search-strategy).
+description: Designs the validation schema before any tuning — picks the split that imitates production (holdout vs K-fold vs Group vs TimeSeries vs combined), sizes K from the bias/variance/compute trade-off, adds gap/embargo and rolling-vs-expanding windows for temporal data, handles rows linked by a network or graph where neighbours break the independence assumption (GroupKFold by community, and transductive vs inductive construction of neighbour-derived features), decides when nested CV is required for an honest number, checks train/test comparability with adversarial validation, reports metrics as intervals rather than point estimates, and sets the split-refresh policy. Use when choosing how to split data, when CV score does not transfer to production, when data has groups, panels, time, graph edges or leakage risk, or when asked which k-fold variant to use. Does NOT choose the metric being validated (use ml-metric-choice), does NOT model the network itself — ERGM, latent-space models, link prediction and centrality are outside this pack — and does NOT run the hyperparameter search itself (use ml-search-strategy).
 ---
 
 # Дизайн схеми валідації
@@ -36,11 +36,30 @@ description: Designs the validation schema before any tuning — picks the split
 | групи + час | комбінація (див. Крок 3) | готового сплітера немає, пишеться руками |
 | дуже дорога модель (DL) | holdout 60/20/20 | CV не по кишені; одне число, знати його дисперсію |
 | мало даних | RepeatedStratifiedKFold | K×N оцінок замість K |
+| **рядки зв'язані мережею** (соцграф, ко-автори, транзакції) | **GroupKFold по спільнотах** | Крок 1b; рядки не i.i.d. за побудовою |
 
 **Критерій групування — одне з найважливіших рішень усього проєкту.** Якщо
 сусідні свердловини качають з одного пласта, а рядки — це виміри, то випадковий
 KFold покаже блискучий результат, якого в проді не буде: та сама свердловина
 опиниться і в train, і у val.
+
+## Крок 1a — мережеві дані: небезпечна не залежність, а трансдуктивна ознака
+
+Коли рядки — вузли графа, незалежності немає: сусіди схожі. Наївний наслідок
+«random KFold завищить» **перевірено й спростовано** (800 вузлів, 20 спільнот):
+0.7000 проти 0.7125 у GroupKFold — розриву немає. Витік вносить не залежність
+рядків, а **трансдуктивна ознака** — «середнє y сусідів», пораховане з усіх
+міток, зокрема тестових. Чесна версія (лише train-мітки) дає 0.6813 під random
+KFold і **0.4725** під GroupKFold: оптимізм +0.0075 проти **+0.2238**.
+
+**Найгірше — random KFold цю ваду ховає:** під ним чесна й трансдуктивна версії
+дають одне число, тож помилки в конвеєрі ознак не видно взагалі.
+
+**Питання, що вирішує все: нові вузли того самого графа чи новий граф?** Той
+самий — трансдуктивність законна, але скажіть вголос. Новий — GroupKFold по
+спільнотах (`louvain_communities`) + ознаки лише з train-міток, і чекайте
+падіння: 0.68 стало **0.47**. Моделі мереж (ERGM, latent space) — поза зоною
+пака. Повний прогін і діагностика — `references/schemas.md`.
 
 ## Крок 2 — скільки фолдів
 
@@ -198,3 +217,7 @@ Quantitude S1E26 «The Internal Validity Pre-Flight Checklist» (Curran & Hancoc
 2026-07-18): загрози instrumentation і regression artifacts у Shadish/Cook/
 Campbell. Показовий приклад епізоду — «сплески» когнітивного розвитку рівно на
 датах зміни тесту, а не розвитку.
+
+Крок 1a — Quantitude S3E19 «Social Network Analysis» (Tracy Sweet) як постановка
+(незалежності спостережень немає); числа й **спростування наївного наслідку** про
+завищення random KFold — власний живий прогін на networkx + sklearn 1.9.

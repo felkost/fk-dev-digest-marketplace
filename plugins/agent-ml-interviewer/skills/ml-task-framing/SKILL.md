@@ -1,6 +1,6 @@
 ---
 name: ml-task-framing
-description: Turns a vague business request into a well-posed ML task before any modelling — asks whether ML is needed at all, identifies the task type across the full taxonomy (binary/multiclass/multi-label/one-class and anomaly/ranking/forecasting/sequence labelling/seq2seq/clustering/RL), defines the unit of observation and the target with its horizon and label delay, specifies the point-in-time input contract that prevents leakage, and routes to the metric, validation and model-selection skills. Use when starting any modelling consultation, when the request is "build a model for X", when it is unclear what the target or the row even is, or when a project needs reframing. Does NOT choose the model family (use ml-model-selection) and does NOT design the validation split (use ml-validation-design).
+description: Turns a vague business request into a well-posed ML task before any modelling — asks whether ML is needed at all, identifies the task type across the full taxonomy (binary/multiclass/multi-label/one-class and anomaly/ranking/forecasting/sequence labelling/seq2seq/clustering/RL), defines the unit of observation and the target with its horizon and label delay, specifies the point-in-time input contract that prevents leakage, and routes to the metric, validation and model-selection skills. It also judges whether the task is worth doing — predictive power is necessary but not sufficient, so a model with significant coefficients and a tiny R² is a weak basis for intervention, and a model handed to a human decision-maker needs to be simple enough to act on rather than merely accurate. Use when starting any modelling consultation, when the request is "build a model for X", when it is unclear what the target or the row even is, when asked whether a weak-but-significant model justifies acting on it, or when a project needs reframing. Does NOT choose the model family (use ml-model-selection) and does NOT design the validation split (use ml-validation-design).
 ---
 
 # Постановка задачі: від запиту до коректно поставленої ML-задачі
@@ -35,6 +35,20 @@ description: Turns a vague business request into a well-posed ML task before any
 
 **Що буде зроблено з прогнозом?** Якщо відповіді немає — задачі теж немає.
 Прогноз, який нікуди не підключений, не має ні метрики, ні порогу.
+
+**Зворотний бік, який пропускають частіше:** прогностична здатність **необхідна,
+але недостатня** для моделі, на яку спираються діями. Модель зі значущими
+коефіцієнтами і R² ≈ 0.03 пояснює 3% мінливості — втручання в ці «механізми»
+цілі майже не зрушить, скільки б зірочок не було біля p. Значущість каже, що
+ефект **не нуль**; вона не каже, що він **вартий бюджету**. Питання до замовника
+формулюється так: *якщо ми ідеально вплинемо на цей предиктор, на скільки
+зміниться ціль — і чи окупить це втручання?*
+
+**Третій режим, окремий від «прогноз» і «пояснення» — дія.** Модель, яку віддають
+людині для рішення (аудитор, лікар, кредитний комітет), має бути водночас досить
+точною і досить простою, щоб за нею можна було діяти. Це зазвичай **ні** найкраща
+прогностична, **ні** найкраща пояснювальна модель, і цей компроміс варто назвати
+явно на етапі постановки, а не виявити на впровадженні.
 
 ## Крок 1 — тип задачі
 

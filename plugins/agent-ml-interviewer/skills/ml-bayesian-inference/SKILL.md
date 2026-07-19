@@ -1,6 +1,6 @@
 ---
 name: ml-bayesian-inference
-description: Runs the Bayesian inference workflow as an alternative to point-estimate frequentist fitting — when to go Bayesian at all (small n, decision-critical stakes, sequential updating, borrowing strength across groups), the prior-selection ladder (vague/weakly-informative/informative/conjugate/Jeffreys and how prior influence fades as n grows), the PyMC model-sample-check workflow with the sandboxed-multiprocessing gotcha, MCMC convergence diagnostics (r_hat, ESS, divergences, trace plots, the folk theorem), posterior predictive checks, and credible intervals versus confidence intervals (including ArviZ's non-obvious default interval type). Use when asked to quantify uncertainty via priors and posteriors, when told to build a PyMC/probabilistic-programming model, when MCMC won't converge or throws divergences, or when a credible interval is confused with a confidence interval. Does NOT compare finished Bayesian models against each other (WAIC/LOO/Bayes factors — use ml-model-selection) and does NOT choose the likelihood family from data shape (use ml-distribution-choice).
+description: Runs the Bayesian inference workflow as an alternative to point-estimate frequentist fitting — when to go Bayesian at all (small n, decision-critical stakes, sequential updating, borrowing strength across groups), the prior-selection ladder (vague/weakly-informative/informative/conjugate/Jeffreys and how prior influence fades as n grows), the PyMC model-sample-check workflow with the sandboxed-multiprocessing gotcha, MCMC convergence diagnostics (r_hat, ESS, divergences, trace plots, the folk theorem), posterior predictive checks, and credible intervals versus confidence intervals (including ArviZ's non-obvious default interval type). Also shows that L2 and L1 regularisation already are priors — Ridge is the MAP estimate under a Gaussian prior and LASSO under a Laplace one — which turns "estimate freely versus fix at zero" into one continuum and gives alpha a domain meaning. Use when asked to quantify uncertainty via priors and posteriors, when asked how regularisation relates to Bayesian inference, when told to build a PyMC/probabilistic-programming model, when MCMC won't converge or throws divergences, or when a credible interval is confused with a confidence interval. Does NOT compare finished Bayesian models against each other (WAIC/LOO/Bayes factors — use ml-model-selection) and does NOT choose the likelihood family from data shape (use ml-distribution-choice).
 ---
 
 # Байєсів вивід: від пріора до перевіреного постеріора
@@ -63,6 +63,21 @@ description: Runs the Bayesian inference workflow as an alternative to point-est
 знання, які можна записати». Зворотна пастка — **пріор-«шпилька»**, що тримає
 модель замість даних (ознака: постеріор ≈ пріор; перевірка: ширший пріор). Числа
 й процедура — `derivations.md`.
+
+**Ви вже ставите пріори — регуляризацією.** Ridge — це MAP-оцінка з гаусовим
+пріором, LASSO — з пріором Лапласа; перевірено чисельно, збіг до **1.6·10⁻⁸** і
+**9.2·10⁻⁹** відповідно:
+
+| Регуляризатор | Еквівалентний пріор | Зв'язок |
+|---|---|---|
+| Ridge (L2), `alpha` | `β ~ N(0, τ²)` | `alpha = σ²/τ²` |
+| LASSO (L1), `alpha` | `β ~ Laplace(0, b)` | `alpha = σ²/(n·b)` |
+
+Звідси **континуум замість дихотомії** «оцінювати вільно чи зафіксувати нулем»:
+`alpha → 0` = плоский пріор = OLS; `alpha → ∞` = пріор-шпилька в нулі = жорстке
+`β = 0` (виміряно на `alpha` від 1e−6 до 1e6). Отже `alpha` має доменний сенс —
+`τ = σ/√alpha` є апріорним SD ефекту, тож сітку можна центрувати на
+правдоподібній величині, а не брати наосліп. Вивід — `references/derivations.md`.
 
 **Народна теорема байєсових обчислень** (Дэвидсон-Пайлон): якщо MCMC не
 збігається — щось не так із моделлю, не з семплером. Типовий винуватець —
