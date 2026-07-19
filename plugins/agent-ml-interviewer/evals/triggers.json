@@ -1,5 +1,5 @@
 {
-  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані).",
+  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані). Дев'ята звірка: +t104-t109 (4 позитивні на ml-measurement-model, 2 стрес-тести на межі з ml-label-quality/ml-distribution-choice), n14 негативний.",
   "items": [
     {
       "id": "t01",
@@ -655,6 +655,55 @@
       "expected": "ml-distribution-choice",
       "acceptable_alt": null,
       "fixture_note": "СТРЕС: 'скошені дані' тепер є в описі ml-clustering-k; межа з ml-distribution-choice має триматись"
+    },
+    {
+      "id": "t104",
+      "prompt": "Я усереднив 6 колонок опитувальника в один бал задоволеності — це нормально?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "ПОЗИТИВ: усереднення колонок у композит — ядро скіла (середнє = навантаження 1, похибка 0)"
+    },
+    {
+      "id": "t105",
+      "prompt": "Моя модель уперлась у R²=0.75 і не росте, хоч ознак багато. Ціль — усереднений експертний рейтинг.",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": "ml-overfitting-diagnosis",
+      "fixture_note": "ПОЗИТИВ: плато R² при ненадійній композитній цілі — стеля = надійність (Крок 2)"
+    },
+    {
+      "id": "t106",
+      "prompt": "Хочу порізати вік на 3 групи для інтерпретованості. Що я втрачаю?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "ПОЗИТИВ: огрублення неперервної ознаки — Крок 3 (−17% звʼязку при k=3)"
+    },
+    {
+      "id": "t107",
+      "prompt": "Порівнюю індекс залученості між двома країнами — в одній він вищий. Чи можна довіряти цій різниці?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "ПОЗИТИВ: порівняння композита між групами вимагає інваріантності (Крок 5)"
+    },
+    {
+      "id": "t108",
+      "prompt": "Cronbach alpha мого набору ознак 0.71, а колега каже рахувати omega. Яка різниця?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "СТРЕС: alpha/omega — лексика надійності; НЕ ml-label-quality (там мітка y, тут композит X)"
+    },
+    {
+      "id": "t109",
+      "prompt": "У мене шкала 1-5 і я рахую кореляцію Пірсона між двома такими ознаками — вона занижена?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "СТРЕС: поліхорична проти Пірсона на порядкових; межа з ml-distribution-choice (там вибір розподілу, тут огрублення звʼязку)"
+    },
+    {
+      "id": "n14",
+      "prompt": "Скільки нейронів у прихованому шарі для мого класифікатора?",
+      "expected": "none",
+      "acceptable_alt": "nn-training-params",
+      "fixture_note": "НЕГАТИВ поруч зі скілом: 'скільки' + архітектура — це не модель вимірювання"
     }
   ]
 }

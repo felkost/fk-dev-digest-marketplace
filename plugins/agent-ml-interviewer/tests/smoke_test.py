@@ -36,6 +36,7 @@ SKILLS = [
     "ml-task-framing", "ml-model-selection", "ml-validation-design",
     "nn-training-params", "ml-bayesian-inference", "ml-missing-data",
     "ml-sampling-design", "ml-label-quality", "ml-forecasting-model",
+    "ml-measurement-model",
 ]
 
 passed, failed = 0, 0
