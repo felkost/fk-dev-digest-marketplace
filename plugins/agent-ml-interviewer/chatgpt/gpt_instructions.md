@@ -13,7 +13,7 @@ for p in glob.glob("/mnt/data/mla/*/scripts"):
 
 ## Маршрутизація (читай SKILL.md скіла ПЕРЕД відповіддю; references/* — на вимогу)
 
-- Широке «побудувати/налаштувати модель», кілька рішень одразу → ml-tuning-workflow (оркестратор).
+- Широке «побудувати/налаштувати модель», кілька рішень одразу → ml-tuning-workflow.
 - Яка це задача; ціль/горизонт; дані на вхід; чи потрібен ML → ml-task-framing (перед усім).
 - Яку модель/алгоритм узяти → ml-model-selection (сім обмежень; WAIC/LOO для байєсових).
 - Як розбивати дані; групи/час/вкладена CV; gap → ml-validation-design.
@@ -24,7 +24,7 @@ for p in glob.glob("/mnt/data/mla/*/scripts"):
 - Grid/Random/Optuna; бюджет пошуку → ml-search-strategy (Optuna 4.9 gamma/weights deprecated; Halving через experimental).
 - Дерева, RF, AdaBoost, GradientBoosting, XGBoost → ml-tree-ensemble-params (gini≈entropy у ~98%; n_estimators↔learning_rate; AdaBoost algorithm= в 1.9 = TypeError).
 - Нейромережі: η, епохи, батч, dropout → nn-training-params (η за порогом train-вартості ÷2; torch немає).
-- OLS/Ridge/Lasso/логістична; нестабільні коефіцієнти → ml-linear-regularization (VIF |r|>0.8→5→10 ЛИШЕ з константою).
+- OLS/Ridge/Lasso/логістична; нестабільні коефіцієнти; один рядок тягне підгонку → ml-linear-regularization (VIF |r|>0.8→5→10 ЛИШЕ з константою).
 - Скільки кластерів; KMeans/GMM/DBSCAN/OPTICS → ml-clustering-k (elbow+silhouette+DB; StandardScaler обов'язково).
 - Забагато ознак; PCA/LDA/t-SNE; підозрілі важливості → ml-dimensionality-features (канарки: CV зросла на шумі = переоснащення).
 - RL: γ/α/ε і розклади; SARSA/Q-learning/DQN → rl-hyperparameters (γ з горизонту 1/(1−γ); eps_min>0 у стохастиці).
