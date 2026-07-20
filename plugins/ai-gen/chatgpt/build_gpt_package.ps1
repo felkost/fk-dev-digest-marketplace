@@ -24,8 +24,9 @@ $stage = Join-Path $env:TEMP "ai_gen_knowledge_stage"
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
-$skills = "plan-ai-solution", "select-genai-models", "design-agent-architecture",
-          "deploy-ai-environments", "evaluate-optimize-models", "build-ai-examples"
+$skills = "plan-ai-solution", "select-genai-models", "engineer-prompt-context",
+          "design-agent-architecture", "explain-llm-internals", "deploy-ai-environments",
+          "evaluate-optimize-models", "build-ai-examples"
 foreach ($s in $skills) {
     $srcSkill = Join-Path $skillsRoot $s
     if (-not (Test-Path $srcSkill)) { throw "Missing skill directory: $srcSkill" }

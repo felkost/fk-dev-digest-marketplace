@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-20T09:56:05.642Z",
+  "generatedAt": "2026-07-20T12:58:12.850Z",
   "marketplace": {
     "name": "fk-dev-digest-marketplace",
     "displayName": "Dev Digest",
@@ -481,11 +481,19 @@
         },
         {
           "name": "design-agent-architecture",
-          "description": "Design LLM/agent system architecture with explicit trade-offs and risks. Covers ReAct, RAG, multi-agent, and human-in-the-loop (agent-in-the-loop) patterns, connecting models to MCP servers and tools, short-term and long-term memory design, and vector databases for retrieval. Use for agent architecture decisions, RAG pipeline design, tool integration via MCP, memory/state design, and vector store selection. Respond in Ukrainian unless the user requests another language."
+          "description": "Design LLM/agent system architecture with explicit trade-offs and risks. Covers workflow patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) versus agents, ReAct, RAG, multi-agent, and human-in-the-loop patterns, connecting models to MCP servers and tools, short-term and long-term memory including persistent knowledge bases, vector databases for retrieval, and autonomous loops with stop contracts and maker-checker separation. Use for agent architecture decisions, RAG pipeline design, tool integration via MCP, memory/state design, vector store selection, and deciding what an agent may do unattended. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "engineer-prompt-context",
+          "description": "Engineer prompts and context for LLM systems with measured trade-offs. Covers prompt anatomy and assembly (introduction, refocus/sandwich, position vs importance vs dependency, elastic snippets, token inertness), technique selection (zero-shot with output schema, few-shot, chain-of-thought, self-consistency, least-to-most decomposition, tree-of-thoughts, personas), and context engineering for long-horizon agents (attention budget and context rot, compaction, structured note-taking, sub-agent isolation, just-in-time retrieval, tool schemas as context). Use for writing or reviewing a prompt, fixing format and instruction-following failures, deciding whether reasoning techniques are worth their cost, and managing a context window that overflows. Respond in Ukrainian unless the user requests another language."
         },
         {
           "name": "evaluate-optimize-models",
           "description": "Measure model quality correctly and optimize efficiency. Covers choosing evaluation metrics per task class (generation, classification, retrieval, agents), building eval sets, LLM-as-judge with its biases, and optimizing tokens, latency, cost and throughput (prompt budgeting, caching, batching, model right-sizing, quantization). Use for \"how do I know it works\", eval design, quality regressions, token/cost reduction, and latency tuning. Respond in Ukrainian unless the user requests another language."
+        },
+        {
+          "name": "explain-llm-internals",
+          "description": "Explain how large language models work internally, at the level a senior engineer needs to make decisions. Covers tokenization and byte-pair encoding, embeddings and the transformer block, attention and its quadratic cost, pretraining, compute-optimal scaling laws, post-training alignment (supervised fine-tuning, RLHF, DPO), inference internals (prefill versus decode, KV cache, PagedAttention, continuous batching, FlashAttention, speculative decoding, grouped-query attention, mixture of experts, quantization), and fine-tuning mechanics (LoRA, QLoRA, chat templates, adapter serving). Use for \"why does the model do that\", \"how does this actually work\", tokenization and context-window questions, serving performance explanations, and fine-tuning mechanics. Respond in Ukrainian unless the user requests another language."
         },
         {
           "name": "plan-ai-solution",

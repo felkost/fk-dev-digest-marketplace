@@ -48,9 +48,19 @@ an optimization that loses quality you didn't measure is a regression you shippe
 - Speculative decoding where supported: measured speedup varies with acceptance rate — verify
   on your traffic.
 
+**Why these knobs work** — prefill vs decode, the KV cache as the real capacity limit,
+PagedAttention, continuous batching, and which techniques are *exact* (FlashAttention,
+speculative decoding) versus a genuine quality trade (quantization) — is
+`explain-llm-internals/references/inference-internals.md`. Read it before promising a speedup:
+two of the items above cost nothing in quality and one of them does.
+
 ## What to instrument (before optimizing anything)
 
 Per request: input/output token counts, model ID, TTFT, total latency, cost (from usage
 fields), cache hit/miss, agent iterations, tool-call count/duration. Aggregate: cost per
 *solved* task and p95 end-to-end — those two are what the business feels; optimizing anything
 else is proxy-chasing.
+
+Once this runs in production, instrumentation becomes a discipline rather than a one-off:
+trajectory tracing, sampled online judging, metrics-gated deploys and the incident→eval-case
+loop are in [agent-ops.md](agent-ops.md).

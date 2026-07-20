@@ -12,6 +12,9 @@ description: Measure model quality correctly and optimize efficiency. Covers cho
 
 - [references/evaluation.md](references/evaluation.md) — метрики за класом задачі, побудова
   eval-набору, LLM-як-суддя і його зсуви, оцінка агентів і retrieval.
+- [references/agent-ops.md](references/agent-ops.md) — експлуатація агента в проді:
+  трасування траєкторій (OpenTelemetry), вибіркове онлайн-суддівство, деплой за метриками,
+  цикл «інцидент → eval-кейс», guardrails і поверхня prompt injection.
 - [references/token-latency-cost.md](references/token-latency-cost.md) — важелі оптимізації:
   бюджет промпта, кешування, батчинг, right-sizing моделі, квантизація; що міряти до і після.
 

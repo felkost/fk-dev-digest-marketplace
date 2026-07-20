@@ -1,0 +1,12 @@
+interface:
+  display_name: "Промпт і контекст"
+  short_description: "Анатомія промпту, техніки з ціною, бюджет контексту"
+  default_prompt: Use $engineer-prompt-context to write or review the prompt (technique choice
+    with its cost, assembly order, context budget) and say how to measure it; answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true

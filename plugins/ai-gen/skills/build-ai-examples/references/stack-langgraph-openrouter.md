@@ -55,6 +55,17 @@ image). Compose wires backend + frontend (+ Postgres/pgvector when the example n
 memory). One `docker compose up` must reproduce the demo on a clean machine — that is the test
 of the example's honesty.
 
+## Adding RAG to this scaffold
+
+Expose retrieval as a **tool** on the same `create_react_agent`, rather than retrieving before
+every turn — the model then decides when the corpus is relevant. A complete worked version
+(pgvector store, ingestion script, offline-testable pure logic) is in
+[rag-example.md](rag-example.md).
+
+One provider caveat carried over from there: OpenRouter documents chat completions, not an
+embeddings endpoint, so the embedding half needs a separate OpenAI-compatible endpoint (a local
+Ollama by default). The `base_url` trick still applies — it is a config change, not a code one.
+
 ## Production deltas (state them with every example)
 
 Retries with backoff on model/tool calls · per-request cost logging (usage from the response) ·
