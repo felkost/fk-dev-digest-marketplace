@@ -24,12 +24,12 @@ export const strings = {
       "Reviews, tests, docs, and shippable digests for Claude Code. Browse the catalog, then add the marketplace and install what you need.",
   },
   stats: {
-    clonesTotal: "repo clones",
-    clones14d: "clones · last 14 days",
+    externalClones: "external clones",
+    externalClones14d: "external clones · last 14 days",
     copyInstalls: "install copies",
     views: "plugin views",
     caption:
-      "Clones approximate installs (they clone the repo directly); copies and views are site activity.",
+      "Clone counts exclude this repository's own CI checkouts, but still include bots and mirrors — read them as an interest trend, not an install count. Copies and views are deliberate actions on this site.",
   },
   catalog: {
     categoryLabel: "Category",

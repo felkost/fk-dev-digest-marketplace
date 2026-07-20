@@ -1,0 +1,1 @@
+ALTER TABLE "clone_stats" ADD COLUMN "ci_count" integer DEFAULT 0 NOT NULL;

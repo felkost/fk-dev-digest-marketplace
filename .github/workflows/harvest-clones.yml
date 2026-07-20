@@ -6,6 +6,11 @@ name: harvest-clones
 # re-run — it upserts by day, refining the last couple of days as GitHub finalizes them rather
 # than duplicating history.
 #
+# It also counts this repo's own workflow runs over the same days into clone_stats.ci_count, since
+# GitHub records every actions/checkout as a clone — that is how the published figure excludes the
+# traffic we generate ourselves. Note the self-reference: this workflow's own checkout is one of
+# the clones it goes on to record and subtract.
+#
 # Requires two repo secrets (Settings → Secrets and variables → Actions):
 #   * STATS_DATABASE_URL — the same Neon/PostgreSQL connection string used by the
 #     fk-dev-digest-stats Render service.

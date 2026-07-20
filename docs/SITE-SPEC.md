@@ -122,23 +122,30 @@ An optional companion backend counts how the catalog is used. Full details in
   cookies, or session ids are stored. `GET /api/stats` returns per-plugin aggregates, plus
   `totals` and the `clones` summary.
 - **Display** — the detail page shows this plugin's numbers as a "Usage" metadata cell; the
-  homepage hero shows a `StatsTiles` row (repo clones, clones · last 14 days, install copies,
-  plugin views) from `totals` + `clones`. Both fetch `/api/stats` once (shared cached promise in
-  `statsApi.ts`). All of it renders nothing when `VITE_STATS_API` is unset or a value is still 0,
-  so the UI is unchanged until real numbers exist.
+  homepage hero shows a `StatsTiles` row (external clones, external clones · last 14 days, install
+  copies, plugin views) from `totals` + `clones`. Both fetch `/api/stats` once (shared cached
+  promise in `statsApi.ts`). All of it renders nothing when `VITE_STATS_API` is unset or a value is
+  still 0, so the UI is unchanged until real numbers exist. The 14-day tile also hides itself while
+  it still equals the total, which it does until tracking outlives the 14-day window.
 - **Wiring** — the site reads the backend base URL from `VITE_STATS_API` at build time (set in
   `pages.yml` and `render.yaml`). Unset it and the site builds with stats fully disabled — every
   stats call is a graceful no-op.
 - **Honest limitation** — real installs happen via `git clone` of this repo by Claude Code and
   never touch the website, so `copy_install`/`plugin_view` measure catalog engagement, not
-  installs.
-- **Clone harvesting** — the closer proxy for real installs. `.github/workflows/harvest-clones.yml`
-  runs daily, pulling GitHub's Traffic API (`/traffic/clones`, a 14-day rolling window) and
-  upserting each day into `clone_stats` (`server/src/harvestClones.ts`), so history survives past
-  that window. `GET /api/stats`'s `clones` field exposes `since`, `recordedDays`,
-  `totalSinceTracking`, `last14dCount`, `last14dUniques`. See
-  [`server/README.md` § Clone harvesting](../server/README.md#clone-harvesting-github-traffic-api)
-  for setup and the reading caveat on `uniques`.
+  installs. Nothing published here is an install count; `copy_install` is the only counter that
+  records a deliberate human action aimed at installing.
+- **Clone harvesting** — `.github/workflows/harvest-clones.yml` runs daily, pulling GitHub's
+  Traffic API (`/traffic/clones`, a 14-day rolling window) and upserting each day into
+  `clone_stats` (`server/src/harvestClones.ts`), so history survives past that window.
+- **CI correction** — GitHub counts every `actions/checkout` as a clone, so raw clone traffic
+  counts this repo's own CI as if it were interest from outside. The Traffic API carries no
+  attribution, so the harvester also counts our own workflow runs over the same days
+  (`/actions/runs`) into `ci_count`, and `GET /api/stats` publishes the difference. The `clones`
+  field exposes `since`, `recordedDays`, `rawTotal`, `ciTotal`, `externalTotal`, `raw14d`, `ci14d`,
+  `external14d`, `uniques14dSummed` — raw and correction side by side, so any published number can
+  be traced back. Only `external*` reaches the UI, and even that still contains bots and mirrors.
+  See [`server/README.md` § Clone harvesting](../server/README.md#clone-harvesting-github-traffic-api)
+  for setup and the reading caveats.
 
 ## Not included in this version
 
