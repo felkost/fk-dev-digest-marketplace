@@ -150,6 +150,30 @@ and do not make it a lesson unless trigger 2 above actually fired.
   RMS 0.0773 for the chain vs **0.0015** for genuine one-factor data at the same
   first-component share. Report the residual, not the variance explained. Same
   file.
+- **"Cronbach's alpha above 0.70 means the scale is good."** It means item count
+  times mean inter-item correlation reaches 0.70, and nothing else. Forty items
+  each sharing 6% of their variance with the next post **alpha = 0.7273**; thirty
+  items at 9% post 0.7479. Ask for the mean inter-item correlation before the
+  alpha. → `discover-eda-structure/references/measurement-reliability.md`
+- **"A high alpha means the items measure one thing."** Two **orthogonal**
+  15-item factors — true correlation 0 by construction — post **alpha = 0.9179**,
+  and the mean score built from them correlates ~0.69 with each and represents
+  neither. Alpha is not a dimensionality statistic; parallel analysis and the
+  residual matrix are. Same file.
+- **"Check for outliers before fitting."** Three different things wear that name
+  and they come apart completely. Measured on one design: a point with a
+  studentized deleted residual of **+5.45** moved the slope by a 60-seed median
+  of **−0.0007**; a point at 5× the leverage flag moved it 0.017; only the point
+  with both moved it **+0.623**. And on perfectly clean data **8–13% of all rows**
+  are flagged. Screen, then refit — the refit is the evidence. →
+  `discover-eda-structure/references/associations.md`
+- **"Split at the median to simplify the analysis."** It discards **36% of the
+  sample** — rows, not effect — because information goes as `r²` and the split
+  multiplies `r` by 0.7979. Power falls **0.682 → 0.568** at d = 0.35. A 90/10
+  cut keeps only 0.34. The honest counterweight, measured and reported as a
+  negative: dichotomizing two correlated additive predictors did **not**
+  manufacture a spurious interaction (0.043–0.059 at every n tried, nominal). →
+  `discover-eda-structure/references/ordinal-dichotomization.md`
 
 ## What not to do
 

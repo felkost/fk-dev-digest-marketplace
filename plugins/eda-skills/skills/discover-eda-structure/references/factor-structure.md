@@ -173,6 +173,30 @@ Causes, in the order worth checking: too few indicators; too few rows; too many 
 an outlier; a column that is ordinal or heavily non-linear being treated as continuous; columns on
 wildly different scales.
 
+**On the ordinal cause specifically, which this file used to name without a remedy.** Feeding Pearson
+correlations of ordinal codes to a factor model does not mainly produce Heywood cases — measured, it
+produces an **extra factor**. One latent factor, p=12, n=500, thresholds shifted one way for six
+items and the other way for six, so the only structure beyond the single factor is item difficulty:
+Pearson extracted ≥2 factors in **100%** of reps at every k from 2 to 7 (splitting exactly along the
+easy/hard grouping), while polychoric returned the correct single factor at k=5 and k=7. The Heywood
+rate was **0 in both paths across all twelve cells** — so the ordinal cause listed above shows up as
+a manufactured dimension, not as a boundary estimate.
+
+Two boundaries matter before reaching for polychoric. At *moderate* threshold spread Pearson only
+over-extracts at k=2; from k=3 up it is fine, so ordinary Likert data with mild difficulty variation
+is not in danger. And at k=2 with extreme spread **polychoric is worse than Pearson** (0.96 vs 1.00
+over-extraction), because every two-way table goes sparse. `ordinal_data.polychoric_matrix` produces
+an `R` that `principal_axis_factoring` accepts directly; the full argument, with the sparse-table
+guard, is in `ordinal-dichotomization.md`.
+
+**Formative indicators are a prior question, not a factor-model result.** If the columns are *causes*
+of a composite rather than *effects* of a construct — income, education and occupation feeding
+socioeconomic status — then they need not correlate, a factor model does not describe them, and
+neither does alpha. The solution will look poor and invite you to delete the indicator carrying the
+most unique information. `reliability.indicator_direction_check` screens for it, and cannot settle it:
+a formative set and a badly built reflective scale are indistinguishable in the data. See
+`measurement-reliability.md`.
+
 **Do not repair it by clipping the communality to 1.0 or by deleting the offending column
 reflexively.** Clipping silences the warning without changing what caused it and biases the
 remaining loadings. The negative variance is a canary, not the gas leak. Add indicators, add rows,

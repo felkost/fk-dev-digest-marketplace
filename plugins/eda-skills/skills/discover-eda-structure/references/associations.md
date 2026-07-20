@@ -121,6 +121,50 @@ The coefficient was unbiased in every cell. Coverage degraded in exactly one: sm
 
 So the diagnostic that earns its place is `leverage_diagnostics` — hat values, their concentration, and a `clt_safe` flag — not a normality test on residuals. Mean leverage is always `p/n`; flag rows above `2p/n`, and when the design is concentrated, get intervals from a bootstrap instead of assuming them.
 
+### Outlier, leverage and influence are three different things
+
+`leverage_diagnostics` depends on **X only** — no outcome is involved — which is precisely why it says who *could* move the estimate and never who *does*. `influence_diagnostics` supplies the half that needs `y`, and the first thing it shows is that one word is being used for three unrelated properties:
+
+| | what it means | statistic |
+|---|---|---|
+| **outlier** | far from the fitted surface | studentized deleted residual |
+| **leverage** | far out in `X`, with room to pull | hat value `h` |
+| **influence** | removing it actually changes the estimate | Cook's D, DFFITS, DFBETAS |
+
+Measured on one clean base (n=60, `x ~ U(0,3)`, `y = 2 + 1·x + N(0,1)`, clean slope 1.0979) with **exactly one planted point per dataset** — flags at `2p/n` = 0.0656, `4/n` = 0.0656, `2√(p/n)` = 0.3621, `|r_del| > 3`:
+
+| planted point | h | stud. deleted | Cook's D | DFFITS | slope shift | flags |
+|---|---|---|---|---|---|---|
+| **A** x at the mean, y off +6 | 0.0166 | **+5.449** | 0.1685 | +0.708 | +0.013 | outlier+influence |
+| **B** x=6, on the true line | **0.3081** | −0.183 | 0.0076 | −0.122 | +0.017 | leverage |
+| **C** x=6, y off −9 | 0.3081 | −6.826 | **5.8510** | **−4.554** | **+0.623** | all three |
+
+Only C matters, and only C carries all three flags. Over 60 seeds the separation is total: A's leverage stays in [0.0164, 0.0193] — always *below* the flag; B's studentized deleted residual stays in [−1.16, +1.54], never near 3; C's Cook's D never falls below 3.76.
+
+**The thresholds are scale-free and do not know what is material.** A is flagged `influence` in 60 seeds out of 60 — Cook's D 0.126–0.265 and DFFITS 0.58–1.06, both clearing their conventional flags every time — while the slope it actually moves has a 60-seed **median of −0.0007** against a coefficient of 1.10. It is a real outlier that changes nothing, because a point at the centre of `x` moves the intercept and not the slope. That is why `slope_shift_if_top_dropped` carries the actual refit: it is the only number here denominated in the units of the answer.
+
+**B is not reliably "clean" either**, and the honest version says so: with its outcome on the *true* line but not the *fitted* one, 5× leverage amplifies a small residual enough to trip Cook's D in **27 of 60 seeds**. What holds in every seed is the pair of facts the trichotomy is about — B is a leverage point, and B is not an outlier.
+
+**Three planted points in one dataset contaminate each other.** With B and C sharing an x-position, B's Cook's D rises from a 60-seed median of 0.057 to **0.455**, exceeding the flag in 60 of 60 seeds purely because C is nearby. The trichotomy has to be measured one planted point per dataset, and the smoke test asserts the interference case explicitly so a refactor cannot silently reintroduce it.
+
+**These are screening rules, not tests.** On perfectly clean normal data with no influential structure whatsoever (p ∈ {2,4,8}, 2000 reps):
+
+| n | share of **rows** flagged | share of **datasets** with ≥1 flag |
+|---|---|---|
+| 30 | 0.122–0.131 | 0.9985 |
+| 50 | 0.096–0.124 | **1.0000** |
+| 100 | 0.083–0.120 | **1.0000** |
+| 300 | 0.077–0.117 | **1.0000** |
+| 1000 | 0.075–0.117 | **1.0000** |
+
+"My data has influential points" is the normal condition, not a finding. Roughly a tenth of all rows are flagged on data built to contain nothing. The flags start the investigation; the refit ends it.
+
+**A briefed expectation died here.** Heavy-tailed errors were supposed to raise the flag rate, and they do not: lognormal errors give 0.1190 of rows flagged at n=100/p=2 against 0.1203 for normal errors — indistinguishable, and the same at every cell tried. The rules are studentized, so inflating the error spread inflates the estimated scale with it and the rate self-normalises.
+
+**Masking, measured rather than assumed.** Duplicating point C (two copies, x-separation 0 to 2) drops the largest single-deletion Cook's D from 5.8510 to 1.76–2.23 — a real 3× dilution, since deleting either copy leaves the other holding the fit. But 1.76 is still **27× the flag**, so the points are not hidden; only the magnitude is. Meanwhile the damage doubles: the slope falls to 0.146 with two copies against 0.475 with one, from a clean 1.0979. Masking here costs accuracy in the *diagnostic*, not the detection — the opposite of the usual warning, and what this design actually produced.
+
+**Never delete a flagged row because it is flagged.** A is a real observation. So is B. Deleting either buys nothing and costs a data point; deleting C changes the answer by 60%, which is a reason to *understand* C, not to remove it.
+
 ### "Fit a line through the scatter" has three different answers
 
 OLS minimises residuals **vertically**, not perpendicularly — because the goal is predicting `y`, not describing the cloud. The eye does the opposite, gravitating to the perpendicular fit, which is PC1. Slopes measured on the same data:
