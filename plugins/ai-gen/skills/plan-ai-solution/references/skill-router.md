@@ -55,6 +55,9 @@ Ukrainian the user is likely to type.
 | «які основні теми в корпусі», питання про весь корпус, багатокрокові зв'язки | `design-agent-architecture` | `references/graph-rag.md` |
 | GraphRAG, граф знань, Neo4j/Cypher, text2cypher, спільноти й entity resolution | `design-agent-architecture` | `references/graph-rag.md` |
 | «покажи робочий RAG», код ingest+retrieve, pgvector | `build-ai-examples` | `references/rag-example.md` |
+| «як завантажити PDF/Word/Excel», OCR, скани, аудіо, таблиці, мультимодальний парсинг | `build-ai-examples` | `references/document-loading.md` |
+| structured outputs, JSON schema, Pydantic-схема відповіді | `build-ai-examples` | `references/document-loading.md` |
+| «донавчити ембединги», fine-tune ретривера, спільне навчання retriever+LLM | `select-genai-models` | `references/build-vs-use.md` |
 | «пам'ять між сесіями», persistent knowledge base, «щоб агент пам'ятав» | `design-agent-architecture` | `references/memory-vector-db.md` |
 | «підключи інструменти», MCP server/tool design, tool permissions | `design-agent-architecture` | `references/mcp-tools.md` |
 | «щоб працювало саме», автономний цикл, автоматизації, worktrees, субагенти | `design-agent-architecture` | `references/loop-engineering.md` |

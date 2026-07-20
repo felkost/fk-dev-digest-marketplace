@@ -1,11 +1,99 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 10** —
-production RAG and eval-set construction. **This closes the round-7 roadmap; there is no round 11
-planned and the next unit of work needs a new user request.** Written for a fresh Claude session
-with no conversation history — read this whole file before touching anything.
+Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 11** —
+document loading and retriever-side tuning, spending the last of the round-7 source batch.
+Written for a fresh Claude session with no conversation history — read this whole file before
+touching anything.
 
-## What just happened (round 10 — production RAG + label production, 2026-07-20, branch `feat/ai-gen-production-rag-evalset` off `main`)
+## What just happened (round 11 — document loading + retriever tuning, 2026-07-20, branch `feat/ai-gen-loading-retriever-tuning` off `main`)
+
+Round 10 closed the roadmap and said the next unit of work needed a new user request. The user
+made one: use the two leftovers the round-10 summary named. Analysis changed the plan, so read
+this before acting on the old summary.
+
+### The analysis, which demoted one of the two leftovers
+
+**Polzer's cookbook: most of it was already covered, one gap was real.** Checking its 11-chapter
+TOC against the plugin found chunking (round 9), vector stores and indexing (round 9), HyDE /
+multiquery / reranking (rounds 2 and 9), agentic RAG and MCP (existing), Graph RAG (round 8) and
+evaluation (rounds 2 and 10) all already present. What was **not** present: its Chapter 3, eleven
+recipes on getting text out of real files. That is precisely the hole `rag-pipeline.md` admits at
+its Load stage — it names "silent extraction loss" and says to eyeball a sample, without ever
+saying *how*. Also missing: structured outputs with Pydantic (the plugin used the phrase and
+never showed the mechanism) and index-time hypothetical questions (HyDE's inverse).
+
+**大模型RAG实战 turned out not to matter, and the round-10 summary overstated it.** Its TOC is
+13 entries for 247 pages — chapter titles with no subsections — so 第5章 (paradigm evolution) and
+第6章 (system training) are visible only as headings, and the standing book procedure forbids
+reading chapter bodies. More decisively, **both topics have proper primary sources**: paradigm
+evolution is Gao et al.'s RAG survey (<https://arxiv.org/abs/2312.10997>), and joint training is
+REALM/Atlas/RA-DIT. The book was a map, the map has been read, and it is now spent. The claim in
+round 10's summary that these topics were "not better covered elsewhere" was wrong: they are not
+covered *in the plugin*, but they are covered far better by the papers than by that book.
+
+Paradigm evolution (Naive → Advanced → Modular) was **proposed and rejected** — it is vocabulary
+rather than a decision, the plugin already teaches the substance, and `rag-pipeline.md` is
+already the longest reference. The user chose the scope: loading plus retriever tuning, no
+taxonomy.
+
+### What shipped
+
+**New: `build-ai-examples/references/document-loading.md`** (142 lines) — references 28 → **29**,
+skills unchanged at 8. Opens with the rule that governs the stage: *every loader succeeds*, so
+the deliverable of Load is text **plus a sample a human has read**, with a five-point check and
+an automated degeneracy screen routing suspect documents to quarantine instead of the index.
+Then a format-by-format table (Word, text-layer PDF, scanned PDF, Excel/CSV, SQL, audio, images,
+video) naming what breaks in each; a three-tier parsing decision (text extraction →
+layout-aware → multimodal model) whose top tier carries the warning that a generated image
+description or table summary is a **model artifact, not source text** and must never be cited as
+the document; index-time enrichment (metadata and trust tiers, vocabulary normalization that
+*keeps* the original because the abbreviation is the rare token BM25 exists to catch, and
+hypothetical questions as the index-time inverse of HyDE); structured outputs; and a production
+section (idempotent re-ingest keyed on content hash, extractor version in metadata, deletion
+path, quarantine over silent drop).
+
+**`select-genai-models/references/build-vs-use.md`** 65 → 130 lines, gaining **rung 2.5**. The
+ladder jumped from "attach RAG" to "fine-tune the generator" and skipped the rung most teams
+need: when RAG underperforms the defect is usually retrieval, and a fine-tuned generator cannot
+fix a passage that never arrived. Escalation inside retrieval, then embedding fine-tuning —
+whose training data is *the same positive-pair artifact `evaluation.md` already demands*, which
+is what makes it cheaper than it looks — then joint training as a rung to recognize and skip.
+
+### Sources verified before writing (all of them, per the standing rule)
+
+- **OpenRouter documents structured outputs**: `response_format` with `"type": "json_schema"`,
+  a nested object carrying `name`/`strict`/`schema`, streaming supported, **per-model** — a
+  request to a model without support fails. This nearly went in backwards: round 2's rule
+  ("don't attribute undocumented capabilities", learned when OpenRouter turned out to have no
+  embeddings endpoint) makes absence the intuitive guess. `build-ai-examples/SKILL.md` now states
+  the rule cuts **both** ways — check for presence and for absence, do not extrapolate from
+  precedent.
+- **REALM** (Guu, Lee, Tung, Pasupat & Chang, 2020, <https://arxiv.org/abs/2002.08909>):
+  retriever pre-trained end-to-end with the LM, MLM as the learning signal, backpropagating
+  through retrieval over millions of documents.
+- **RA-DIT** (Lin et al., 2023, <https://arxiv.org/abs/2310.01352>): two lightweight stages —
+  update the LM to use retrieved text better, update the retriever toward what the LM prefers.
+- **Atlas** (Izacard et al., 2022, <https://arxiv.org/abs/2208.03299>): **its abstract does not
+  discuss joint training**, so the file does not attribute that to it. What it does support —
+  retrieval substituting for parameters, and an index that can be updated without retraining —
+  is what got carried. Its benchmark numbers were not.
+- **sentence-transformers docs**: `MultipleNegativesRankingLoss` for positive-pair data, with
+  in-batch negatives (duplicates hurt). **The docs give no minimum dataset size**, so the
+  reference tells the reader to measure rather than repeating a number from a blog post.
+- **LangChain's loader integrations page** now foregrounds Unstructured, Docling and
+  PyMuPDF-family loaders rather than the per-format classes it used to lead with — round 9's
+  identifier-drift rule confirmed again, so the new file names mechanisms and tool *families*
+  and tells the reader to check current identifiers.
+
+### Verification actually run
+
+`check_docs.py` 7/7 (8 skills / **29** references) · `smoke_test.py` 14/14 · `npm run lint` (8
+plugins, 0 warnings) · `lint:markdown` (400 files, 0 errors) · `lint:format` clean · zip rebuilt
+(142,317 bytes; `gpt_instructions.md` unmoved at 6928) · CJK scan over all English references: 0.
+`build:catalog` skipped — only body sections of two SKILL.md files changed, no frontmatter
+`description`.
+
+## What happened before (round 10 — production RAG + label production, 2026-07-20, branch `feat/ai-gen-production-rag-evalset` off `main`, merged as `f4cfd1b` via PR #15)
 
 The last round of the round-7 roadmap. Three files, no new references (still 8 skills / 28):
 `rag-pipeline.md` 233 → **322 lines**, `evaluation.md` 42 → **100**, `loop-engineering.md`
@@ -1292,25 +1380,23 @@ path filled in) at the start of the analysis — it is self-contained:
 
 ## Open threads / not done
 
-- **Every planned round is now done.** The fixed roadmap (rounds 1–4) plus rounds 5 (reasoning
-  models), 6 (live RAG verification), 7 (source triage), 8 (GraphRAG), 9 (ANN + chunking) and 10
-  (production RAG + label production) have all shipped. `main` has rounds 0–9 (round 7 =
-  `de3f084`/PR #12, round 8 = `3fac365`/PR #13, round 9 = `1a9864d`/PR #14); round 10 is on
-  `feat/ai-gen-production-rag-evalset` awaiting the user's merge. 8 skills, **28** references, a
-  runnable example, two test guards.
-- **There is no round 11 planned. The next unit of work needs a new user request** — do not
-  invent one from the leftovers below.
-- **What the round-7 source batch still has left in it**, if the user ever wants more:
-  - **Polzer's cookbook recipes** (agentic chunking, embedding hypothetical questions, metadata
-    filtering, Ollama, Pydantic structured outputs, multimodal parsing) were triaged as a recipe
-    index for `build-ai-examples` and **never used** — rounds 8–10 all landed in
-    `design-agent-architecture` and `evaluate-optimize-models` instead.
-  - **汪鹏/谷清水/卞龙鹏, 大模型RAG实战** (Chinese) stays the marginal fallback it was: only its
-    RAG-paradigm-evolution and joint retriever/generator training framing are not better covered
-    elsewhere, and round 8 did not need it.
-  - **Mendelevitch & Bao** and **Jia Huang** are spent as maps; **Dhyani** is spent on round 9's
-    chunking table; the **Karim article** is spent across rounds 10's three edits.
-  - The rejected list stands and must not be re-mined — see the round-7 entry.
+- **Every planned round is done, and so is the source batch.** The fixed roadmap (rounds 1–4)
+  plus rounds 5 (reasoning models), 6 (live RAG verification), 7 (source triage), 8 (GraphRAG),
+  9 (ANN + chunking), 10 (production RAG + label production) and 11 (document loading + retriever
+  tuning) have all shipped. `main` has rounds 0–10 (round 7 = `de3f084`/PR #12, 8 =
+  `3fac365`/PR #13, 9 = `1a9864d`/PR #14, 10 = `f4cfd1b`/PR #15); round 11 is on
+  `feat/ai-gen-loading-retriever-tuning` awaiting the user's merge. 8 skills, **29** references,
+  a runnable example, two test guards.
+- **Nothing is planned. The next unit of work needs a new user request** — and unlike after
+  round 10, there is no leftover material to build one from.
+- **The round-7 source batch is fully spent.** Karim (Tier A) across round 10's three edits;
+  Bratanic & Hane, Jia Huang and Mendelevitch & Bao as maps for rounds 8–10; Dhyani on round 9's
+  chunking table; **Polzer on round 11's loading reference**. **汪鹏/谷清水/卞龙鹏, 大模型RAG实战
+  is spent too, and not by being used** — round 11's analysis established that its two candidate
+  topics have proper primary sources (Gao et al.'s RAG survey; REALM/Atlas/RA-DIT), that its TOC
+  is too coarse to see anything else, and that paradigm-evolution taxonomy is vocabulary the
+  plugin does not need. Do not re-open it expecting content. The rejected list from round 7
+  likewise stands and must not be re-mined.
 - **Decisions still waiting on the user, not on work:**
   1. ~~Whether to place the Cameron Wolfe reasoning-models source~~ — **done in round 5**; that
      content gap is closed. The other triaged source (Hao Hoang, rejected) stays rejected.
@@ -1320,8 +1406,9 @@ path filled in) at the start of the analysis — it is self-contained:
   3. Whether to add the plugin to `~/.claude/settings.json` → `enabledPlugins`. **No longer
      blocked on the merge** — that already happened. The one remaining wrinkle is the installed
      plugin cache lagging behind `main` until its own refresh; see the round-5 postscript.
-  4. Whether references should keep growing. **Measured in round 10, not carried forward: 9 of
-     28 references are ≤63 lines**, the rest span 64–322. The "12 of 27/28" figure this file
+  4. Whether references should keep growing. **Re-measured in round 11: 9 of 29 references are
+     ≤63 lines**, the rest span 64–322 (round 11 added a 142-line file and took `build-vs-use.md`
+     from 65 to 130, so the stub list itself did not change). The "12 of 27/28" figure this file
      repeated from round 4 onward was never re-counted and was wrong — same lesson as the round-7
      triage correction above, applied to our own arithmetic. The nine, smallest first:
      `python-visualization.md` (37), `react19-frontend.md` (37), `local-docker.md` (41),

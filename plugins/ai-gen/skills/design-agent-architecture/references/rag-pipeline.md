@@ -48,7 +48,9 @@ Get documents out of their source format into text plus metadata.
   success and the content is already destroyed.
 - **Counter-measure:** eyeball the extracted text for a sample of every source *type* before
   building anything on top. Keep source URI, section, and date as metadata from this stage —
-  you cannot reconstruct them later, and citations depend on them.
+  you cannot reconstruct them later, and citations depend on them. Format-by-format mechanics
+  (PDF layout, tables, OCR, speech-to-text, multimodal parsing) plus index-time enrichment are
+  in `build-ai-examples/references/document-loading.md`.
 
 ### 2. Split
 
