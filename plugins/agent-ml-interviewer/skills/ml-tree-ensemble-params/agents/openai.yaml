@@ -1,7 +1,7 @@
 interface:
   display_name: "Параметри дерев і ансамблів"
   short_description: "Критерій, глибина, обрізання, n_estimators і learning_rate"
-  default_prompt: Use $ml-tree-ensemble-params to set tree/RF/boosting capacity knobs and the n_estimators-learning_rate trade-off; answer in Ukrainian.
+  default_prompt: Use $ml-tree-ensemble-params to set tree/RF/boosting capacity knobs and the n_estimators-learning_rate trade-off; auditing whether an importance ranking is trustworthy (a RandomForest ranking a junk column first, injected-noise canaries) belongs to ml-dimensionality-features; answer in Ukrainian.
 policy:
   products:
     - chatgpt

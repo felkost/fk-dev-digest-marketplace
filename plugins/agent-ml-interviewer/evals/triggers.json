@@ -1,5 +1,5 @@
 {
-  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані).",
+  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані). Дев'ята звірка: +t104-t109 (4 позитивні на ml-measurement-model, 2 стрес-тести на межі з ml-label-quality/ml-distribution-choice), n14 негативний. v9 (2026-07-20): розведено межу t18 tree-ensemble ↔ dimensionality-features (аудит важливостей → dimensionality).",
   "items": [
     {
       "id": "t01",
@@ -108,7 +108,8 @@
       "id": "t18",
       "prompt": "RandomForest поставив службову колонку-вагу на перше місце важливості. Це нормально?",
       "expected": "ml-dimensionality-features",
-      "acceptable_alt": "ml-overfitting-diagnosis"
+      "acceptable_alt": "ml-overfitting-diagnosis",
+      "fixture_note": "МЕЖА (v9, 2026-07-20): аудит довіри до ранжування важливостей (канарки, RF ставить службову колонку першою) належить ml-dimensionality-features, НЕ ml-tree-ensemble-params. До v9 обидва описи заявляли RandomForest+importance, і холодний роутер варіативно крав це в tree-ensemble (той самий клас, що t08). Розведено: з опису tree прибрано 'importances look implausible' + додано Does NOT-вказівник; в опис dimensionality додано 'tree/RandomForest putting a junk column at the top'. Переперевірено 10/10, регресія t11/fresh2 (RF+перенавчання) лишилась у tree."
     },
     {
       "id": "t19",
@@ -655,6 +656,105 @@
       "expected": "ml-distribution-choice",
       "acceptable_alt": null,
       "fixture_note": "СТРЕС: 'скошені дані' тепер є в описі ml-clustering-k; межа з ml-distribution-choice має триматись"
+    },
+    {
+      "id": "t104",
+      "prompt": "Я усереднив 6 колонок опитувальника в один бал задоволеності — це нормально?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "ПОЗИТИВ: усереднення колонок у композит — ядро скіла (середнє = навантаження 1, похибка 0)"
+    },
+    {
+      "id": "t105",
+      "prompt": "Моя модель уперлась у R²=0.75 і не росте, хоч ознак багато. Ціль — усереднений експертний рейтинг.",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": "ml-overfitting-diagnosis",
+      "fixture_note": "ПОЗИТИВ: плато R² при ненадійній композитній цілі — стеля = надійність (Крок 2)"
+    },
+    {
+      "id": "t106",
+      "prompt": "Хочу порізати вік на 3 групи для інтерпретованості. Що я втрачаю?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "ПОЗИТИВ: огрублення неперервної ознаки — Крок 3 (−17% звʼязку при k=3)"
+    },
+    {
+      "id": "t107",
+      "prompt": "Порівнюю індекс залученості між двома країнами — в одній він вищий. Чи можна довіряти цій різниці?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "ПОЗИТИВ: порівняння композита між групами вимагає інваріантності (Крок 5)"
+    },
+    {
+      "id": "t108",
+      "prompt": "Cronbach alpha мого набору ознак 0.71, а колега каже рахувати omega. Яка різниця?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "СТРЕС: alpha/omega — лексика надійності; НЕ ml-label-quality (там мітка y, тут композит X)"
+    },
+    {
+      "id": "t109",
+      "prompt": "У мене шкала 1-5 і я рахую кореляцію Пірсона між двома такими ознаками — вона занижена?",
+      "expected": "ml-measurement-model",
+      "acceptable_alt": null,
+      "fixture_note": "СТРЕС: поліхорична проти Пірсона на порядкових; межа з ml-distribution-choice (там вибір розподілу, тут огрублення звʼязку)"
+    },
+    {
+      "id": "n14",
+      "prompt": "Скільки нейронів у прихованому шарі для мого класифікатора?",
+      "expected": "none",
+      "acceptable_alt": "nn-training-params",
+      "fixture_note": "НЕГАТИВ поруч зі скілом: 'скільки' + архітектура — це не модель вимірювання"
+    },
+    {
+      "id": "t113",
+      "prompt": "Прибрав з датасету одне спостереження — коефіцієнт при ключовому предикторі змінив знак. Як зрозуміти, які саме рядки тримають мою лінійну модель?",
+      "expected": "ml-linear-regularization",
+      "fixture_note": "нова зона Кроку 2a (плече/відстань/вплив); не має піти в ml-label-quality"
+    },
+    {
+      "id": "t114",
+      "prompt": "Беру alpha для Lasso за мінімумом крос-валідаційної помилки. Чи є причина брати щось інше?",
+      "expected": "ml-linear-regularization",
+      "acceptable_alt": "ml-search-strategy",
+      "fixture_note": "СТРЕС на межу: правило 1-SE тепер у linear-regularization, але сітки й пошук — зона search-strategy; ALT легітимний"
+    },
+    {
+      "id": "t115",
+      "prompt": "Відібрав ознаки за допомогою Lasso, потім переоцінив OLS на тих, що лишились, і звітую p-значення. Колега каже, що так не можна. Хто правий?",
+      "expected": "ml-linear-regularization",
+      "fixture_note": "нова зона: недійсність інференсу після керованого даними відбору"
+    },
+    {
+      "id": "t116",
+      "prompt": "Навчив змішану логістичну регресію з user_id як випадковим перехопленням. Чи можна цей коефіцієнт подавати як ефект по популяції?",
+      "expected": "ml-sampling-design",
+      "fixture_note": "нова зона Кроку 5a (маргінальний проти умовного); ризик перетягування в ml-model-selection"
+    },
+    {
+      "id": "t117",
+      "prompt": "Цільова змінна сильно скошена вправо. Логарифмувати її перед навчанням чи ні?",
+      "expected": "ml-distribution-choice",
+      "fixture_note": "розширена зона: ціна нелінійного перетворення; ризик перетягування в ml-linear-regularization"
+    },
+    {
+      "id": "t118",
+      "prompt": "Приблизно 5% рядків у навчальній вибірці мають явно хибні мітки. Що з цим робити?",
+      "expected": "ml-label-quality",
+      "fixture_note": "АНТИ-КРАДІЖКА: linear-regularization отримав зону про 'рядки, що тримають модель' — не має красти шум міток"
+    },
+    {
+      "id": "t119",
+      "prompt": "У мене 60 спостережень і 500 ознак. Яку модель тут узагалі можна будувати?",
+      "expected": "ml-model-selection",
+      "acceptable_alt": "ml-linear-regularization",
+      "fixture_note": "АНТИ-КРАДІЖКА: p>n тепер згадано в описі linear-regularization, але 'яку модель узяти' — зона model-selection"
+    },
+    {
+      "id": "t120",
+      "prompt": "RandomForest дає 0.99 на train і 0.71 на test. Як це діагностувати?",
+      "expected": "ml-overfitting-diagnosis",
+      "fixture_note": "РЕГРЕСІЯ: сусід не має постраждати від нових зон"
     }
   ]
 }

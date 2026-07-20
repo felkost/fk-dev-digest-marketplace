@@ -1,7 +1,7 @@
 interface:
   display_name: "Дизайн вибірки (страти, кластери, ваги)"
-  short_description: "Як відбирали → ваги, design effect, ефективний n, межі узагальнення"
-  default_prompt: Use $ml-sampling-design to turn the sampling scheme into modelling consequences — target population versus frame, strata and clusters, sampling and non-response weights, getting weights into fit AND the metric via metadata routing, design effect and effective n; answer in Ukrainian.
+  short_description: "Ваги, design effect, ефективний n, маргінальний проти умовного"
+  default_prompt: Use $ml-sampling-design to turn the sampling scheme into modelling consequences — target population versus frame, strata and clusters, sampling and non-response weights, getting weights into fit AND the metric via metadata routing, design effect and effective n, marginal versus conditional coefficients; answer in Ukrainian.
 policy:
   products:
     - chatgpt

@@ -20,7 +20,8 @@ $skills = "ml-metric-choice", "ml-decision-threshold", "ml-distribution-choice",
           "rl-hyperparameters", "llm-parameter-choice", "ml-tuning-workflow",
           "ml-task-framing", "ml-model-selection", "ml-validation-design",
           "nn-training-params", "ml-bayesian-inference", "ml-missing-data",
-          "ml-sampling-design", "ml-label-quality", "ml-forecasting-model"
+          "ml-sampling-design", "ml-label-quality", "ml-forecasting-model",
+          "ml-measurement-model"
 
 # 1. Прибрати кеші байткоду, щоб не роздували архів.
 Get-ChildItem -Path $root -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue |

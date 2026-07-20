@@ -1,6 +1,6 @@
 interface:
   display_name: "Розподіл даних → модель і метрика"
-  short_description: "Від природи даних до втрати, моделі й метрики"
+  short_description: "Від природи даних до втрати й метрики; чому не логарифмувати ціль"
   default_prompt: Use $ml-distribution-choice to identify the data distribution
     from its signature and domain, verify it, and derive the model family, loss,
     and metric with Leemis UDR citations; answer in Ukrainian.

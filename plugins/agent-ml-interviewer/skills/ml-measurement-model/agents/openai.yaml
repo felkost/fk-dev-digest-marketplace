@@ -1,0 +1,11 @@
+interface:
+  display_name: "Модель вимірювання (композит, надійність, інваріантність)"
+  short_description: "Що ви припустили, взявши середнє по колонках: надійність, огрублення, інваріантність"
+  default_prompt: Use $ml-measurement-model to audit the measurement model implied by a composite feature — why a mean over columns fixes all loadings at 1 with zero error, how unreliability attenuates correlations and caps R2 at the reliability of the target, what binning costs and how polychoric correlation recovers it, alpha versus omega, effect versus formative indicators, invariance before comparing a composite across groups, improper solutions, and parcel allocation variability; answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true

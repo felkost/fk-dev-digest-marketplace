@@ -1,6 +1,6 @@
 ---
 name: ml-distribution-choice
-description: Identifies the probability distribution behind a variable or target from its data signature (support, discreteness, dispersion, zeros, tails, censoring) and domain, verifies the candidate on the data, and translates it into the model family, GLM family and link, training loss, and evaluation metric — citing proof PDFs from the Leemis & McQueston Univariate Distribution Relationships chart. Use when asked which distribution fits the data, which loss or deviance to train with, why MSE misbehaves on counts or heavy tails, when to use Poisson versus negative binomial, or how to justify a log-transform. Does NOT choose classification metrics under imbalance (use ml-metric-choice) and does NOT pick decision thresholds (use ml-decision-threshold).
+description: Identifies the probability distribution behind a variable or target from its data signature (support, discreteness, dispersion, zeros, tails, censoring) and domain, verifies the candidate on the data, and translates it into the model family, GLM family and link, training loss, and evaluation metric — citing proof PDFs from the Leemis & McQueston Univariate Distribution Relationships chart. Explains why picking the loss beats reshaping the target with a Box-Cox or log transform — a nonlinear transform changes the relationship itself and can erase a real interaction while improving R2, whereas linear rescaling changes neither correlations nor R2. Use when asked which distribution fits the data, which loss or deviance to train with, why MSE misbehaves on counts or heavy tails, when to use Poisson versus negative binomial, whether to log-transform a skewed target, or how to justify a log-transform. Does NOT choose classification metrics under imbalance (use ml-metric-choice) and does NOT pick decision thresholds (use ml-decision-threshold).
 ---
 
 # Розподіл даних → модель, втрата, метрика
@@ -30,6 +30,26 @@ description: Identifies the probability distribution behind a variable or target
 явно: MLE ≡ мінімізація MSE саме за гаусового шуму. Якщо ціль — лічильник або
 додатна величина з мультиплікативним розкидом, ця заява хибна, і модель
 систематично перекошена.
+
+**Чому саме так, а не «прологарифмуємо ціль».** Історична альтернатива —
+підігнати дані під модель степеневим перетворенням (Box-Cox: `λ`=0.5 корінь,
+`λ`=0 лог, `λ`=−1 обернене). Ціна, якої не видно з якості підгонки: **нелінійне
+перетворення змінює сам зв'язок**, не лише форму розподілу. Виміряно на
+`y = a·c·exp(ε)`, n=20 000:
+
+| Шкала | коефіцієнт при `a·c` | p | R² |
+|---|---|---|---|
+| сира | **+1.0007** | ~0 | 0.9606 |
+| логарифмічна | **−0.0006** | 0.876 | **0.9748** |
+
+Взаємодія, яка на сирій шкалі пояснює майже все, на логарифмічній **зникає
+повністю** — і модель при цьому підганяється **краще** (R² 0.975 проти 0.961),
+бо мультиплікативний зв'язок став адитивним (головні ефекти рівно 1.0004 і
+1.0004). Тобто критерій «стало краще» **схвалює втрату ефекту**, який ви
+шукали. Лінійні перетворення (центрування, стандартизація) цим не грішать —
+вони не змінюють ані кореляцій, ані R². Правило: спершу оберіть розподіл і
+втрату під сиру шкалу; логарифм — лише коли мультиплікативність і є вашою
+теорією, і тоді взаємодії шукайте вже на тій шкалі, на якій інтерпретуєте.
 
 ## Не відповідає на
 
@@ -62,7 +82,7 @@ description: Identifies the probability distribution behind a variable or target
 | Нулів більше за exp(−µ): «немає фічі» + «не скористався» | zero-inflated / hurdle | розділити структурні нулі; окрема модель для «чи взагалі» |
 | Додатна неперервна, CV ≈ const: вартість збитку, тривалість | Gamma | `GammaRegressor` / HGBR(loss="gamma"); `mean_gamma_deviance` |
 | Мультиплікативний механізм: доходи, ціни, розміри | Lognormal | лог-трансформація → лінійна/деревна на лог-шкалі; метрики на лог-шкалі |
-| Додатна з точною масою в нулі: страхові виплати за полісом | Tweedie, 1<p<2 | `TweedieRegressor(power≈1.5)`; `d2_tweedie_score` |
+| Додатна з точною масою в нулі: страхові виплати, переміжний попит | Tweedie, 1<p<2 | `TweedieRegressor(power≈1.5)`; для forecasting-цілі — `LGBMRegressor(objective="tweedie")`, див. `ml-forecasting-model` Крок 2a |
 | Час до події, є цензуровані: відтік у часі, наробіток | Exponential / Weibull | survival-аналіз (lifelines), НЕ RMSE; C-index. Exponential лише якщо процес без пам'яті — це властивість F, вона перевіряється |
 | Важкі хвости: дохідності, збитки, затримки | t / Pareto / GPD | MSE може бути безглуздою (нескінченна дисперсія!); MAE / Huber / `QuantileRegressor`; хвіст окремо через POT→GPD |
 | Максимуми за блок: повені, пікові навантаження | GEV (Extreme value) | `scipy.stats.genextreme`; квантилі/return levels, не середнє |
@@ -156,3 +176,9 @@ American Statistician 62(1), 45–53. Інтерактивний чарт:
 `www.math.wm.edu/~leemis/chart/UDR/UDR.html` (76 розподілів, 280 PDF; сайт веде
 власний список помилок чарта — див. `references/leemis-navigation.md`).
 Докази, цитовані вище, завантажені й звірені 2026-07-18.
+
+Quantitude S4E17 «Variable Transformations — Box-Cox, Fox in Socks» (Curran &
+Hancock, звірено 2026-07-20): родина Box-Cox і `λ`; лінійні перетворення не
+чіпають кореляцій, нелінійні змінюють сам зв'язок; історичний контекст (1964 —
+підганяли дані під єдину доступну модель; сьогодні обирають модель під дані).
+Числа таблиці — власний прогін на n=20 000, не переказ епізоду.

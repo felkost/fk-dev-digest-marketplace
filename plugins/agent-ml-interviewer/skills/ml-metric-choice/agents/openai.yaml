@@ -2,7 +2,10 @@ interface:
   display_name: "Вибір метрики класифікації"
   short_description: "Метрика за балансом класів і ціною помилок"
   default_prompt: Use $ml-metric-choice to select the evaluation metric from class
-    balance and FP/FN cost asymmetry; answer in Ukrainian.
+    balance and FP/FN cost asymmetry, including the rank-metric versus training-loss
+    split (ROC-AUC and normalized Gini = 2*AUC-1 are monotone-invariant, so train a
+    log-loss surrogate and use the rank metric only for eval/early-stopping); answer
+    in Ukrainian.
 policy:
   products:
     - chatgpt
