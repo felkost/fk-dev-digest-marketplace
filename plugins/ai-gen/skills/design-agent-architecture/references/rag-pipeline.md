@@ -223,6 +223,96 @@ Diagnose before adding components. In payoff order:
 Adding HyDE, multi-query, and reranking all at once to an untested pipeline is the standard
 mistake: cost triples, latency triples, and nobody can attribute the change.
 
+## Production concerns the stage list does not cover
+
+Everything above gets a pipeline working. The three below decide whether it survives contact
+with real traffic, real users, and a corpus other people can write to. They are **engineering
+practice** rather than results from a paper — where a specific claim has a source, it is cited;
+where it does not, it is stated as practice and you should check it against your own system.
+
+### Hallucination: detect, then *correct*
+
+Detection is the part most pipelines implement and stop at. Groundedness has to be checked
+**per claim**, not per answer — an answer that is 90% supported is not 90% correct, it is one
+false sentence away from misleading someone. Workable checks, cheapest first:
+
+- **Mechanical citation verification.** Require the generator to emit an explicit claim →
+  source-label mapping, then check *in code* that each cited chunk was actually retrieved and
+  actually contains supporting text. A surprising share of hallucination is a citation pointing
+  at a passage that does not say what the sentence claims, and that is catchable without a model.
+- **Entailment scoring.** Score each claim against its cited passage with an NLI-style model.
+  Cheaper than an LLM judge and it produces a per-claim number you can threshold.
+- **Self-consistency.** Sample the answer several times; claims that appear inconsistently across
+  samples are the unstable ones. Costs N generations, so reserve it for high-stakes paths.
+
+**Correction is the missing half.** Once a claim fails, decide by *where* the failure lives:
+
+| Diagnosis | Correction |
+|---|---|
+| Claim is unsupported, but the corpus does contain the fact | Re-retrieve **using the failed claim as the query** — a specific claim is often a better query than the original question — then regenerate |
+| Claim is unsupported and the corpus has nothing | Strip the claim and re-answer from what remains; if nothing remains, abstain |
+| Claim is supported but cited to the wrong passage | Repair the citation, keep the claim — a labelling defect, not a hallucination |
+| Whole answer drifts from the retrieved set | Regenerate with the failed claims named explicitly in the instruction |
+
+Two rules around this loop:
+
+- **Abstention is a first-class outcome and must be measured.** A system that never says "not in
+  the provided sources" is not grounded, it is confident. Track the abstention rate the way you
+  track accuracy; both a zero and a runaway rate are defects.
+- **The corrector must not share the generator's context and prompt**, or it rehearses the same
+  reasoning and confirms the same error — the maker-checker rule in `loop-engineering.md`.
+
+### The retrieval surface is an attack surface
+
+`architectures.md` states the general rule: tool output is data, not commands. **Retrieved
+documents are tool output.** A document containing instructions is therefore a delivery
+mechanism, and anyone who can put a document into the corpus can attempt to steer the model.
+
+Start from the write paths, because that list *is* the threat model. In most real deployments
+it is longer than the design assumed: shared drives, ticket systems, wiki pages anyone can edit,
+customer-submitted attachments, scraped web pages, and auto-ingested email. If ingestion is
+automatic, a hostile document is one upload away from being ranked first for the query it
+targets.
+
+Counter-measures, none of which is sufficient alone:
+
+- **Structural delimitation.** Retrieved text goes in a clearly bounded region, with an explicit
+  instruction that content inside it is never an instruction. Weak on its own, free to add.
+- **No tool calls triggered by retrieved content** without an independent check. This is the
+  control that actually prevents damage, because it breaks the path from "model was fooled" to
+  "something irreversible happened".
+- **Provenance and trust tiers in metadata.** A customer-submitted document must not be able to
+  outrank a policy document. Trust is a retrieval-time filter, not a prompt-time hope.
+- **Output-side guardrails independent of the generator** — a separate check that the answer
+  contains no exfiltrated secrets and no attempt to trigger an action.
+
+This is not hypothetical. A review of agent-based annotation systems records adversarial control
+of an agent's output corrupting stored records at scale before rollback, and concludes that
+hallucination, bias and adversarial control are measurable failures already disrupting real
+pipelines rather than theoretical risks — while also noting that robustness against
+adversarial and prompt-injection attacks is *rarely covered* in the literature (Karim, Khan, Van,
+Liu, Wang & Qu, "Transforming Data Annotation with AI Agents", *Future Internet* 2025, 17(8),
+353, <https://doi.org/10.3390/fi17080353>, §1 and §10.1). Read that second half as the reason to
+design this yourself rather than expecting the field to have solved it.
+
+### Index freshness at scale
+
+The Store stage says to schedule re-ingestion and carry a timestamp. At scale that is the
+beginning, not the answer:
+
+- **Deletion is the hard direction.** A document removed at the source must be removed from the
+  index, or the system answers confidently from retracted material — the failure with legal
+  consequences attached. Full rebuilds mask the problem; incremental pipelines need an explicit
+  tombstone path, and it needs a test.
+- **Measure staleness of what was *retrieved*, not of the job.** "The indexer ran at 04:00" says
+  nothing about whether the passage that answered this question is current. Log the age of the
+  passages behind each answer and alert on the tail.
+- **Re-embedding is a migration, not a config change** (`memory-vector-db.md`): build the new
+  index alongside the old one and cut over, rather than mutating in place and serving a half-
+  migrated index.
+- **A graph index has a second staleness surface.** Community summaries are pregenerated, so they
+  can be stale even when the underlying graph is current — see `graph-rag.md`.
+
 ## Evaluation hooks
 
 The two-stage split is non-negotiable, and `evaluate-optimize-models/references/evaluation.md`
