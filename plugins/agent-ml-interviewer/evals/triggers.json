@@ -705,6 +705,56 @@
       "expected": "none",
       "acceptable_alt": "nn-training-params",
       "fixture_note": "НЕГАТИВ поруч зі скілом: 'скільки' + архітектура — це не модель вимірювання"
+    },
+    {
+      "id": "t113",
+      "prompt": "Прибрав з датасету одне спостереження — коефіцієнт при ключовому предикторі змінив знак. Як зрозуміти, які саме рядки тримають мою лінійну модель?",
+      "expected": "ml-linear-regularization",
+      "fixture_note": "нова зона Кроку 2a (плече/відстань/вплив); не має піти в ml-label-quality"
+    },
+    {
+      "id": "t114",
+      "prompt": "Беру alpha для Lasso за мінімумом крос-валідаційної помилки. Чи є причина брати щось інше?",
+      "expected": "ml-linear-regularization",
+      "acceptable_alt": "ml-search-strategy",
+      "fixture_note": "СТРЕС на межу: правило 1-SE тепер у linear-regularization, але сітки й пошук — зона search-strategy; ALT легітимний"
+    },
+    {
+      "id": "t115",
+      "prompt": "Відібрав ознаки за допомогою Lasso, потім переоцінив OLS на тих, що лишились, і звітую p-значення. Колега каже, що так не можна. Хто правий?",
+      "expected": "ml-linear-regularization",
+      "fixture_note": "нова зона: недійсність інференсу після керованого даними відбору"
+    },
+    {
+      "id": "t116",
+      "prompt": "Навчив змішану логістичну регресію з user_id як випадковим перехопленням. Чи можна цей коефіцієнт подавати як ефект по популяції?",
+      "expected": "ml-sampling-design",
+      "fixture_note": "нова зона Кроку 5a (маргінальний проти умовного); ризик перетягування в ml-model-selection"
+    },
+    {
+      "id": "t117",
+      "prompt": "Цільова змінна сильно скошена вправо. Логарифмувати її перед навчанням чи ні?",
+      "expected": "ml-distribution-choice",
+      "fixture_note": "розширена зона: ціна нелінійного перетворення; ризик перетягування в ml-linear-regularization"
+    },
+    {
+      "id": "t118",
+      "prompt": "Приблизно 5% рядків у навчальній вибірці мають явно хибні мітки. Що з цим робити?",
+      "expected": "ml-label-quality",
+      "fixture_note": "АНТИ-КРАДІЖКА: linear-regularization отримав зону про 'рядки, що тримають модель' — не має красти шум міток"
+    },
+    {
+      "id": "t119",
+      "prompt": "У мене 60 спостережень і 500 ознак. Яку модель тут узагалі можна будувати?",
+      "expected": "ml-model-selection",
+      "acceptable_alt": "ml-linear-regularization",
+      "fixture_note": "АНТИ-КРАДІЖКА: p>n тепер згадано в описі linear-regularization, але 'яку модель узяти' — зона model-selection"
+    },
+    {
+      "id": "t120",
+      "prompt": "RandomForest дає 0.99 на train і 0.71 на test. Як це діагностувати?",
+      "expected": "ml-overfitting-diagnosis",
+      "fixture_note": "РЕГРЕСІЯ: сусід не має постраждати від нових зон"
     }
   ]
 }

@@ -108,7 +108,10 @@ for s in SKILLS:
     check(f"{s}: description містить 'Use when'", "Use when" in desc)
     check(f"{s}: description містить негативне обмеження", "Does NOT" in desc)
     body_lines = len(text.splitlines())
-    check(f"{s}: SKILL.md ≤ 500 рядків", body_lines <= 500, f"{body_lines}")
+    # Конвенція піднята 200 → 300 (2026-07-20). Стеля 500 була настільки вищою за
+    # конвенцію, що НЕ стерегла її взагалі — борг накопичувався мовчки й
+    # виявлявся лише ручним wc. 300 = чинна конвенція, тож тест її реально ловить.
+    check(f"{s}: SKILL.md ≤ 300 рядків", body_lines <= 300, f"{body_lines}")
     # усі згадані ЛОКАЛЬНІ references/* існують (крос-пакові шляхи виду
     # `інший-скіл/references/...` мають префікс і не рахуються)
     refs = set(re.findall(r"(?<![\w/-])references/[A-Za-z0-9._-]+\.(?:md|txt)", text))
