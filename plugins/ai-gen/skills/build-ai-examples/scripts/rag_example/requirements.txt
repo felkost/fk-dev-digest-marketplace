@@ -11,3 +11,4 @@ langgraph
 openai            # OpenAI-compatible client, used for the embeddings endpoint
 psycopg[binary]
 pgvector
+python-dotenv     # loads .env into os.environ; settings.py itself stays stdlib-only

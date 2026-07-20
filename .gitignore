@@ -5,6 +5,12 @@ dist/
 __pycache__/
 *.pyc
 
+# Real secrets filled into a runnable example's env file (e.g.
+# plugins/ai-gen/skills/build-ai-examples/scripts/rag_example/.env). Bare
+# pattern so it's caught at any depth, covering this example and any future
+# one — only the *.example/*.sample templates are meant to be tracked.
+.env
+
 # Local Claude Code directory (personal, per-machine — never shared by default).
 # Default-deny rather than naming settings.local.json alone: a single-filename
 # rule only protects the exact file named today, not whatever Claude Code or a

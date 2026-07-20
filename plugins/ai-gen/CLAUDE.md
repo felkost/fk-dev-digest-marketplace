@@ -13,13 +13,21 @@ asked to touch another plugin or the marketplace root.
   persona). Each `skills/<name>/agents/openai.yaml` is a custom-GPT/Codex packaging descriptor
   consumed by the `chatgpt/` pipeline (`build_gpt_package.ps1` → `dist/*.zip`) — unrelated to the
   plugin-level `agents/` convention, and not scanned as such.
-- The plugin is a v0.x scaffold by design: skill methodology will be extended from user-supplied
-  materials in later sessions. Read `HANDOFF.md` first in every new session, and keep it updated
-  at the end of a working session (the handoff protocol is part of the plugin's own methodology —
-  see `skills/plan-ai-solution/SKILL.md` § «Handoff між сесіями»).
+- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and one round past it has
+  shipped; it is no longer a bare scaffold (8 skills, 27 references), but version stays `0.0.1`
+  and untagged until the user says otherwise. Read `HANDOFF.md` first in every new session, and
+  keep it updated at the end of a working session (the handoff protocol is part of the plugin's
+  own methodology — see `skills/plan-ai-solution/SKILL.md` § «Handoff між сесіями»).
 - Do not invent benchmark numbers, prices, or model-capability claims: when a reference needs a
   concrete figure, either cite the source it came from or mark it as "verify against the provider's
   current docs". Model catalogs (OpenRouter etc.) change weekly — skills teach *how to choose*,
   not a frozen leaderboard.
 - Repo-root scripts (`npm run lint`, `npm run build:catalog`) must be run from the marketplace
   root, not from here — paths in `scripts/*.mjs` are root-relative.
+- The RAG example (`skills/build-ai-examples/scripts/rag_example/`) needs a real
+  `OPENROUTER_API_KEY` in its own `.env` (gitignored repo-wide; `.env.example` is the tracked
+  template, values blank). Never ask the user to paste the key into chat and never write one into
+  a file yourself — the user fills `.env` in their own editor. `ingest.py`/`agent.py` load it via
+  `python-dotenv`, anchored to the script's directory; `settings.py` stays stdlib-only on purpose
+  and only reads `os.environ` (see `rag-example.md`) — don't add dotenv or any other third-party
+  import there.

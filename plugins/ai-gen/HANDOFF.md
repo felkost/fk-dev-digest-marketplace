@@ -1,8 +1,164 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 5** —
-reasoning models, the first work past the fixed roadmap. Written for a fresh Claude session with
-no conversation history — read this whole file before touching anything.
+Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 6** —
+post-merge doc accuracy pass, and the RAG example's full live path (Postgres, Ollama, and a real
+OpenRouter call) verified end to end, which found and fixed four real bugs along the way. Written
+for a fresh Claude session with no conversation history — read this whole file before touching
+anything.
+
+## What just happened (round 6 — post-merge accuracy pass + RAG DB verified live, 2026-07-20, branch `docs/ai-gen-post-merge-accuracy` off `main`)
+
+Two unrelated threads the user asked about in the same breath: whether `CLAUDE.md` → memory →
+this file were still accurate after the merge, and what to do about the RAG example's
+never-actually-run live path. Both turned out to have real content, not just bookkeeping.
+
+### Docs were stale in a specific, checkable way
+
+**PR #10 merged into `main` as `e3894cd`** (squash-merge; tree identical to the pre-merge
+squashed commit `c7a7413` on `feat/gen` — confirmed with `git diff`, not assumed). Local `main`
+was behind by one commit and was fast-forwarded. Found stale by reading, not by a check (none of
+this is covered by `tests/check_docs.py`):
+
+- This file's own "Open threads" section still said *"the fixed roadmap (rounds 1–4) is
+  COMPLETE, there is no round 5 defined"* — three lines below a header that said round 5 had
+  already shipped. Also said 26 references where round 5's own entry already said 27.
+- `enabledPlugins` guidance across three spots in this file (and in the
+  `marketplace-autoupdate-and-global-enable` memory) was written from the pre-merge world, where
+  enabling early would load the stale 6-skill scaffold from the installed plugin cache. That
+  blocker is gone now that `main` has the content — checked directly: the cache at
+  `~/.claude/plugins/marketplaces/fk-dev-digest-marketplace` was still on `64d772c` (6-skill
+  `ai-gen`) as of this round, because `autoUpdate` refreshes on its own schedule, not the instant
+  a merge lands. That lag is the one real remaining wrinkle, not the merge itself.
+- `CLAUDE.md` still called the plugin "a v0.x scaffold by design" — undersold 8 skills.
+
+All fixed in place; see `git log` on this branch for the exact diffs rather than restating them
+here.
+
+### The RAG example's database layer is now genuinely verified, and it found three bugs
+
+The honest state before this round: `smoke_test.py` never touches a database (offline by
+design), so nothing had ever executed `ingest.py`'s DDL or `agent.py`'s ranking query against
+real Postgres. "Nobody has run it end to end" was sitting in this file as an acknowledged gap,
+not a resolved one.
+
+Checked what was actually possible without the user's involvement: **Docker was installed but
+not running** (daemon started this round); **Ollama was not installed at all** (no binary, no
+service on :11434); the OpenRouter key is the user's credential and spending against it, however
+small, is not this session's call. So the embedding and chat calls stay manual-verification —
+but the whole Postgres/pgvector layer, which needs neither, was fully testable right now.
+
+Brought up the real `docker-compose.yml`, reset to a **genuinely fresh** database each time (no
+half-credit from a previous attempt), and imported the actual `EXTENSION`/`build_schema()`
+constants from `ingest.py` and mirrored `agent.py`'s exact `<=>` query — not a reimplementation,
+the real code. Three real bugs surfaced, in order, each only visible against a real server:
+
+1. **`register_vector(conn)` before `CREATE EXTENSION IF NOT EXISTS vector`** in both
+   `ingest.py` and `agent.py`. Crashes on literally the first run against a fresh database —
+   `psycopg.ProgrammingError: vector type not found in the database`. This is the golden-path
+   failure: exactly what a user following the Quickstart hits on step one.
+2. **`vector(%(dim)s)` as a bound query parameter inside `CREATE TABLE`** — Postgres rejects a
+   server-side parameter as a DDL type modifier (`type modifiers must be simple constants or
+   identifiers`). `ingest.py` now has `build_schema(dim: int) -> str`, which validates `dim` is a
+   positive int and formats it directly into the DDL text.
+3. **A raw Python list sent as the `<=>` query vector** in `agent.py`'s `search_docs` —
+   `operator does not exist: vector <=> double precision[]`. An `INSERT` can infer `vector` from
+   the target column; a bare comparison has no column to infer from, so psycopg's default list
+   adapter wins and sends a plain array. Fixed by wrapping with `pgvector.Vector(...)` before
+   binding — `from pgvector import Vector`, added to `agent.py`'s imports.
+
+All three fixed, then **re-verified end to end against a fourth fresh database** with all three
+fixes applied together: schema, insert, upsert-on-reingest, the exact ranking query (correct
+chunk ranked first), and model-ID index versioning — 5/5 checks, real container, real query
+plumbing. Container and volume torn down afterward (`docker compose down -v`); nothing left
+running. Full detail, including *why* the INSERT path didn't need the `Vector()` wrapper but the
+query did (column-type inference exists for one, not the other) — see the round-6 section of
+`references/rag-example.md`.
+
+**What remained unverified at that point:** Ollama (needs installing) and the OpenRouter chat
+call (needs the user's key; spending against it needs the user's say-so). Both were manual
+verification, not CI. **This gap closed later the same session** — see the next section.
+
+### Postscript: the full live path is now verified too — Ollama installed, real OpenRouter call made, and a 4th real bug found
+
+Same session, continued after the database-layer work above. The user asked how to install
+Ollama on a non-`C:` drive (F:), then filled in a real `OPENROUTER_API_KEY`, then asked to
+proceed. All of it done for real, not simulated:
+
+- **Ollama installed to `F:\Ollama`**, models to `F:\Ollama\models`
+  (`OllamaSetup.exe /DIR="F:\Ollama"`, then `setx OLLAMA_MODELS "F:\Ollama\models"`). Verified
+  by byte count on disk, not by trusting the installer's exit code.
+- **A real environment-inheritance trap, specific to this agent-tool's process ancestry, not to
+  Windows or Ollama in general:** the first `ollama pull` landed 274MB on
+  `C:\Users\felko\.ollama\models` instead of `F:\Ollama\models`, even though the registry held
+  the correct value and the Ollama processes started *after* `setx` ran. Diagnosis:
+  `$env:OLLAMA_MODELS` inside a freshly-spawned PowerShell process in this session was **empty**
+  — every process this tool spawns inherits environment from a parent that predates the `setx`
+  call, so no amount of "open a new terminal" *within this session* would have picked it up.
+  Worked around by exporting `$env:OLLAMA_MODELS` explicitly in the same process that launched
+  `ollama.exe serve`, which bypasses inheritance entirely. **This is not expected to affect the
+  user's own normal terminals** (opened via Start Menu/Explorer, which do get the broadcast) —
+  confirmed separately when the user later started Ollama themselves and it worked correctly.
+- Re-pulled with the fix; confirmed via **isolated, single-purpose checks** (one command per
+  path, not a combined script whose output could be misread) that `F:\Ollama\models` held the
+  274MB and `C:\Users\felko\.ollama\models` did not gain anything new. Tested the actual
+  `/v1/embeddings` endpoint with a real request — got a real 768-dimension vector back,
+  `"model":"nomic-embed-text"`. The stray `C:\Users\felko\.ollama\models` duplicate was deleted
+  on request; `id_ed25519`/`id_ed25519.pub` (Ollama's own identity keypair, unrelated to model
+  storage) were left alone since they were never part of what was flagged.
+- **Bug #4, found only by running the actual documented Quickstart:** `cp .env.example .env`
+  does nothing on its own — `settings.py` reads `os.environ` directly and nothing loaded `.env`
+  into it. `ingest.py` crashed with `RuntimeError: OPENROUTER_API_KEY is not set` even with a
+  correctly filled-in `.env` sitting right next to it. Fixed by adding `python-dotenv` to
+  `requirements.txt` and calling `load_dotenv(pathlib.Path(__file__).parent / ".env")` in
+  `ingest.py` and `agent.py` — **not** in `settings.py`, which stays stdlib-only on purpose (the
+  smoke-test invariant from round 2 still holds; check it before adding any import there).
+- **Full real run, no stubs anywhere:** a 2-paragraph synthetic `handbook.md` corpus (refunds,
+  shipping, warranty, account issues — clearly fictional, not user data) through `ingest.py`
+  (real Ollama embeddings, real Postgres write) — "2 chunks to embed", "stored 2 chunks". Then
+  `python agent.py "What is the refund policy?"` — real retrieval, real OpenRouter call,
+  correct grounded answer citing `[handbook.md#0]`. This is the first time any part of this
+  example ran against a real LLM.
+- **One non-blocking finding to track:** `langgraph.prebuilt.create_react_agent` (what
+  `agent.py` uses) printed a deprecation warning — moved to `langchain.agents.create_agent` in
+  LangGraph V1.0, planned removal in V2.0. Not fixed this round: swapping it without re-running
+  the live verification would be exactly the kind of unverified change this whole session argues
+  against. `rag-example.md` now documents this as a known future-breakage risk with the
+  migration pointer.
+- **Where the OpenRouter key goes, now documented in three places** (the user asked
+  specifically): `rag-example.md` (get the key at openrouter.ai, top up a balance, paste into
+  `.env` yourself), the plugin `README.md` (a short pointer section), and this plugin's
+  `CLAUDE.md` (a rule for future sessions: never ask for the key in chat, never write one into a
+  file yourself, `settings.py` stays stdlib-only).
+- Cleaned up afterward: Postgres container + volume torn down, temp corpus and venv were in the
+  session scratchpad (not the repo), nothing left running that wasn't there before.
+
+### Verification actually run (all green)
+
+`python tests/check_docs.py` (7/7, 27 references, 8 SKILL.md — unaffected by the code fix since
+it doesn't inspect Python semantics) · `python tests/smoke_test.py` (14/14 — unaffected for the
+same reason: it never imports `ingest.py`/`agent.py`) · `python -m py_compile ingest.py agent.py`
+· from repo root: `npm run lint`, `lint:markdown`, `lint:format`.
+
+**Not run this round:** `build:catalog`, `evals eval:quality`, `site build` — no skill/reference
+content changed, only `scripts/rag_example/*.py` and doc accuracy; those three gates cover
+catalog/skill surface, which did not move. Run them anyway before merging if pulling this branch
+forward, since running them is cheap and "should be a no-op" is not the same as "verified a
+no-op" — this round's whole point.
+
+### Round-6 facts worth not re-deriving
+
+- **pgvector-python 0.5.0's `register_vector()` needs the extension to exist first, full stop —
+  there is no defensive order that avoids this.** Any future `scripts/*/ingest.py`-shaped code in
+  this plugin that touches pgvector should create the extension before registering.
+- **`INSERT` and comparison/`ORDER BY` parameters are not the same trust level for type
+  inference in psycopg + pgvector.** A raw list works when Postgres can infer the type from a
+  target column; it does not when there is no column to infer from. Wrap explicitly with
+  `pgvector.Vector(...)` for anything that isn't a plain column-typed insert.
+- **Docker Desktop killed a container it had just started**, mid-session, while a slow `pip
+  install` ran in another shell — a cold-start backend restart, not user action. The container
+  and its named volume survived (`docker compose up -d` again just restarted the same one, same
+  data). Don't assume a container that answered `pg_isready` a few minutes ago still is — a
+  fresh `docker compose ps` before trusting a connection costs nothing.
 
 ## What just happened (round 5 — reasoning models, 2026-07-20, branch `feat/gen`)
 
@@ -18,6 +174,29 @@ that their own triage section (below) had accepted but left unplaced.
   cross-ref from `prompt-techniques.md` where CoT already warned that reasoning models do this
   internally. **No instruction bytes spent** — still 6,928 (headroom 1,072), because a new
   reference rides into the zip free. Zip 110,592 → 114,730.
+
+### Postscript: squashed and merged (2026-07-20, same day)
+
+The user asked to squash the branch and push, and merged the PR themselves. The seven working
+commits (round 0 → round 5) became **one commit** on `feat/gen`
+(`c7a7413`), verified identical in tree content to the pre-squash state (`git diff` against a
+local-only safety tag `pre-squash-feat-gen` was empty) before force-pushing with
+`--force-with-lease`. GitHub's squash-merge then created `e3894cd` on `main` — same tree again,
+confirmed the same way.
+
+**`main` is now current**: `plugins/ai-gen` on `main` has all 8 skills and 27 references. Local
+`main` in this working copy was fast-forwarded to match. `feat/gen` still exists, pointing at the
+same content as `main` — safe to delete once you're confident nothing else is pending on it; this
+session did not delete it, only merges/deletes on request.
+
+**What this changes for the two open questions below:** `enabledPlugins` is no longer blocked by
+"would load a stale scaffold" — that was true only pre-merge. The **installed plugin cache**
+(`~/.claude/plugins/marketplaces/fk-dev-digest-marketplace`) is still separate from this and was
+checked directly: as of this session it is still on an old commit (`64d772c`) with the 6-skill
+`ai-gen`, because `autoUpdate` refreshes on its own schedule, not the instant a merge lands. If
+you enable now, don't be surprised if the 7th/8th skill don't appear immediately — that is the
+cache lagging, not a wiring bug; it should catch up on its own refresh cycle, or force it by
+reinstalling.
 
 ### Attribution corrected against the primary sources
 
@@ -701,14 +880,19 @@ path filled in) at the start of the analysis — it is self-contained:
 
 ## Open threads / not done
 
-- **The fixed roadmap (rounds 1–4) is COMPLETE.** There is no round 5 defined. Anything further
-  needs either new material from the user or a decision on the deferred backlog below. The
-  plugin is no longer a scaffold: 8 skills, 26 references, a runnable example, two test guards.
-- **Decisions now waiting on the user, not on work:**
+- **The fixed roadmap (rounds 1–4) is COMPLETE, and round 5 (reasoning models) shipped on top of
+  it.** `main` now has all of it — see the round-5 postscript above. Anything further needs
+  either new material from the user or a decision on the deferred backlog below. The plugin is
+  no longer a scaffold: 8 skills, **27** references, a runnable example, two test guards.
+- **Decisions still waiting on the user, not on work:**
   1. ~~Whether to place the Cameron Wolfe reasoning-models source~~ — **done in round 5**; that
      content gap is closed. The other triaged source (Hao Hoang, rejected) stays rejected.
-  2. Whether to bump the version off `0.0.1` and tag a release. Still deliberately unreleased.
-  3. Whether to add the plugin to `~/.claude/settings.json` → `enabledPlugins`.
+  2. Whether to bump the version off `0.0.1` and tag a release. Still deliberately unreleased —
+     merging the PR did not tag one, and none of `eda-skills`, `agent-ml-interviewer`,
+     `agent-database` is tagged either.
+  3. Whether to add the plugin to `~/.claude/settings.json` → `enabledPlugins`. **No longer
+     blocked on the merge** — that already happened. The one remaining wrinkle is the installed
+     plugin cache lagging behind `main` until its own refresh; see the round-5 postscript.
   4. Whether references should keep growing: 12 of **27** are still 37–63 lines (the original
      scaffold set), against an eda-skills mature band of ~250–380. Rounds 1–5 deepened the ones
      the roadmap named; the rest were never in scope.
@@ -722,16 +906,22 @@ path filled in) at the start of the analysis — it is self-contained:
   `gpt_instructions.md`'s stage chain. The marketplace catalog self-heals via `build:catalog`.
 - `tests/check_docs.py` (7 checks) and `tests/smoke_test.py` (14 checks) both exist. Neither runs
   in CI — see round-1 decision 2. Run both before every commit that touches this plugin.
-- The RAG example's **live path is unverified by design**: real embeddings, a real Postgres and a
-  real OpenRouter key are manual verification, never CI. Nobody has run it end to end against
-  live services yet — say so rather than implying it is proven.
+- **The RAG example's full live path was run for real in round 6** — database layer, Ollama
+  embeddings, and a real OpenRouter chat call, all against live services, all in the same
+  session. Four real bugs came out of it: extension-before-register ordering, a DDL type
+  modifier that can't be a bound parameter, a raw list where pgvector needed `Vector(...)`, and
+  `.env` never actually loading into `os.environ` (fixed with `python-dotenv` in the two
+  entrypoint scripts, not in `settings.py`). All four fixed and re-verified. Nothing about this
+  example's live path is unverified anymore — see round 6's postscript for the full run,
+  including the correct, grounded, cited answer it produced.
 - No `README-beginner.md` yet — add one if/when the user asks (eda-skills precedent).
-- The plugin is not in `~/.claude/settings.json` → `enabledPlugins` yet (the other 4 released
-  plugins are); enable after the user confirms content maturity, or install via
-  `/plugin install`. Still unreleased v0.x, still untagged, deliberately.
+- **`enabledPlugins` status — see the fuller note in the round-5 postscript above and the
+  "Decisions still waiting" item 3.** Short version: merged, so no longer structurally blocked;
+  the installed plugin cache just hasn't refreshed to it yet as of this session.
 - Deferred backlog with no round assigned: the ~50-project Agentic-AI catalog as an idea mine
   for `build-ai-examples`; deeper SFT/DPO pipelines (Labonne & Iusztin) beyond what
-  `fine-tuning-mechanics.md` will cover in round 4.
+  `fine-tuning-mechanics.md` already covers (that file shipped in round 4 — the backlog item is
+  *more* depth than it has, not a claim the file is missing).
 - **Two practitioner-advice sources triaged 2026-07-20** with the standing procedure above, both
   evaluated-but-unplaced — the user will decide round/file placement personally, it is not on
   the roadmap above:
