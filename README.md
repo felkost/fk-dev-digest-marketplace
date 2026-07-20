@@ -1,8 +1,13 @@
 # fk-dev-digest-marketplace
 
-A Claude Code plugin marketplace: a complete spec-driven development (SDD) workflow, the
-technical knowledge it depends on, an architecture reviewer, and research tools — split into four
-independently versioned plugins that install together through declared dependencies.
+A Claude Code plugin marketplace. Its core is a complete spec-driven development (SDD) workflow —
+the technical knowledge it depends on, an architecture reviewer, and research tools — split into
+four independently versioned plugins that install together through declared dependencies (see the
+dependency graph below). Four more standalone plugins ship alongside it: mentor agents for
+generative-AI engineering (`ai-gen`) and database work (`agent-database`), plus skill-only
+knowledge bases for classical ML/Bayesian/forecasting decisions (`agent-ml-interviewer`) and
+exploratory data analysis (`eda-skills`). **11 agent personas across 8 plugins** — see
+[Agents in this catalog](#agents-in-this-catalog).
 
 ## Install
 
@@ -62,12 +67,62 @@ To make the marketplace available to your whole team automatically, add it to yo
 | [`sdd-engineering`](plugins/sdd-engineering/README.md) | The full spec → plan → implement → verify → retro pipeline: 5 agents, 5 skills, 1 command, 1 hook | `engineering-paved-path`, `research-tools`, `architecture-review` |
 | [`agent-ml-interviewer`](plugins/agent-ml-interviewer/README.md) | 21 decision-procedure skills for classical ML, Bayesian inference, forecasting, and LLM/RL parameter choice | — |
 | [`eda-skills`](plugins/eda-skills/README.md) | 4 linked skills that turn raw data into a documented, leakage-safe, validated dataset | — |
-| [`ai-gen`](plugins/ai-gen/README.md) | Senior-developer/mentor agent + 6 linked skills for generative-AI engineering: model-class choice, OpenRouter selection, agent architectures, deployment, evaluation, worked examples | — |
-| [`agent-database`](plugins/agent-database/README.md) | Teacher/analyst agent + 7 linked skills for database coursework: task analysis, SQL/CQL review in six dialects, SQLite/MongoDB, connectivity and cloud, vector databases, ETL and lakehouse, DWH design, BI analytics | — |
+| [`ai-gen`](plugins/ai-gen/README.md) | `ai-gen-mentor` agent + 8 linked skills for generative-AI engineering: model-class choice, OpenRouter selection, prompt/context engineering, agent architectures, LLM internals, deployment, evaluation/optimization, worked examples | — |
+| [`agent-database`](plugins/agent-database/README.md) | `sql-mentor` agent + 7 linked skills for database coursework: task analysis, SQL/CQL review in six dialects, SQLite/MongoDB, connectivity and cloud, vector databases, ETL and lakehouse, DWH design, BI analytics | — |
 
 `agent-ml-interviewer` and `eda-skills` are vendored as-is from a Ukrainian-language course project;
 `ai-gen` and `agent-database` continue that Ukrainian-language line — see
 [Note on Ukrainian-language plugins](#note-on-ukrainian-language-plugins).
+
+## Agents in this catalog
+
+Eleven Claude Code agent personas ship across five of the eight plugins. The other three —
+`engineering-paved-path`, `agent-ml-interviewer`, `eda-skills` — are skill-only: Claude routes to
+them by matching each skill's own `description`, with no named persona to invoke.
+
+```mermaid
+flowchart LR
+  subgraph rt["research-tools"]
+    researcher
+    dw["doc-writer"]
+  end
+  subgraph ar["architecture-review"]
+    arv["architecture-reviewer"]
+    arvl["architecture-reviewer-lite"]
+  end
+  subgraph sdd["sdd-engineering"]
+    sc["spec-creator"]
+    ip["implementation-planner"]
+    im["implementer"]
+    tw["test-writer"]
+    pv["plan-verifier"]
+  end
+  subgraph db["agent-database"]
+    sm["sql-mentor"]
+  end
+  subgraph gen["ai-gen"]
+    gm["ai-gen-mentor"]
+  end
+```
+
+| Agent | Plugin | Role |
+|---|---|---|
+| `researcher` | `research-tools` | Read-only codebase/web research — structured report, exact `file:line` citations, explicit "not found" gaps |
+| `doc-writer` | `research-tools` | Generates and updates docs, design docs, API references, Mermaid diagrams |
+| `architecture-reviewer` | `architecture-review` | Read-only audit of a diff against the repo's own documented architecture contracts |
+| `architecture-reviewer-lite` | `architecture-review` | Relaxed variant of the above; may also report well-reasoned judgment findings |
+| `spec-creator` | `sdd-engineering` | Turns a request into a testable EARS spec — the pipeline's entry point |
+| `implementation-planner` | `sdd-engineering` | Turns a spec into a Development Plan with a dependency DAG and wave map |
+| `implementer` | `sdd-engineering` | Executes exactly one plan task per instance, spawned in parallel waves |
+| `test-writer` | `sdd-engineering` | Behavior-focused unit/integration tests per the plan's Testing Plan |
+| `plan-verifier` | `sdd-engineering` | Read-only ✅/⚠️/❌ completeness sign-off against the plan (two passes) |
+| `sql-mentor` | `agent-database` | Database teacher/analyst — six SQL/CQL dialects, SQLite/MongoDB, cloud, vector DBs, DWH/BI |
+| `ai-gen-mentor` | `ai-gen` | Senior GenAI developer/mentor — model choice, agent architecture (incl. RAG/GraphRAG), deployment, evaluation |
+
+The five `sdd-engineering` agents run in a specific pipeline order with a parallel review+test
+stage and a fix-loop cap — the diagram above only shows which plugin owns which agent; the actual
+execution flow is documented in
+[the plugin's own README](plugins/sdd-engineering/README.md#pipeline-how-the-agents-work-together).
 
 ## Dependency graph
 

@@ -74,7 +74,7 @@
     {
       "name": "ai-gen",
       "source": "./plugins/ai-gen",
-      "description": "Senior-developer/mentor agent with 6 linked skills for generative-AI engineering: model-class selection, LLM/VLM/OpenRouter choice, agent architectures (ReAct, RAG, multi-agent, human-in-the-loop) with MCP/memory/vector DBs, deployment, evaluation/optimization, and worked LangChain/LangGraph + React 19 examples. Content is in Ukrainian — quarantined from the marketplace's English-only content checks (see validate-marketplace.mjs).",
+      "description": "Senior-developer/mentor agent with 8 linked skills for generative-AI engineering: model-class selection, LLM/VLM/OpenRouter choice, prompt and context engineering, agent architectures (ReAct, RAG, GraphRAG, multi-agent, human-in-the-loop) with MCP/memory/vector DBs, LLM internals (tokenization, attention, training, inference, reasoning models), deployment, evaluation/optimization, and worked LangChain/LangGraph + React 19 examples. Content is in Ukrainian — quarantined from the marketplace's English-only content checks (see validate-marketplace.mjs).",
       "category": "knowledge",
       "keywords": [
         "generative-ai",
