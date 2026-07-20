@@ -1,6 +1,6 @@
 ---
 name: select-genai-models
-description: Choose concrete generative models and their combinations. Covers the LLM/VLM/transformer/encoder landscape, build-vs-use decision (train, fine-tune, or use a ready model), selecting models from the OpenRouter catalog by task, quality, context, latency and price, and combining models (encoder + generator, router + specialists, draft + verifier). Use for "which LLM should I pick", model comparison, fine-tune vs prompt decisions, and OpenRouter model selection. Respond in Ukrainian unless the user requests another language.
+description: Chooses concrete generative models and their combinations. Covers the LLM/VLM/transformer/encoder landscape, build-vs-use decision (train, fine-tune, or use a ready model), selecting models from the OpenRouter catalog by task, quality, context, latency and price, and combining models (encoder + generator, router + specialists, draft + verifier). Use for "which LLM should I pick", model comparison, fine-tune vs prompt decisions, and OpenRouter model selection. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Вибір генеративних моделей

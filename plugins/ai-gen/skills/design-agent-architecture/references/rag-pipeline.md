@@ -18,6 +18,17 @@ the right rung at all is `select-genai-models/references/build-vs-use.md`. Quest
 pipeline cannot answer *by construction* — global, thematic, and multi-hop ones — are
 `graph-rag.md`.
 
+## Contents
+
+- What RAG fixes, and what it does not
+- Ingestion pipeline (offline)
+- Serving pipeline (online)
+- Choosing the embedding model
+- Advanced retrieval
+- Order of work when RAG underperforms
+- Production concerns
+- Evaluation hooks
+
 ## What RAG fixes, and what it does not
 
 | Symptom | Is RAG the fix? |

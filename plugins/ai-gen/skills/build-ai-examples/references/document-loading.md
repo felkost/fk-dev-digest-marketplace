@@ -11,6 +11,15 @@ page today foregrounds Unstructured, Docling and PyMuPDF-family loaders rather t
 per-format classes it used to lead with), so this file names *mechanisms and tool families* and
 expects you to check the current identifier before writing code.
 
+## Contents
+
+- The rule that governs the whole stage
+- Format by format
+- Choosing a parsing tier
+- Index-time enrichment
+- Structured outputs
+- What to change for production
+
 ## The rule that governs the whole stage
 
 **Every loader succeeds.** It returns a string, the pipeline moves on, and nothing anywhere

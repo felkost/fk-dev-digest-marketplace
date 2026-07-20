@@ -3,6 +3,16 @@
 Two different problems that get conflated: *state within a session* (short-term) and *knowledge
 across sessions* (long-term). Design them separately.
 
+## Contents
+
+- Short-term memory (within a session)
+- Long-term memory (across sessions)
+- Vector databases
+- What the "approximate" in ANN is actually trading
+- Chunking strategies
+- Persistent knowledge base (the LLM-wiki pattern)
+- Write-back and consolidation
+
 ## Short-term memory (within a session)
 
 The context window is the short-term memory; managing it is a budget problem.
@@ -16,6 +26,17 @@ The context window is the short-term memory; managing it is a budget problem.
   first, volatile content last.
 
 ## Long-term memory (across sessions)
+
+This bucket itself splits into two things that are easy to conflate because they're often stored
+the same way: **knowledge** is static and external — documents, manuals, schemas, a code
+repository — curated on the timescale of its source and identical for every user of the agent.
+**Memory** is dynamic and experiential — preferences, past decisions, session history — updated
+continuously and scoped to a specific user, tenant, or session. The write policy below ("record
+decisions with reasons," timestamps, superseding) is memory's discipline; a knowledge corpus is
+instead re-ingested when its source changes (`document-loading.md`'s idempotent re-ingest). Both
+are commonly surfaced through the same retrieve-then-generate pattern (RAG), which is why they
+get conflated, but confusing "the corpus is stale" with "the user's stated preference wasn't
+recorded" leads to fixing the wrong pipeline.
 
 Choose the store by *retrieval pattern*, not fashion:
 

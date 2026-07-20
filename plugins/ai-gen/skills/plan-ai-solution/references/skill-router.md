@@ -8,6 +8,15 @@ Code: the orchestrator and `agents/ai-gen-mentor.md` route through it instead of
 Read this once per conversation, then read only the `SKILL.md` and `references/*.md` the route
 names. Do not pre-read everything — that is the failure this file prevents.
 
+## Contents
+
+- The stage sequence
+- Coverage check: an agent's five functional layers
+- Routing table
+- Routing rules
+- Misroutes worth naming
+- Extending this map
+
 ## The stage sequence
 
 | # | Stage | Skill | Invariant that makes the stage "done" |
@@ -32,6 +41,25 @@ any stage when the mechanism changes the decision (tokenization explaining a cha
 failure, quadratic attention explaining a context budget, KV-cache pressure explaining p95 under
 load). Route to it when a user asks *why*, not *what to do*; never let it substitute for the
 measurement the stage still owes.
+
+## Coverage check: an agent's five functional layers
+
+A different cut through the same roster, useful when the question is "does this plugin actually
+cover building an agent end to end" rather than "which stage am I on": persona, tools/actions,
+reasoning/planning, knowledge/memory, and evaluation/feedback are the five layers most treatments
+of agent design name as the core of what an agent is built from. Each has a skill home here —
+this is a coverage map, not a new stage order; use the stage sequence above for actual routing.
+
+| Layer | Skill(s) | Entry reference |
+|---|---|---|
+| Persona (system prompt / role) | `engineer-prompt-context` | `references/prompt-techniques.md` |
+| Tools and actions | `design-agent-architecture` | `references/mcp-tools.md` |
+| Reasoning and planning | `design-agent-architecture`, `explain-llm-internals` | `references/architectures.md`, `references/reasoning-models.md` |
+| Knowledge and memory | `design-agent-architecture` | `references/memory-vector-db.md`, `references/rag-pipeline.md` |
+| Evaluation and feedback | `evaluate-optimize-models` | `references/evaluation.md` |
+
+A request that names a layer without naming a stage ("who evaluates the agent's own output?")
+routes off this table instead of the stage sequence; both land in the same skill either way.
 
 ## Routing table
 
@@ -68,6 +96,7 @@ Ukrainian the user is likely to type.
 | «чому повільно/дорого» на рівні механізму, KV-кеш, квантизація, MoE | `explain-llm-internals` | `references/inference-internals.md` |
 | «як влаштоване донавчання», LoRA/QLoRA, chat-шаблони, адаптери | `explain-llm-internals` | `references/fine-tuning-mechanics.md` |
 | «reasoning-моделі», «брати o-серію / R1?», довгий CoT, RLVR, дистиляція міркування | `explain-llm-internals` | `references/reasoning-models.md` |
+| «який temperature/top_p», «seed для відтворюваності», presence/frequency penalty | `explain-llm-internals` | `references/generation-parameters.md` |
 | «дорого/повільно», token burn, latency, caching, routing, quantization | `evaluate-optimize-models` | `references/token-latency-cost.md` |
 | «запусти локально», Docker, GPU, vLLM/Ollama | `deploy-ai-environments` | `references/local-docker.md` |
 | «розгорни в AWS/GCP/Azure», serverless, secrets, budget alarms | `deploy-ai-environments` | `references/cloud-aws-gcp-azure.md` |

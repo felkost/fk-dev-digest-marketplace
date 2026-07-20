@@ -1,6 +1,6 @@
 ---
 name: plan-ai-solution
-description: Orchestrate the design of an AI solution end to end. Analyze a task statement and justify which model class fits — generative (LLM/VLM), computer vision, tree-based, regression, time series, or a deep-learning architecture — then plan the system and coordinate the companion skills select-genai-models, design-agent-architecture, deploy-ai-environments, evaluate-optimize-models, and build-ai-examples. Use for "which model should I use", solution architecture plans, AI feasibility analysis, and session handoff. Respond in Ukrainian unless the user requests another language.
+description: Orchestrates the design of an AI solution end to end. Analyzes a task statement and justifies which model class fits — generative (LLM/VLM), computer vision, tree-based, regression, time series, or a deep-learning architecture — then plans the system and coordinates the companion skills select-genai-models, design-agent-architecture, deploy-ai-environments, evaluate-optimize-models, and build-ai-examples. Use for "which model should I use", solution architecture plans, AI feasibility analysis, and session handoff. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Планування AI-рішення

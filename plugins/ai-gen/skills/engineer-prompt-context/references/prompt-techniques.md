@@ -9,6 +9,14 @@ Techniques below are ordered by cost. Climb only when the cheaper rung is *measu
 insufficient — the same discipline as the model-selection ladder in
 `select-genai-models/references/build-vs-use.md`.
 
+## Contents
+
+- Prompt anatomy
+- Techniques
+- Assembly mechanics
+- Common failure modes
+- What to measure
+
 ## Prompt anatomy
 
 Berryman & Ziegler's shape of a well-constructed prompt:

@@ -5,6 +5,14 @@ markdown/text files into Postgres/pgvector and answers questions through a LangG
 calls retrieval **as a tool**. The concepts behind each stage — and the failure mode of each —
 are in `design-agent-architecture/references/rag-pipeline.md`; this file covers the build.
 
+## Contents
+
+- Run it
+- Layout
+- Four decisions worth explaining
+- What the smoke test pins (14 checks, offline)
+- Production deltas
+
 ## Run it
 
 ```bash

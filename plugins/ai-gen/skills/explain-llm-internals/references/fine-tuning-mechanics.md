@@ -9,6 +9,16 @@ was "no", nothing here applies.
 Worked-code source for this material: Godoy, *A Hands-On Guide to Fine-Tuning Large Language
 Models with PyTorch and Hugging Face* (2024).
 
+## Contents
+
+- Full fine-tuning vs parameter-efficient
+- LoRA
+- QLoRA
+- The dataset is the project
+- Training loop, in outline
+- Serving what you trained
+- Failure modes to name before anyone starts
+
 ## Full fine-tuning vs parameter-efficient
 
 Full fine-tuning updates every weight. The memory cost is the killer: you hold the weights, the

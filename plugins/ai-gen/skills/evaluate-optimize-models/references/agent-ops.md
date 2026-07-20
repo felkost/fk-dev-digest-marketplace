@@ -9,6 +9,17 @@ which describes Agent Ops as a natural evolution of DevOps and MLOps tailored to
 motivating problem it names is exact: traditional unit tests assert `output == expected`, and
 that does not work when a response is probabilistic by design.
 
+## Contents
+
+- Why deterministic testing does not transfer
+- Measure what the business feels
+- Trajectory tracing
+- Online quality: sampled judging
+- Metrics-gated deployment
+- The incident → eval-case loop
+- Security surface of a deployed agent
+- Minimum viable Agent Ops
+
 ## Why deterministic testing does not transfer
 
 Three properties break the usual toolchain, and each needs its own answer:

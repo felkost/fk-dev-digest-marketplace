@@ -1,6 +1,6 @@
 ---
 name: evaluate-optimize-models
-description: Measure model quality correctly and optimize efficiency. Covers choosing evaluation metrics per task class (generation, classification, retrieval, agents), building eval sets, LLM-as-judge with its biases, and optimizing tokens, latency, cost and throughput (prompt budgeting, caching, batching, model right-sizing, quantization). Use for "how do I know it works", eval design, quality regressions, token/cost reduction, and latency tuning. Respond in Ukrainian unless the user requests another language.
+description: Measures model quality correctly and optimizes efficiency. Covers choosing evaluation metrics per task class (generation, classification, retrieval, agents), building eval sets, LLM-as-judge with its biases, and optimizing tokens, latency, cost and throughput (prompt budgeting, caching, batching, model right-sizing, quantization). Use for "how do I know it works", eval design, quality regressions, token/cost reduction, and latency tuning. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Оцінювання якості та оптимізація
