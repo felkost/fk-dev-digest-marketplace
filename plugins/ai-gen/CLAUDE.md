@@ -13,8 +13,8 @@ asked to touch another plugin or the marketplace root.
   persona). Each `skills/<name>/agents/openai.yaml` is a custom-GPT/Codex packaging descriptor
   consumed by the `chatgpt/` pipeline (`build_gpt_package.ps1` → `dist/*.zip`) — unrelated to the
   plugin-level `agents/` convention, and not scanned as such.
-- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–7 have shipped on
-  top of it; it is no longer a bare scaffold (8 skills, 27 references), but version stays `0.0.1`
+- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–8 have shipped on
+  top of it; it is no longer a bare scaffold (8 skills, 28 references), but version stays `0.0.1`
   and untagged until the user says otherwise. Read `HANDOFF.md` first in every new session, and
   keep it updated at the end of a working session (the handoff protocol is part of the plugin's
   own methodology — see `skills/plan-ai-solution/SKILL.md` § «Handoff між сесіями»).
@@ -34,8 +34,20 @@ asked to touch another plugin or the marketplace root.
   bibliography is rejected only when it also carries no such technique — missing credentials are
   not the disqualifier; having nothing checkable is. (User's rule, 2026-07-20; the triage
   procedures in `HANDOFF.md` carry the same exception.)
+- **A famous paper and its reference implementation are two different sources — check which one
+  owns the feature before citing.** Popular systems grow capabilities in the codebase that were
+  never in the paper, and the paper's name gets attached to all of them by association. This has
+  now caught the plugin twice: RLVR is named in Tülu 3, not in the DeepSeek work that popularized
+  it (round 5), and GraphRAG's *local search* mode exists only in the Microsoft implementation's
+  docs — the paper describes the global map-reduce mode alone (round 8). Cite the artifact that
+  actually documents the feature, and say which one it is.
 - Repo-root scripts (`npm run lint`, `npm run build:catalog`) must be run from the marketplace
   root, not from here — paths in `scripts/*.mjs` are root-relative.
+- Adding a reference costs no `gpt_instructions.md` bytes, but the knowledge zip is **not**
+  free-riding: `dist/*.zip` is a build artifact and `check_docs.py` check 5 fails until
+  `chatgpt/build_gpt_package.ps1` is re-run. Rebuild it in any round that adds or removes a
+  reference, even when the instruction text is untouched. (Invoke it as `& .\chatgpt\build_gpt_package.ps1`
+  — `pwsh` is not installed on this machine, only Windows PowerShell 5.1.)
 - The RAG example (`skills/build-ai-examples/scripts/rag_example/`) needs a real
   `OPENROUTER_API_KEY` in its own `.env` (gitignored repo-wide; `.env.example` is the tracked
   template, values blank). Never ask the user to paste the key into chat and never write one into

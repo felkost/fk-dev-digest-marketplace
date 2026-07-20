@@ -1,12 +1,82 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 7** — triage
-of a 13-file source batch (one peer-reviewed article, twelve books), a new user rule on what makes
-a source admissible, and a fixed roadmap for rounds 8–10. No reference content was written.
-Written for a fresh Claude session with no conversation history — read this whole file before
-touching anything.
+Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 8** — the
+GraphRAG reference, the first content round off the round-7 roadmap. Written for a fresh Claude
+session with no conversation history — read this whole file before touching anything.
 
-## What just happened (round 7 — source-batch triage + rounds 8–10 roadmap, 2026-07-20, branch `docs/ai-gen-source-triage-round7` off `main`)
+## What just happened (round 8 — GraphRAG reference, 2026-07-20, branch `feat/ai-gen-graph-rag` off `main`)
+
+Round 7's roadmap named this round completely, so it needed no new material from the user: a new
+`skills/design-agent-architecture/references/graph-rag.md` (235 lines) closing the plugin's only
+zero-coverage gap. References 27 → **28**; skills unchanged at 8.
+
+### The attribution error this round caught, and why it is now a `CLAUDE.md` rule
+
+The brief said to describe "Microsoft GraphRAG's two query modes, global vs local". Verifying
+Edge et al. (<https://arxiv.org/abs/2404.16130>, v2 Feb 2025) **before** writing showed the paper
+describes the **global map-reduce mode only**. *Local search* is a mode of the Microsoft
+implementation, documented at <https://microsoft.github.io/graphrag/query/local_search/>. Citing
+the paper for it would have been exactly the round-5 mistake again (RLVR attributed to DeepSeek
+instead of Tülu 3), so `CLAUDE.md` now carries the general rule: **a famous paper and its
+reference implementation are two different sources — check which one owns the feature.** The
+reference states the split explicitly rather than hiding it, since a reader who cites the paper
+for local search will be wrong in public.
+
+Other things verified against primaries rather than the books, per the standing rule:
+
+- **Leiden** community detection, used hierarchically — Traag, Waltman & van Eck, "From Louvain
+  to Leiden: guaranteeing well-connected communities", *Scientific Reports* 9:5233, 2019
+  (<https://arxiv.org/abs/1810.08473>). The guarantee over Louvain is that communities are
+  internally connected.
+- **text2cypher** against the Neo4j GraphRAG Python package docs
+  (<https://neo4j.com/docs/neo4j-graphrag-python/current/user_guide_rag.html>): the
+  `neo4j_schema` and `examples` parameters are real API surface, and the docs state directly that
+  a generated query is not guaranteed valid — it raises `Text2CypherRetrievalError`. Written as a
+  practitioner technique checked against current tool docs, per round 7's rule (в).
+- Bratanic & Hane was used as a **map only** — no claim in the file rests on it.
+
+**Two paper figures were deliberately not carried**, in house style: the chunk-size/entity-recall
+ratio from the appendix and the token-cost ratio in Table 2. The file carries the *direction* and
+the knob (smaller chunks recall more entity references, at more LLM calls; gleaning rounds are the
+counter-measure) and points at the paper for the numbers.
+
+### What the reference actually argues
+
+Leads with the decision rule, because it is the part that changes a recommendation: vector top-k
+**structurally** cannot answer global/aggregative questions (similarity to the question is not
+coverage of the corpus, and `k` out of `N` cannot become `N`) or multi-hop ones — and reranking
+cannot fix either, because it only reorders a candidate set that is still `k`. Then: LLM graph
+construction with **entity resolution as the hard part** (over-merging is the dangerous direction
+— the graph looks clean while facts contaminate each other); the index pipeline and the two query
+modes; text2cypher with its failure modes, including that generated Cypher can contain `DELETE`
+and must run under a database-enforced read-only role, not a prompt instruction; a cost-honesty
+section with a "when it is *not* worth it" table and three cheaper rungs to try first; and the
+retriever router cross-referenced to `architectures.md`, not restated. The one router failure
+mode kept here is the asymmetric one: **a misroute toward vector search is silent** — it returns
+a fluent, well-cited answer of the wrong scope, while the reverse merely wastes money.
+
+### Wiring done (the twins check does not cover any of it)
+
+`rag-pipeline.md` scope note + a new row in the "what RAG fixes" table; `memory-vector-db.md`'s
+one-line graph row expanded into a pointer paragraph that separates *store choice* from
+*retrieval architecture*; `SKILL.md` Довідки entry; two routing rows in `skill-router.md`; README
+tree line and trigger phrases.
+
+### Verification actually run
+
+`check_docs.py` 7/7 (8 skills / **28** references) · `smoke_test.py` 14/14 · `npm run lint` (8
+plugins, 0 warnings) · `lint:markdown` (399 files, 0 errors) · `lint:format` clean ·
+`build_gpt_package.ps1` rebuilt · stray-codepoint scan over all English references: **0 CJK**, and
+`graph-rag.md` contains exactly two non-ASCII characters (`—`, `→`).
+
+**A belief from the round-7 brief needed correcting:** "a new reference rides into the zip free"
+is true of `gpt_instructions.md` **bytes** (6928, headroom 1072 — unmoved, confirmed), but *not*
+of the zip artifact. `check_docs.py` check 5 failed with "knowledge zip has 27 references,
+expected 28" until `build_gpt_package.ps1` was re-run (zip now 125,592 bytes). Recorded in
+`CLAUDE.md`: rebuild the zip in any round that adds or removes a reference. `build:catalog` was
+correctly skipped — no SKILL.md `description` changed.
+
+## What happened before (round 7 — source-batch triage + rounds 8–10 roadmap, 2026-07-20, branch `docs/ai-gen-source-triage-round7` off `main`, merged as `de3f084` via PR #12)
 
 A round-0-shaped session: **no reference content written.** The user supplied 13 files and asked
 for a verdict on each, a plan for using them, and then the bookkeeping chain. Both standing
@@ -1045,19 +1115,28 @@ path filled in) at the start of the analysis — it is self-contained:
 - Repo-root scripts must run from the marketplace root (`npm run lint`, `npm run
   build:catalog`); paths in `scripts/*.mjs` are root-relative.
 - `dist/` is gitignored repo-wide, including this plugin's `dist/` — knowledge zips are built
-  artifacts, never committed.
+  artifacts, never committed. **They still have to be rebuilt when a reference is added or
+  removed** — `check_docs.py` check 5 compares the zip's contents against disk and fails on a
+  stale zip even though nothing about it gets committed (round 8 hit this).
+- **`pwsh` is not installed on this machine** — only Windows PowerShell 5.1. Run the packaging
+  script as `& .\chatgpt\build_gpt_package.ps1` from the plugin root; `pwsh -File ...` fails with
+  `CommandNotFoundException`.
 - Markdown is prettier-ignored repo-wide (`.prettierignore`); markdownlint-cli2 with the
   root `.markdownlint.jsonc` is the md gate instead.
 
 ## Open threads / not done
 
 - **The fixed roadmap (rounds 1–4) is COMPLETE; rounds 5 (reasoning models), 6 (live RAG
-  verification) and 7 (source triage) shipped on top of it.** `main` has rounds 0–6; round 7 is on
-  `docs/ai-gen-source-triage-round7` awaiting the user's merge. The plugin is no longer a scaffold:
-  8 skills, **27** references, a runnable example, two test guards.
-- **Rounds 8–10 are now planned, not open** — see the round-7 entry at the top of this file for
-  the full brief. Round 8 (GraphRAG) is the next unit of work and needs no new material from the
-  user; the sources are already triaged and named.
+  verification), 7 (source triage) and 8 (GraphRAG) shipped on top of it.** `main` has rounds 0–7
+  (round 7 merged as `de3f084` via PR #12); round 8 is on `feat/ai-gen-graph-rag` awaiting the
+  user's merge. The plugin is no longer a scaffold: 8 skills, **28** references, a runnable
+  example, two test guards.
+- **Rounds 9–10 remain planned, not open** — see the round-7 entry for the full brief, which round
+  8 did not change. Round 9 (ANN index internals + chunking strategies in `memory-vector-db.md`)
+  is the next unit of work and needs no new material from the user; the sources are already
+  triaged and named. Round 8 left it one extra hook: `memory-vector-db.md` now separates store
+  choice from retrieval architecture in prose, so the ANN section lands under a heading that
+  already exists.
 - **Decisions still waiting on the user, not on work:**
   1. ~~Whether to place the Cameron Wolfe reasoning-models source~~ — **done in round 5**; that
      content gap is closed. The other triaged source (Hao Hoang, rejected) stays rejected.
@@ -1067,7 +1146,7 @@ path filled in) at the start of the analysis — it is self-contained:
   3. Whether to add the plugin to `~/.claude/settings.json` → `enabledPlugins`. **No longer
      blocked on the merge** — that already happened. The one remaining wrinkle is the installed
      plugin cache lagging behind `main` until its own refresh; see the round-5 postscript.
-  4. Whether references should keep growing: 12 of **27** are still 37–63 lines (the original
+  4. Whether references should keep growing: 12 of **28** are still 37–63 lines (the original
      scaffold set), against an eda-skills mature band of ~250–380. Rounds 1–5 deepened the ones
      the roadmap named; rounds 9–10 will deepen `memory-vector-db.md` and `evaluation.md`, which
      takes two more off that list.
