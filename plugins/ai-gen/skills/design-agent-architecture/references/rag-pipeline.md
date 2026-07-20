@@ -14,7 +14,9 @@ you are choosing what the model should know versus what it should look up.
 Scope note: chunking policy, store selection, hybrid search and the same-model embedding rule
 live in `memory-vector-db.md` and are cross-referenced here rather than restated. What a
 retrieval failure means for the *architecture* decision is in `architectures.md`; whether RAG is
-the right rung at all is `select-genai-models/references/build-vs-use.md`.
+the right rung at all is `select-genai-models/references/build-vs-use.md`. Questions this
+pipeline cannot answer *by construction* — global, thematic, and multi-hop ones — are
+`graph-rag.md`.
 
 ## What RAG fixes, and what it does not
 
@@ -25,6 +27,7 @@ the right rung at all is `select-genai-models/references/build-vs-use.md`.
 | Wrong format, wrong tone, ignores instructions | **No** — behavior defect; rungs 0–1, or fine-tuning |
 | Reasoning is weak on facts already supplied | **No** — the context was there and the model failed to use it |
 | Corpus is small and static and fits in the context window | **Probably not** — just put it in the prompt and skip the pipeline |
+| Question is about the corpus *as a whole* ("main themes across all reports?"), or joins facts that never share a chunk | **Not this pipeline** — top-k cannot cover a corpus and reranking cannot fix it; see `graph-rag.md` |
 
 The last row matters more than it looks: a pipeline you do not build cannot break. Recommend
 long-context stuffing when the corpus genuinely fits and is stable, and say what would change

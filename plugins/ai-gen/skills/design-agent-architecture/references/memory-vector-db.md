@@ -23,8 +23,17 @@ Choose the store by *retrieval pattern*, not fashion:
 |---|---|
 | Exact-key facts (user prefs, config, decisions) | Plain files / relational DB — retrieval by key, no embeddings needed |
 | Semantic recall over unstructured text | Vector DB (see below) |
-| Relations/graph traversal (who-worked-with-whom) | Graph or relational DB |
+| Relations/graph traversal (who-worked-with-whom) | Graph or relational DB — see below |
 | Session handoff for a coding/analysis agent | A human-readable HANDOFF/memory file (auditable, editable) |
+
+**When the graph row is the answer.** Picking a graph *store* and building a graph *retrieval
+architecture* are different decisions, and the second one is not made here. If the questions are
+global ("what are the main themes across this corpus?") or multi-hop (joining facts that never
+share a chunk), no vector store configuration answers them — that is `graph-rag.md`, which
+covers LLM-driven graph construction, entity resolution, community summaries and their two query
+modes, text2cypher, and what the index costs. If you only need relation lookups over data you
+already hold, an ordinary graph or relational DB with hand-written queries is the cheaper answer
+and needs none of that machinery.
 
 Write policy matters more than the store: record *decisions with reasons* and *stable facts*;
 do not archive raw transcripts as "memory" — retrieval will surface stale contradictions.

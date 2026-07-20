@@ -21,6 +21,10 @@ description: Design LLM/agent system architecture with explicit trade-offs and r
 - [references/rag-pipeline.md](references/rag-pipeline.md) — RAG як два конвеєри (ingestion і
   serving): стадії з режимами відмови, вибір ембединг-моделі як процедура, просунутий retrieval
   (реранкінг, multi-query, компресія, HyDE) з ціною кожного, порядок дій при поганому RAG.
+- [references/graph-rag.md](references/graph-rag.md) — графовий пошук: чому векторний top-k
+  структурно не відповідає на глобальні й багатокрокові питання; побудова графа знань через LLM
+  і entity resolution; спільноти та їхні підсумки, global vs local режими; text2cypher; чесна
+  вартість індексації та таблиця «коли графа не треба».
 - [references/loop-engineering.md](references/loop-engineering.md) — система навколо моделі:
   автоматизації, worktrees, скіли, конектори, субагенти; maker-checker; зовнішній стан; ризики
   автономного циклу.

@@ -52,6 +52,8 @@ Ukrainian the user is likely to type.
 | «спроєктуй агента», ReAct, multi-agent, human-in-the-loop, workflow vs agent | `design-agent-architecture` | `references/architectures.md` |
 | «зроби RAG», «пошук по документах», citations over a private corpus | `design-agent-architecture` | `references/rag-pipeline.md` |
 | «RAG поганий», retrieval misses, реранкінг, HyDE, multi-query | `design-agent-architecture` | `references/rag-pipeline.md` |
+| «які основні теми в корпусі», питання про весь корпус, багатокрокові зв'язки | `design-agent-architecture` | `references/graph-rag.md` |
+| GraphRAG, граф знань, Neo4j/Cypher, text2cypher, спільноти й entity resolution | `design-agent-architecture` | `references/graph-rag.md` |
 | «покажи робочий RAG», код ingest+retrieve, pgvector | `build-ai-examples` | `references/rag-example.md` |
 | «пам'ять між сесіями», persistent knowledge base, «щоб агент пам'ятав» | `design-agent-architecture` | `references/memory-vector-db.md` |
 | «підключи інструменти», MCP server/tool design, tool permissions | `design-agent-architecture` | `references/mcp-tools.md` |
