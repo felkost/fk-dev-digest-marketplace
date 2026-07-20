@@ -13,7 +13,7 @@ asked to touch another plugin or the marketplace root.
   persona). Each `skills/<name>/agents/openai.yaml` is a custom-GPT/Codex packaging descriptor
   consumed by the `chatgpt/` pipeline (`build_gpt_package.ps1` → `dist/*.zip`) — unrelated to the
   plugin-level `agents/` convention, and not scanned as such.
-- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–8 have shipped on
+- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–9 have shipped on
   top of it; it is no longer a bare scaffold (8 skills, 28 references), but version stays `0.0.1`
   and untagged until the user says otherwise. Read `HANDOFF.md` first in every new session, and
   keep it updated at the end of a working session (the handoff protocol is part of the plugin's
@@ -41,6 +41,13 @@ asked to touch another plugin or the marketplace root.
   it (round 5), and GraphRAG's *local search* mode exists only in the Microsoft implementation's
   docs — the paper describes the global map-reduce mode alone (round 8). Cite the artifact that
   actually documents the feature, and say which one it is.
+- **Tool documentation is a moving target: cite the technique, treat the identifier as volatile.**
+  Class names, parameter names and doc URLs drift between releases — round 9 found LangChain's
+  concept URLs 308-redirecting to a generic overview and LlamaIndex's docs on a new host, and the
+  same round's brief carried FAISS's `nlist`/`nprobe` for what pgvector calls
+  `lists`/`ivfflat.probes`. Name the mechanism, name the implementation you checked, and say the
+  identifier should be verified against current docs. Never copy a parameter name from one
+  library into a sentence about another.
 - Repo-root scripts (`npm run lint`, `npm run build:catalog`) must be run from the marketplace
   root, not from here — paths in `scripts/*.mjs` are root-relative.
 - Adding a reference costs no `gpt_instructions.md` bytes, but the knowledge zip is **not**

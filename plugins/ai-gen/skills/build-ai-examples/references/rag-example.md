@@ -145,9 +145,12 @@ This is a teaching scaffold. Before it carries real traffic:
 - **Tokenizer, not words.** The splitter windows on whitespace words so the example runs with
   nothing installed. Real chunk sizes must be measured in the *embedding model's* tokens, or
   chunks silently overflow its max sequence length and get truncated.
-- **ANN index.** The example's query does an exact scan. Add an HNSW or IVFFlat index in
-  pgvector once the corpus grows, and re-measure recall@k after — approximate search trades
-  recall for speed, and the trade must be observed, not assumed.
+- **ANN index.** The example's query does an exact scan, deliberately: on a demo corpus that is
+  the correct choice. Add an HNSW or IVFFlat index in pgvector once the scan is the *measured*
+  bottleneck, and re-measure recall@k after — approximate search trades recall for speed, and the
+  trade must be observed, not assumed. Which family, which build-time versus query-time knobs,
+  and pgvector's exact parameter names are in
+  `design-agent-architecture/references/memory-vector-db.md`.
 - **Hybrid search.** Dense vectors miss exact identifiers and rare terms; add keyword/BM25 and
   fuse (see `design-agent-architecture/references/memory-vector-db.md`).
 - **A labelled retrieval set** of question→passage pairs, and recall@k measured *before* anyone

@@ -16,8 +16,10 @@ description: Design LLM/agent system architecture with explicit trade-offs and r
 - [references/mcp-tools.md](references/mcp-tools.md) — приєднання інструментів через MCP-сервери:
   дизайн інструментів, безпека, версіонування.
 - [references/memory-vector-db.md](references/memory-vector-db.md) — короткотривала і
-  довготривала пам'ять, векторні бази даних: вибір, чанкінг, гібридний пошук, оцінка retrieval;
-  постійна база знань (LLM-wiki), запис і консолідація пам'яті.
+  довготривала пам'ять, векторні бази даних: вибір сховища, ANN-індекси (Flat/IVF/HNSW/PQ/LSH)
+  і трикутник recall-латентність-пам'ять, ручки побудови проти ручок запиту з назвами pgvector;
+  sparse vs dense і RRF; меню стратегій чанкінгу; оцінка retrieval; постійна база знань
+  (LLM-wiki), запис і консолідація пам'яті.
 - [references/rag-pipeline.md](references/rag-pipeline.md) — RAG як два конвеєри (ingestion і
   serving): стадії з режимами відмови, вибір ембединг-моделі як процедура, просунутий retrieval
   (реранкінг, multi-query, компресія, HyDE) з ціною кожного, порядок дій при поганому RAG.
