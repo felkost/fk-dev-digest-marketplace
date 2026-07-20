@@ -128,6 +128,14 @@ supported. The caveats are the load-bearing part:
   on a sample.
 - Keep schemas shallow and required-heavy. Deeply nested optionals give the model room to return
   a technically valid, semantically empty object.
+- **Model a keyed or numbered collection as a list of typed records, not an open-ended map.** A
+  strict schema enumerates its properties explicitly and forbids extras (OpenRouter's own schema
+  example sets `additionalProperties: false`), and a dict keyed on arbitrary values cannot be
+  expressed that way — so a field typed as `dict[int, str]` is exactly the shape strict mode
+  cannot pin down. Use a list of small typed objects (e.g. a Pydantic model or `TypedDict` with
+  `id`/`description` fields) and forbid extra keys on it. Practitioner technique, verified against
+  OpenRouter's structured-output schema example; confirm the exact strict-mode constraints in the
+  reference for the model you actually call.
 
 ## What to change for production
 

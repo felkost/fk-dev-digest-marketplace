@@ -98,6 +98,30 @@ existing Berryman & Ziegler-backed `prompt-techniques.md`); OpenAI Agents SDK sp
 §2.3–2.4 (the plugin's stack is LangGraph; typed outputs and tracing are already covered by
 `document-loading.md` and `agent-ops.md`).
 
+### Follow-up: the companion repo's chapter_02 code was mined too (same session, same branch)
+
+After the book-chapter work above, the user asked to analyze the companion repo's actual code —
+specifically `chapter_02/` (nine `.py` files, OpenAI Agents SDK: `Runner.run_sync`,
+`@function_tool`, `with trace(...)`). The code is one "Research Planner" agent built up in steps.
+Most of it re-illustrates what the chapters already gave (model settings, tracing, tool chaining
+— covered in `generation-parameters.md`, `agent-ops.md`, `architectures.md`), and the SDK
+specifics were not carried (LangGraph stack). **Two genuine deltas the prose did not show, both
+taken as practitioner technique:**
+
+- **`document-loading.md` § Structured outputs** gained the lesson from the `04_output_types.py`
+  → `05_output_types_fixed.py` progression: model a keyed/numbered collection as a *list of typed
+  records*, not an open-ended map. A field typed `dict[int, str]` is exactly the shape a strict
+  schema cannot pin down; the fix is a list of small typed objects with extra keys forbidden.
+  Verified against OpenRouter's schema example (`additionalProperties: false`), not attributed as
+  a claim OpenRouter makes about dicts.
+- **`mcp-tools.md` § Tool design rules** gained the lesson from `07`/`08`: registering a tool does
+  not make the model use it. Grounding the answer on a tool result is an instruction/persona job
+  ("begin by calling `search`, use only what it returns"), not something the tool schema enforces.
+
+These two edits are a small follow-up commit on top of the round-12 base commit, not a new round.
+The rest of the companion repo (chapters other than 02) is still unread — if a future round wants
+runnable-example material from it, that is unexplored, not ruled out.
+
 ### The Anthropic Skill-authoring audit
 
 Checked against <https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>
@@ -150,9 +174,10 @@ scan (> U+2E7F) over every `SKILL.md` and reference: **0**.
   covers MCP servers in depth, per the book's own forward references), re-run the same triage —
   don't assume this round's Tier B verdict needs revisiting, but don't assume chapter 3 is already
   covered either; `mcp-tools.md` got depth this round, not the book's dedicated chapter.
-- **The companion repo (`AI-Agent-Workflows`) was read only at the README level** — chapter-folder
-  code was not inspected. If a future round wants runnable-example material from it, that is
-  unexplored territory, not something this round ruled out.
+- **The companion repo's `chapter_02/` code was mined this session** (see the follow-up section
+  above); chapters other than 02 are still unread. If a future round wants runnable-example
+  material from the rest of the repo, that is unexplored territory, not something this round ruled
+  out.
 - **`rag-pipeline.md` is still the longest reference (324 lines)**, first split candidate if it
   grows again (carried forward from round 10 — still true, not re-verified this round beyond the
   line count).

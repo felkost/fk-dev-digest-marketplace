@@ -55,6 +55,12 @@ instead, not from an MCP-level auth handshake. Don't assume one auth story cover
   destroys the context budget.
 - Timeouts and error text designed for the model: a clear "what went wrong + what to try"
   string beats a stack trace.
+- Registering a tool does not make the model use it. When a tool result must ground the answer,
+  the agent's instructions have to say so — call the tool first, and constrain the output to what
+  it returned. "You have a search tool" leaves the model free to answer from its training data
+  instead; "begin by calling `search`, and use only the sources it returns" is what actually
+  binds the answer to the tool. This is a persona/instruction job (`engineer-prompt-context`),
+  not something the tool schema can enforce on its own.
 
 ## Handling tool failure as normal control flow
 
