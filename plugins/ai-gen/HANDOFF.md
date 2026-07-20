@@ -1,12 +1,157 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 6** —
-post-merge doc accuracy pass, and the RAG example's full live path (Postgres, Ollama, and a real
-OpenRouter call) verified end to end, which found and fixed four real bugs along the way. Written
-for a fresh Claude session with no conversation history — read this whole file before touching
-anything.
+Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 7** — triage
+of a 13-file source batch (one peer-reviewed article, twelve books), a new user rule on what makes
+a source admissible, and a fixed roadmap for rounds 8–10. No reference content was written.
+Written for a fresh Claude session with no conversation history — read this whole file before
+touching anything.
 
-## What just happened (round 6 — post-merge accuracy pass + RAG DB verified live, 2026-07-20, branch `docs/ai-gen-post-merge-accuracy` off `main`)
+## What just happened (round 7 — source-batch triage + rounds 8–10 roadmap, 2026-07-20, branch `docs/ai-gen-source-triage-round7` off `main`)
+
+A round-0-shaped session: **no reference content written.** The user supplied 13 files and asked
+for a verdict on each, a plan for using them, and then the bookkeeping chain. Both standing
+procedures below governed the work; nothing beyond metadata and tables of contents was extracted
+from any book.
+
+### The user's new rule, and why it changed a verdict mid-session
+
+**Source admissibility now splits in two** (user's instruction, this session; recorded in
+`CLAUDE.md` and in *both* triage procedures below):
+
+- *Facts and figures* still need a traceable primary source. Unchanged.
+- *Techniques and practitioner recipes* do **not** need an academic citation, provided they
+  contradict neither the current documentation of the tool they use nor the underlying theory.
+  Verify against that documentation before writing, and label the result a practitioner technique
+  rather than dressing it as a citation.
+
+Consequence: **absence of a bibliography is no longer a rejection reason by itself** — absence of
+anything checkable is. This flipped one verdict the same session. Dhyani's *RAG with Python
+Cookbook* had been rejected on a misreading ("the TOC is just `Recipe 1…51`"); the recipes in fact
+sit under descriptive subheadings — n-gram, topic-based, regex, metadata, time-based, HTML-tag,
+table-aware and custom-separator splitting, plus embedding chunk graphs and noise-resistant
+embeddings via pre-normalization. That is a real spread of chunking technique, and Polzer does not
+carry it. Accepted under the new rule.
+
+### Verdicts (do not re-mine the rejected ones)
+
+**Tier A, the only citable primary source.** Karim, Khan, Van, Liu, Wang & Qu, "Transforming Data
+Annotation with AI Agents", *Future Internet* 2025, 17(8), 353, MDPI, **CC BY**, 38 pp, systematic
+review over 135 selected papers. <https://doi.org/10.3390/fi17080353>. What transfers: the
+annotation architecture ladder (single-agent → dual-agent generator/reviewer → multi-agent
+role-based ensemble → HITL-as-agent, §7/Table 5); **dual-agent review degenerating by confirmation
+bias when both agents share training data** (§7.2) — a citable source for a rule the plugin
+already teaches in `loop-engineering.md`; the QA-loop topology (§6.2, Fig. 4); prompt injection
+overwriting stored annotations as a measured failure, not a hypothetical (§10.1).
+
+**Its numbers do not transfer**, and the reason is now a `CLAUDE.md` rule: the paper prints the
+same cost pair as `$0.00006 vs $0.082` in Table 6 (p. 19) and as `CNY 0.00006 vs CNY 0.082` in
+prose (p. 21). Peer review missed it. It is also dense with second-hand figures (50%/74%/80% cost
+and time reductions, +17–24 pp, 85–95% success rates) and unsourced framing statistics in §1.
+
+**Tier B, accepted as citation backbone:**
+
+| Source | Pages | What it uniquely buys |
+|---|---|---|
+| Mendelevitch & Bao, *Hands-On RAG for Production* (O'Reilly) | 359 | Production RAG: two-stage retrieval, hybrid search, reranking, guardrails and prompt-injection prevention on the serving path, hallucination detection **and correction**, latency/TCO, PoC→production, DIY-vs-platform |
+| Bratanic & Hane, *Essential GraphRAG* (Manning) | 178 | The whole graph-retrieval topic: KG construction with LLMs, entity resolution, text2cypher, Microsoft GraphRAG (community detection, global vs local search), agentic RAG (retriever router + answer critic) |
+| Jia Huang, *RAG from First Principles* (Packt) | 492 | ANN index internals (Flat/IVF/quantization/graph/hashing), sparse-vs-dense and BM25, BGE-M3 hybrid, chunk-size-vs-accuracy, embedding fine-tuning |
+| Polzer, *RAG with Python Cookbook* (O'Reilly) | 378 | Recipe index for `build-ai-examples`: agentic chunking, embedding hypothetical questions, metadata filtering, Ollama, Pydantic structured outputs, multimodal parsing |
+| Dhyani, *RAG with Python Cookbook* (BPB) | 485 | Chunking-strategy spread (see the rule above). **Practitioner technique, not an academic source** — verify each against LangChain/LlamaIndex docs before writing |
+
+Caveats worth not re-deriving: Jia Huang's TOC shows translation artifacts ("Connect learner with
+LlamaHub", stray "Wukong title" headings) — treat the prose as roughly edited and verify any
+mechanism claim against a primary source. **The Polzer epub is an Early Release superseded by the
+PDF** — one source, use the PDF.
+
+**Tier B, marginal, no round assigned:** 汪鹏/谷清水/卞龙鹏, 大模型RAG实战 (247 pp, Chinese).
+Sound structure; **RAG paradigm evolution** and **joint retriever/generator training** are the two
+things the English books cover least. But the plugin's references are English and everything else
+is better covered elsewhere. Fallback for round 8's paradigm framing only.
+
+**Rejected — do not re-mine:**
+
+- **Aki D, *LLM, Transformer, RAG AI*** (self-published, no publisher, no bibliography) — fails
+  the *new* rule too: the TOC has no recipe or technique anywhere, only conceptual chapter names
+  ("Choosing the Right Framework", "Handling Ethical and Bias Considerations"). An "FAQ" chapter
+  sits second. Its "popular LLMs" roster is already stale (GPT-3/BERT/T5/XLNet/RoBERTa/Llama 2).
+  `explain-llm-internals` covers transformers from primary papers (round 4).
+- **Rubin, *Search Engines and RAG in AI*** (self-published, ~400 KB of text across 10 chapters) —
+  generic chapter names with no technique or code detail; far too thin per topic.
+- **"Utilizing Vector Databases to Enhance RAG Models (Fragment)"** — 42 pp, author "unknown",
+  TOC entries are meaningless serial numbers (10870–10911). **Unattributable; cannot be cited.**
+- **Sivabalaselvamani & Revathy et al., *Advanced AI and Data Science Applications*** (329 pp,
+  20 chapters) — applied-domain ML case studies (IPL cricket, CRISPR, skin disease, rainfall
+  XGBoost, fraud detection). No GenAI-engineering methodology. Wrong plugin.
+- **Streamlit Essentials** — already triaged 2026-07-20; that verdict stands, not re-evaluated.
+
+All twelve book files carry libgen/z-lib markers in their filenames. Recorded factually, per
+step 5 of the book procedure.
+
+### Decision: no 9th skill
+
+The user explicitly allowed one and it is still not warranted. GraphRAG is a *retrieval
+architecture* and `design-agent-architecture` already owns RAG — a separate skill would split one
+decision ("how should this system retrieve?") across two discovery surfaces. Agent-driven
+annotation has a better home than its own skill: `evaluation.md:13` demands "labeled
+question→passage pairs" and `evaluation.md:17` tells the reader to build an eval set, while the
+plugin nowhere says how to produce labels at scale — the article answers exactly that, *inside*
+`evaluate-optimize-models`. A 9th skill would also cost ~340 bytes of the 1,072-byte
+`gpt_instructions.md` headroom plus a full wiring set, and 12 of 27 references are still 37–63
+lines, which is the better place for the effort.
+
+### Gaps this batch closes (verified by grep, not from memory)
+
+1. **GraphRAG: zero hits** across the whole plugin for
+   `graphrag|knowledge graph|cypher|neo4j|community detection|multi-hop`. Total absence.
+2. **ANN index internals: two hits, neither substantive** — and one of them is
+   `build-ai-examples/references/rag-example.md:148`, *"The example's query does an exact scan.
+   Add an HNSW or IVFFlat index…"*. The plugin flagged this gap against itself and never filled
+   it; `memory-vector-db.md`, which owns vector stores, never explains what the approximation in
+   "approximate nearest neighbour" is or how to tune it.
+3. **Eval-set construction: metrics exist, label production does not.**
+4. **Chunking strategy: one paragraph** (`memory-vector-db.md:43-45` — "split on semantic units,
+   not fixed characters", and nothing else).
+5. Maker-checker **is** already covered (`loop-engineering.md:113`, `architectures.md:81`). The
+   article is a citation for it, not new content — **do not rewrite those sections.**
+
+### Roadmap for rounds 8–10 (fixed this round)
+
+- **Round 8 — GraphRAG.** New `design-agent-architecture/references/graph-rag.md` (~180–240
+  lines). Lead with the decision rule: vector top-k **structurally** cannot answer global or
+  aggregative questions ("what are the main themes in this corpus?") or multi-hop ones — no amount
+  of reranking fixes a question whose answer requires the whole corpus. Then KG construction with
+  LLMs (**entity resolution is the hard part**, not extraction); Microsoft GraphRAG indexing and
+  its global (map-reduce over community summaries) vs local (entity-anchored) query modes;
+  text2cypher as the general NL→query-language pattern; a cost-honesty section (an LLM pass per
+  chunk plus summarization per community) with a decision table that says when it is *not* worth
+  it; the agentic-RAG router cross-referenced to `architectures.md`, not restated. **Verify Edge
+  et al., <https://arxiv.org/abs/2404.16130> before writing** — Bratanic & Hane is the map, the
+  paper is what gets cited. Wiring: a row in `rag-pipeline.md`'s "what RAG fixes" table, expand
+  the one-line graph row in `memory-vector-db.md`, SKILL.md Довідки, router rows, README tree.
+  **No `gpt_instructions.md` bytes** — a new reference rides into the zip free.
+- **Round 9 — retrieval substrate depth.** `memory-vector-db.md` 123 → ~220–260 in two parts:
+  (a) ANN index families (Flat/IVF/HNSW/PQ/LSH) against the recall–latency–memory triangle,
+  build-time knobs (`m`, `nlist`) vs per-query knobs (`ef_search`, `nprobe`), what pgvector
+  exposes, sparse vs dense and why BM25 still wins on rare identifiers, RRF — verify HNSW against
+  Malkov & Yashunin <https://arxiv.org/abs/1603.09320>, not the books; (b) chunking strategies
+  from Dhyani as practitioner technique, cross-referenced to `rag-pipeline.md`'s "Split" (which
+  already points here) rather than duplicated. Then decide whether to close `rag-example.md:148`
+  by adding the index to `ingest.py` — **if yes, round 6's discipline binds: re-run the live path.**
+- **Round 10 — production RAG + eval-set construction.** `rag-pipeline.md` += hallucination
+  detection *and correction*, guardrails and prompt injection on the retrieval surface, index
+  freshness at scale. `evaluation.md` 42 → ~90–120 += how to produce the labels its own metrics
+  demand (single → dual → ensemble → HITL ladder, the confirmation-bias caveat, and the honest
+  rule that a machine-labelled eval set needs a human-verified subsample or it measures the
+  labeller). `loop-engineering.md` maker-checker += one sentence and the Karim citation.
+
+### Verification actually run
+
+`python tests/check_docs.py` · `python tests/smoke_test.py` · from repo root: `npm run lint`,
+`lint:markdown`, `lint:format`. **Not run:** `build:catalog`, `evals`, `site build`,
+`build_gpt_package.ps1` — no SKILL.md description, skill roster or reference count changed this
+round (still 8 skills / 27 references), so the catalog and zip surfaces did not move.
+
+## What happened before (round 6 — post-merge accuracy pass + RAG DB verified live, 2026-07-20, branch `docs/ai-gen-post-merge-accuracy` off `main`)
 
 Two unrelated threads the user asked about in the same breath: whether `CLAUDE.md` → memory →
 this file were still accurate after the merge, and what to do about the RAG example's
@@ -160,7 +305,7 @@ no-op" — this round's whole point.
   data). Don't assume a container that answered `pg_isready` a few minutes ago still is — a
   fresh `docker compose ps` before trusting a connection costs nothing.
 
-## What just happened (round 5 — reasoning models, 2026-07-20, branch `feat/gen`)
+## What happened before (round 5 — reasoning models, 2026-07-20, branch `feat/gen`)
 
 First round **outside** the round-0 roadmap. The user chose to place the Cameron Wolfe source
 that their own triage section (below) had accepted but left unplaced.
@@ -249,11 +394,12 @@ anything further is round 5+ and needs new material.
   their build scripts assumed skills lived at the plugin root, a pre-migration layout none of
   the four still use. This plugin's own layout was already correct (skills always under
   `skills/`), so the fallback here is precautionary, not a fix for an observed failure.
-- Version is `0.0.1` and **no release tag exists** — deliberately unreleased scaffold;
+- Version is `0.0.1` and **no release tag exists** — deliberately unreleased (not because the
+  plugin is thin: it has 8 skills and 27 references; the user simply has not asked for a tag);
   `scripts/release.mjs` gates only its own plugin directory, so other plugins' releases are
   unaffected.
 
-## What just happened (round 4 — the 8th skill `explain-llm-internals` + Agent Ops, 2026-07-20, branch `feat/gen`)
+## What happened before (round 4 — the 8th skill `explain-llm-internals` + Agent Ops, 2026-07-20, branch `feat/gen`)
 
 **The fixed roadmap from round 0 is now complete.** Eight skills, 26 references, two test guards.
 
@@ -734,7 +880,7 @@ naming of the existing six.
 - Foster's generative theory (VAE/GAN/diffusion) — deferred unless the mentor's scope expands
   to image/audio generation.
 
-## What just happened (initial scaffold, 2026-07-19)
+## What happened before (initial scaffold, 2026-07-19)
 
 Created the whole plugin from scratch, modeled on eda-skills conventions. Key decisions:
 
@@ -792,8 +938,14 @@ LinkedIn, X, Medium тощо}.
    - Названі техніки/методи → чи це впізнавана реальна річ? Знайди першоджерело (пейпер,
      офіційна документація) для кожної. Якщо опис автора спрощує або перекручує механізм —
      зафіксуй розбіжність окремо, не переноси мовчки.
-   - Якщо для твердження нема першоджерела і його не можна верифікувати незалежно — не
-     пропонуй як контент, хоч би як правдоподібно воно звучало.
+   - Якщо для твердження-**факту** нема першоджерела і його не можна верифікувати незалежно —
+     не пропонуй як контент, хоч би як правдоподібно воно звучало.
+   - **Виняток для технік (правило користувача, 2026-07-20):** практичний прийом розробника —
+     не цифра й не факт — можна брати й без академічного першоджерела, якщо він не суперечить
+     (1) поточній документації інструмента, який застосовується, і (2) фундаментальній теорії.
+     Звір із тією документацією до написання й познач у довідці як практичну техніку, не
+     вдягай у вигляд цитати. Тобто відсутність бібліографії сама по собі не є вироком —
+     вироком є відсутність будь-чого перевірюваного.
 
 4. Звір із чинним планом. Прочитай description кожного SKILL.md (не з пам'яті) і секцію
    round'ів у HANDOFF.md. Тема справді належить одному з них, чи це нова гілка знань? Якщо
@@ -854,6 +1006,12 @@ path filled in) at the start of the analysis — it is self-contained:
 4. Класифікуй за замовчуванням як Tier B (citation backbone), не Tier A: книги в цьому плагіні
    не імпортуються цілком — це чинне рішення round 0 (роздуває references понад м'яку межу й не
    той тип контенту). Tier A — виняток, і лише якщо користувач окремо це підтвердить.
+   **Книга без видавця й без бібліографії ще не відхилена** (правило користувача, 2026-07-20):
+   дивись, чи є в змісті впізнавані практичні прийоми. Якщо є — це Tier B «практична техніка»:
+   придатна, але кожен прийом звіряється з поточною документацією інструмента перед записом і
+   позначається як практична техніка, не як цитата. Якщо в змісті самі концептуальні назви
+   розділів без жодного прийому — тоді відхиляй, і саме з цієї причини, а не через видавця.
+   Обидва випадки трапилися в партії round 7: Dhyani прийнято, Aki D і Rubin відхилено.
 
 5. Зафіксуй походження файлу, якщо видно з імені чи метаданих (легітимний доступ, чи тіньова
    бібліотека на кшталт libgen/z-lib/anna's archive) — фактично, без моралізаторства: якщо книгу
@@ -870,7 +1028,20 @@ path filled in) at the start of the analysis — it is self-contained:
 ## Environment gotchas
 
 - Console encoding is cp1251 on this machine — don't `print()` Cyrillic from Python via Bash;
-  write UTF-8 files and Read them instead (inherited from eda-skills sessions).
+  write UTF-8 files and Read them instead (inherited from eda-skills sessions). **Exception found
+  in round 7:** `sys.stdout.reconfigure(encoding='utf-8', errors='backslashreplace')` at the top
+  of a `python - <<'PY'` heredoc through the Bash tool does round-trip UTF-8 correctly, CJK
+  included — that is how a Chinese-language book's table of contents was read without writing a
+  file. Useful when plan mode forbids scratch files.
+- **The harness's attachment listing under-reports PDF page counts — badly.** In round 7 it
+  claimed 12 pages for a 38-page article, 178 for a 378-page book, 185 for 492, 78 for 359, and
+  22 for 178. Judging "this is only a fragment" from that listing would have rejected four good
+  books. Open the file with PyMuPDF and read `doc.page_count` before triaging. (Genuine fragments
+  do exist — one file in the same batch really was 42 pages with unusable metadata — which is
+  exactly why the count has to be measured rather than read off the listing.)
+- PDF *page rendering* is unavailable (`pdftoppm` missing), so the Read tool fails on PDFs.
+  PyMuPDF (`fitz`) and `pdfplumber` are installed; `doc.get_toc()` gives bookmarks without
+  rendering, and `page.get_text("text")` gives text. Known since round 1, re-confirmed in round 7.
 - Repo-root scripts must run from the marketplace root (`npm run lint`, `npm run
   build:catalog`); paths in `scripts/*.mjs` are root-relative.
 - `dist/` is gitignored repo-wide, including this plugin's `dist/` — knowledge zips are built
@@ -880,10 +1051,13 @@ path filled in) at the start of the analysis — it is self-contained:
 
 ## Open threads / not done
 
-- **The fixed roadmap (rounds 1–4) is COMPLETE, and round 5 (reasoning models) shipped on top of
-  it.** `main` now has all of it — see the round-5 postscript above. Anything further needs
-  either new material from the user or a decision on the deferred backlog below. The plugin is
-  no longer a scaffold: 8 skills, **27** references, a runnable example, two test guards.
+- **The fixed roadmap (rounds 1–4) is COMPLETE; rounds 5 (reasoning models), 6 (live RAG
+  verification) and 7 (source triage) shipped on top of it.** `main` has rounds 0–6; round 7 is on
+  `docs/ai-gen-source-triage-round7` awaiting the user's merge. The plugin is no longer a scaffold:
+  8 skills, **27** references, a runnable example, two test guards.
+- **Rounds 8–10 are now planned, not open** — see the round-7 entry at the top of this file for
+  the full brief. Round 8 (GraphRAG) is the next unit of work and needs no new material from the
+  user; the sources are already triaged and named.
 - **Decisions still waiting on the user, not on work:**
   1. ~~Whether to place the Cameron Wolfe reasoning-models source~~ — **done in round 5**; that
      content gap is closed. The other triaged source (Hao Hoang, rejected) stays rejected.
@@ -895,7 +1069,8 @@ path filled in) at the start of the analysis — it is self-contained:
      plugin cache lagging behind `main` until its own refresh; see the round-5 postscript.
   4. Whether references should keep growing: 12 of **27** are still 37–63 lines (the original
      scaffold set), against an eda-skills mature band of ~250–380. Rounds 1–5 deepened the ones
-     the roadmap named; the rest were never in scope.
+     the roadmap named; rounds 9–10 will deepen `memory-vector-db.md` and `evaluation.md`, which
+     takes two more off that list.
 - Books for any future internals work are in
   `F:\Data\Lenovo\Документы\AI_courses\BigData_Course\Books\LLM\` (Raschka ×2, Godoy, Huyen ×2,
   Labonne, Alammar, Berryman/Ziegler) — round 0 recorded the wrong path.
@@ -951,4 +1126,11 @@ path filled in) at the start of the analysis — it is self-contained:
   xhtml text), no chapter body extracted. Verdict: not a knowledge source for any of the 8
   skills — it is a Streamlit how-to, not GenAI methodology. Closest touchpoint is as a candidate
   demo-frontend framework for `build-ai-examples`'s worked examples, not reference content.
-  Evaluated-but-unplaced, no round assigned.
+  Evaluated-but-unplaced, no round assigned. **Re-supplied in the round-7 batch and deliberately
+  not re-triaged** — this verdict stands.
+- **The round-7 batch (13 files) is fully triaged; see the round-7 entry at the top for the
+  per-source verdicts.** Five accepted (one Tier A article, four Tier B books), one marginal
+  (Chinese-language), five rejected, one duplicate, one already-triaged. **Do not re-mine the
+  rejected five** — Aki D, Rubin, the unattributable "Utilizing Vector Databases (Fragment)",
+  Sivabalaselvamani et al., and (as a source rather than a frontend) Streamlit Essentials. The
+  accepted four are assigned to rounds 8–10; nothing in the batch is left unplaced.
