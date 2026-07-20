@@ -1,6 +1,6 @@
 ---
 name: deploy-ai-environments
-description: Set up and deploy environments for running models and agent applications — locally, in Docker, and on AWS, Google Cloud, or Azure. Covers local inference (Ollama/vLLM class), containerizing Python agent apps, choosing between serverless, container services and GPU instances in each cloud, secrets and API-key hygiene, and cost guardrails. Use for "how do I run this locally", Docker setup for LLM apps, cloud deployment choice, and environment configuration best practices. Respond in Ukrainian unless the user requests another language.
+description: Sets up and deploys environments for running models and agent applications — locally, in Docker, and on AWS, Google Cloud, or Azure. Covers local inference (Ollama/vLLM class), containerizing Python agent apps, choosing between serverless, container services and GPU instances in each cloud, secrets and API-key hygiene, and cost guardrails. Use for "how do I run this locally", Docker setup for LLM apps, cloud deployment choice, and environment configuration best practices. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Середовища запуску та розгортання

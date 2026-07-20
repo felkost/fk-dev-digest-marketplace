@@ -10,6 +10,15 @@ Decisions that *use* this knowledge live elsewhere: which model to pick is
 `select-genai-models`, whether to fine-tune is `build-vs-use.md`, serving behaviour is
 `inference-internals.md`.
 
+## Contents
+
+- Tokenization
+- Embeddings and the transformer block
+- Pretraining
+- Post-training: from a text predictor to an assistant
+- Reading benchmark claims
+- What to say when asked "should I care about internals?"
+
 ## Tokenization
 
 Text is split into tokens by a deterministic tokenizer — typically byte-pair encoding, which

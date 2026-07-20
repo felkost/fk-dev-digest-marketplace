@@ -3,6 +3,14 @@
 Pick the metric the task actually needs; then build the smallest eval set that can detect the
 regressions you care about.
 
+## Contents
+
+- Metric by class
+- Building the eval set
+- Producing the labels this file demands
+- LLM-as-judge: use with eyes open
+- Statistical hygiene
+
 ## Metric by class
 
 | Task class | Primary metrics | Notes |

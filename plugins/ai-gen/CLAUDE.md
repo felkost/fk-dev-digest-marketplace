@@ -13,8 +13,8 @@ asked to touch another plugin or the marketplace root.
   persona). Each `skills/<name>/agents/openai.yaml` is a custom-GPT/Codex packaging descriptor
   consumed by the `chatgpt/` pipeline (`build_gpt_package.ps1` → `dist/*.zip`) — unrelated to the
   plugin-level `agents/` convention, and not scanned as such.
-- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–11 have shipped on
-  top of it; it is no longer a bare scaffold (8 skills, 29 references), but version stays `0.0.1`
+- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–12 have shipped on
+  top of it; it is no longer a bare scaffold (8 skills, 30 references), but version stays `0.0.1`
   and untagged until the user says otherwise. Read `HANDOFF.md` first in every new session, and
   keep it updated at the end of a working session (the handoff protocol is part of the plugin's
   own methodology — see `skills/plan-ai-solution/SKILL.md` § «Handoff між сесіями»).
@@ -56,7 +56,20 @@ asked to touch another plugin or the marketplace root.
   same round's brief carried FAISS's `nlist`/`nprobe` for what pgvector calls
   `lists`/`ivfflat.probes`. Name the mechanism, name the implementation you checked, and say the
   identifier should be verified against current docs. Never copy a parameter name from one
-  library into a sentence about another.
+  library into a sentence about another. **A third instance (round 12):** OpenAI's own docs host
+  moved from `platform.openai.com` to `developers.openai.com` mid-plugin-lifetime, and its
+  primary documented text-generation surface shifted from the Chat Completions guide toward the
+  Responses API. `generation-parameters.md` cites OpenRouter (the plugin's actual provider) for
+  concrete parameter ranges instead, precisely because it stayed reachable and current when the
+  upstream OpenAI guide didn't.
+- **Skill frontmatter descriptions must be in third person** (e.g. "Designs…", "Explains…"), per
+  Anthropic's Skill authoring guidance — not the imperative ("Design…", "Explain…") this plugin
+  used for its first eleven rounds without anyone checking against the published best-practices
+  doc. Fixed across all 8 `SKILL.md` files in round 12
+  (<https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>). Apply
+  this to any new skill's `description` field from the start; don't wait for an audit to catch it
+  again. The same source recommends a table of contents at the top of any reference file that
+  exceeds ~100 lines — also applied in round 12 to every reference that had crossed that line.
 - Repo-root scripts (`npm run lint`, `npm run build:catalog`) must be run from the marketplace
   root, not from here — paths in `scripts/*.mjs` are root-relative.
 - Adding a reference costs no `gpt_instructions.md` bytes, but the knowledge zip is **not**

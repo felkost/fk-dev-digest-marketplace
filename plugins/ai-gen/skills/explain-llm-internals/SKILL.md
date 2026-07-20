@@ -1,6 +1,6 @@
 ---
 name: explain-llm-internals
-description: Explain how large language models work internally, at the level a senior engineer needs to make decisions. Covers tokenization and byte-pair encoding, embeddings and the transformer block, attention and its quadratic cost, pretraining, compute-optimal scaling laws, post-training alignment (supervised fine-tuning, RLHF, DPO), inference internals (prefill versus decode, KV cache, PagedAttention, continuous batching, FlashAttention, speculative decoding, grouped-query attention, mixture of experts, quantization), and fine-tuning mechanics (LoRA, QLoRA, chat templates, adapter serving). Use for "why does the model do that", "how does this actually work", tokenization and context-window questions, serving performance explanations, and fine-tuning mechanics. Respond in Ukrainian unless the user requests another language.
+description: Explains how large language models work internally, at the level a senior engineer needs to make decisions. Covers tokenization and byte-pair encoding, embeddings and the transformer block, attention and its quadratic cost, pretraining, compute-optimal scaling laws, post-training alignment (supervised fine-tuning, RLHF, DPO), inference internals (prefill versus decode, KV cache, PagedAttention, continuous batching, FlashAttention, speculative decoding, grouped-query attention, mixture of experts, quantization), and fine-tuning mechanics (LoRA, QLoRA, chat templates, adapter serving). Use for "why does the model do that", "how does this actually work", tokenization and context-window questions, serving performance explanations, and fine-tuning mechanics. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Внутрішня будова LLM
@@ -23,6 +23,10 @@ API — лише на рівні будови.
 - [references/reasoning-models.md](references/reasoning-models.md) — довгий CoT, RLVR і чому
   важлива саме перевірюваність, GRPO, DeepSeek-R1-Zero vs R1 (чотири етапи), дистиляція
   міркування, масштабування на інференсі; і коли reasoning-модель НЕ потрібна.
+- [references/generation-parameters.md](references/generation-parameters.md) — розподіл vs
+  семплінг, temperature і top-p (чому крутити щось одне), presence/frequency penalty, max_tokens
+  як запобіжник вартості, seed як best-effort відтворюваність, поверхня параметрів OpenRouter,
+  пресети за роллю агента.
 
 ## Обов'язкові правила
 
@@ -61,6 +65,7 @@ API — лише на рівні будови.
 | «Квантизувати чи ні» | Квантизація — реальний компроміс | Заміряти до/після; не вірити загальним твердженням |
 | «Скільки даних на fine-tune» | LoRA/QLoRA, якість датасету | Спершу щабель у `build-vs-use.md` |
 | «Брати reasoning-модель?» | RLVR працює там, де є перевірка | Лише якщо задача справді багатокрокова й перевірювана — заміряти проти звичайної |
+| «Який temperature/top_p ставити?» | Розподіл vs семплінг, presets за роллю агента | Крутити температуру за роллю і max_tokens за вартістю; решта — рідко |
 
 ## Межі
 

@@ -1,11 +1,200 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 11** —
-document loading and retriever-side tuning, spending the last of the round-7 source batch.
+Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 12** —
+alignment with a new book source plus an Anthropic Skill-authoring audit. Branch not yet merged.
 Written for a fresh Claude session with no conversation history — read this whole file before
 touching anything.
 
-## What just happened (round 11 — document loading + retriever tuning, 2026-07-20, branch `feat/ai-gen-loading-retriever-tuning` off `main`)
+## What just happened (round 12 — "AI Agents in Action" alignment + Anthropic best-practices audit, 2026-07-20, branch `feat/ai-gen-agents-in-action-alignment` off `main`)
+
+Two requests in one session: use a new book source to close real gaps, and separately audit all
+eight skills against Anthropic's own published Skill-authoring guidance (format, description,
+structure) rather than this plugin's internal conventions alone.
+
+### The source: Micheal Lanham, *AI Agents in Action*, 2nd Edition (Manning)
+
+The user supplied chapters 1–2 as a `.docx`→`.md` export (~1,560 lines; the user built it
+themselves from a MEAP copy on 2026-07-20) plus the companion repository
+<https://github.com/cxbxmxcx/AI-Agent-Workflows> (Python 3.11+, OpenAI Agents SDK, MCP;
+chapter-numbered folders, confirms the book title in its own README). **Tier B — citation
+backbone / map**, per the standing triage rule: publisher and author are known, a companion repo
+exists, but only two of the book's chapters are actually in hand. Chapters 3+ were **not** read —
+their content is not guessed from the book's own later-chapter references (e.g. "chapter 3 covers
+MCP servers extensively" is the book's own forward pointer, not something this round used as a
+content source). No numbers from the book were carried (its own "90% cache savings" style claims
+included) — mechanism only, per the plugin's standing rule.
+
+Facts pulled from the book were re-verified against primary sources before writing, not quoted
+from the book directly:
+
+- **MCP runs on JSON-RPC 2.0** — confirmed against the current spec
+  (<https://modelcontextprotocol.io/specification/2025-06-18/basic>): "All messages between MCP
+  clients and servers **MUST** follow the JSON-RPC 2.0 specification." Discovery/invocation are
+  `tools/list` and `tools/call` (verified against
+  `/specification/2025-06-18/server/tools`). **One nuance the book's prose glosses over**: MCP's
+  authorization framework applies specifically to **HTTP-based transports**; a server running
+  over stdio is expected to get credentials from the environment instead, not from an MCP-level
+  auth handshake. Writing "MCP handles auth at the transport layer" without that qualifier would
+  have been technically imprecise.
+- **Generation parameters** — OpenRouter's own parameter docs
+  (<https://openrouter.ai/docs/api-reference/parameters>) supplied the concrete ranges
+  (`temperature` 0.0–2.0, `top_p` 0.0–1.0, penalties −2.0–2.0, `seed` explicitly documented as
+  best-effort: "repeated requests... **should** return the same result", not "will"). **OpenAI's
+  own docs were not usable as the primary citation this round**: `platform.openai.com` now
+  redirects to `developers.openai.com`, the guide structure has shifted from the Chat Completions
+  page toward the Responses API, and neither surface reachable this session stated the exact
+  current wording of the "adjust temperature or top_p, not both" guidance — well-established and
+  independently corroborated (community sources, prior training knowledge), but not something
+  this round could quote verbatim from a currently-fetched primary page. `generation-parameters.md`
+  therefore cites OpenRouter — the plugin's actual provider — for the numbers, and names the
+  temperature/top-p interaction as a documented pattern to verify against whichever provider's
+  current reference, rather than quoting OpenAI text that could not be freshly confirmed.
+
+### What shipped from the book
+
+**New: `explain-llm-internals/references/generation-parameters.md`** (136 lines, references
+29 → **30**) — the distribution-vs-sampling split; temperature and top-p and why providers
+recommend adjusting one, not both; presence vs frequency penalty (different signals: "appeared at
+all" vs "how many times"); `max_tokens` as a cost guard, not a length target, with the
+finish-reason check to tell truncation from a genuinely short answer apart; seed as best-effort
+reproducibility; an OpenRouter parameter table; role-based presets marked explicitly as
+practitioner technique, not citation; and a closing section naming what sampling parameters do
+**not** fix (a bad prompt, a persona/reasoning defect) versus what they do change (cost, measured
+in `token-latency-cost.md`).
+
+**`design-agent-architecture/references/mcp-tools.md`** 47 → 99 lines: the protocol substrate
+section above, plus a "handling tool failure as normal control flow" section (retry with a cap /
+fall back / ask / abandon — the book's framing that tool failure is the common case at scale for
+a looping agent, not an edge case; the cap is named as the part teams skip, cross-referenced to
+`loop-engineering.md`'s general unbounded-loop failure mode).
+
+**`architectures.md`, Multi-agent section**: a coordination-substrate table (shared thread /
+blackboard / chained) with what each buys and costs, plus a line naming problems that are
+multi-agent *by definition* (social simulations, adversarial red/blue-team setups) rather than by
+architecture choice. Labelled practitioner technique — blackboard is a classical AI pattern, no
+conflict with the section's existing theory.
+
+**`skill-router.md`**: a new "Coverage check: an agent's five functional layers" table
+(persona → `engineer-prompt-context`; tools/actions → `mcp-tools.md`; reasoning/planning →
+`architectures.md` + `reasoning-models.md`; knowledge/memory → `memory-vector-db.md` +
+`rag-pipeline.md`; evaluation/feedback → `evaluation.md`) — this is the "align the agent and
+skills" half of the user's request made concrete: a second cut through the same skill roster that
+demonstrates full coverage of what the book (and most treatments of agent design) call an agent's
+core layers, explicitly marked as a coverage map rather than a new routing order.
+
+**`reasoning-models.md`**: a model-native-vs-structured-reasoning decision rule (short horizon +
+small tool surface + cheap-reversible error → native is enough; long horizon, many tools,
+expensive-irreversible actions, or an auditable trace requirement → layer a structured pattern;
+safety-critical work → always structure), marked as composing with the RLVR material rather than
+restating it — training quality and inference-time auditability are independent concerns.
+
+**`memory-vector-db.md`**: a paragraph distinguishing *knowledge* (static, source-curated, shared
+across users) from *memory* (dynamic, experiential, scoped to a user/session) as an axis
+orthogonal to the file's existing short-term/long-term split, since the existing "Long-term
+memory" bucket silently conflated both.
+
+**Deliberately not taken from the book**: the §2.2 prompt-technique table (weaker than the
+existing Berryman & Ziegler-backed `prompt-techniques.md`); OpenAI Agents SDK specifics in
+§2.3–2.4 (the plugin's stack is LangGraph; typed outputs and tracing are already covered by
+`document-loading.md` and `agent-ops.md`).
+
+### Follow-up: the companion repo's chapter_02 code was mined too (same session, same branch)
+
+After the book-chapter work above, the user asked to analyze the companion repo's actual code —
+specifically `chapter_02/` (nine `.py` files, OpenAI Agents SDK: `Runner.run_sync`,
+`@function_tool`, `with trace(...)`). The code is one "Research Planner" agent built up in steps.
+Most of it re-illustrates what the chapters already gave (model settings, tracing, tool chaining
+— covered in `generation-parameters.md`, `agent-ops.md`, `architectures.md`), and the SDK
+specifics were not carried (LangGraph stack). **Two genuine deltas the prose did not show, both
+taken as practitioner technique:**
+
+- **`document-loading.md` § Structured outputs** gained the lesson from the `04_output_types.py`
+  → `05_output_types_fixed.py` progression: model a keyed/numbered collection as a *list of typed
+  records*, not an open-ended map. A field typed `dict[int, str]` is exactly the shape a strict
+  schema cannot pin down; the fix is a list of small typed objects with extra keys forbidden.
+  Verified against OpenRouter's schema example (`additionalProperties: false`), not attributed as
+  a claim OpenRouter makes about dicts.
+- **`mcp-tools.md` § Tool design rules** gained the lesson from `07`/`08`: registering a tool does
+  not make the model use it. Grounding the answer on a tool result is an instruction/persona job
+  ("begin by calling `search`, use only what it returns"), not something the tool schema enforces.
+
+These two edits are a small follow-up commit on top of the round-12 base commit, not a new round.
+The rest of the companion repo (chapters other than 02) is still unread — if a future round wants
+runnable-example material from it, that is unexplored, not ruled out.
+
+### The Anthropic Skill-authoring audit
+
+Checked against <https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>
+directly (not from memory). Already compliant, unchanged: `name` fields (≤64 chars, lowercase-
+hyphen, no reserved words); `description` fields (504–826 chars, well under the 1,024 limit,
+non-empty, "what + when" with triggers); SKILL.md bodies (54–103 lines, well under the 500-line
+budget); references linked one level deep from SKILL.md (enforced by `check_docs.py` check 3);
+forward slashes throughout; volatile identifiers already flagged as check-at-write-time (round 9's
+rule).
+
+**Two real, not cosmetic, gaps — both fixed, both confirmed with the user first:**
+
+1. **All eight `SKILL.md` descriptions used naked imperative verbs** ("Design…", "Explain…",
+   "Choose…") instead of the third person the guide states explicitly ("Good: 'Processes Excel
+   files and generates reports'" vs "Avoid: 'I can help you...'" / "'You can use this to...'").
+   This shipped in round 0 and went unnoticed for eleven rounds because nothing in this plugin's
+   own review process checks against the external guide — internal consistency isn't the same as
+   external compliance. Fixed across all 8 files (`Design` → `Designs`, `Analyze…justify` →
+   `Analyzes…justifies`, etc.) — this is a **frontmatter change**, so it triggered `build:catalog`,
+   `eval:quality`, and the site build, all re-run clean this round.
+2. **No table of contents in reference files over ~100 lines.** The guide recommends one so
+   Claude can see full scope even on a partial/preview read. Added a `## Contents` bullet list
+   (headings only, no new prose) to every reference that had crossed 100 lines by the end of this
+   round — 20 files in total, including the two new/expanded ones from this round
+   (`generation-parameters.md`, `skill-router.md`, `mcp-tools.md` at 99 lines got one too, just
+   under the line but edited this round anyway).
+
+### `agents/ai-gen-mentor.md`
+
+No changes. The mentor agent already routes through the skill roster and doesn't restate
+per-reference detail, so neither the book content nor the description-wording fix touches it —
+consistent with rounds 5, 8, 9, 10, 11, which also left it untouched for reference-only or
+frontmatter-only changes.
+
+### Verification actually run
+
+`python tests/check_docs.py` (7/7, 8 skills / **30** references) · `python tests/smoke_test.py`
+(14/14) · `& .\chatgpt\build_gpt_package.ps1` (zip rebuilt, **150,429 bytes**;
+`gpt_instructions.md` unmoved at 6,928 bytes, headroom 1,072) · from repo root: `npm run lint`
+(8 plugins, 0 warnings), `lint:markdown` (**401** files, 0 errors), `lint:format` clean,
+`build:catalog` (**61 skills**, unchanged count — only descriptions changed; `site/public/
+catalog.json` updated and needs committing) · `evals` `eval:quality` (61 skills, 0 failures,
+same pre-existing "no eval file" WARNs as every round) · `site` `npm run build` (tsc + vite,
+clean). PyYAML re-parsed all 8 frontmatter blocks (name == dir, no `": "` trap). Stray-codepoint
+scan (> U+2E7F) over every `SKILL.md` and reference: **0**.
+
+### Left for later, on purpose
+
+- **Book chapters 3+ are unread.** If the user supplies more of *AI Agents in Action* (chapter 3
+  covers MCP servers in depth, per the book's own forward references), re-run the same triage —
+  don't assume this round's Tier B verdict needs revisiting, but don't assume chapter 3 is already
+  covered either; `mcp-tools.md` got depth this round, not the book's dedicated chapter.
+- **The companion repo's `chapter_02/` code was mined this session** (see the follow-up section
+  above); chapters other than 02 are still unread. If a future round wants runnable-example
+  material from the rest of the repo, that is unexplored territory, not something this round ruled
+  out.
+- **`rag-pipeline.md` is still the longest reference (324 lines)**, first split candidate if it
+  grows again (carried forward from round 10 — still true, not re-verified this round beyond the
+  line count).
+
+### Prompt for the next round
+
+No new user request is queued. When one arrives, open with: *"Read `plugins/ai-gen/HANDOFF.md`
+(round 12 is newest). If I'm giving you more chapters of Lanham's* AI Agents in Action*, treat
+chapters 1–2 as already mined (generation parameters, MCP protocol substrate, tool-failure
+handling, multi-agent coordination substrates, native-vs-structured reasoning, knowledge-vs-memory)
+— triage only the new chapters against what's already in the plugin, the same way round 11 found
+that 8 of Polzer's 11 chapters were already covered. If instead this is a different kind of
+request (a fresh source batch, a code-verification task like round 6, a pure audit), no roadmap is
+pending — round 10 already closed the fixed roadmap and rounds 11–12 both ran on ad hoc requests,
+so there is nothing to resume by default."*
+
+## What happened before (round 11 — document loading + retriever tuning, 2026-07-20, branch `feat/ai-gen-loading-retriever-tuning` off `main`)
 
 Round 10 closed the roadmap and said the next unit of work needed a new user request. The user
 made one: use the two leftovers the round-10 summary named. Analysis changed the plan, so read

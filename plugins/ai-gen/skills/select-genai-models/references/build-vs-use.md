@@ -3,6 +3,16 @@
 Each rung costs more than the previous one. Climb only when the current rung is *measured*
 insufficient on your own eval set — never on a hunch.
 
+## Contents
+
+- Rung 0 — ready model + prompt engineering
+- Rung 1 — few-shot / in-context learning
+- Rung 2 — RAG
+- Rung 2.5 — tune the retrieval side before you tune the model
+- Rung 3 — fine-tuning
+- Rung 4 — training from scratch
+- Open weights vs hosted API
+
 ## Rung 0 — ready model + prompt engineering
 
 A capable hosted model with a well-structured prompt (role, constraints, output schema,

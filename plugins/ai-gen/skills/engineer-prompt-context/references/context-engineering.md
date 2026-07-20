@@ -7,6 +7,16 @@ for many turns with tools, retrieval and history competing for the same finite s
 Primary source: Anthropic, "Effective context engineering for AI agents"
 (<https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>).
 
+## Contents
+
+- The distinction
+- Why context is a finite resource
+- Techniques for long-horizon work
+- Just-in-time retrieval
+- Tool design is context design
+- Working procedure
+- Failure modes
+
 ## The distinction
 
 | | Prompt engineering | Context engineering |

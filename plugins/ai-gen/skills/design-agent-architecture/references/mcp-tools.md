@@ -3,7 +3,37 @@
 MCP (Model Context Protocol) standardizes how an LLM app discovers and calls external tools:
 an MCP *server* exposes tools/resources/prompts; the *client* (Claude Code, an SDK app, a
 LangChain/LangGraph adapter) lists them and routes model tool-calls to them. The win over ad-hoc
-function calling is reuse: one server serves any MCP-capable client.
+function calling is reuse: one server serves any MCP-capable client, so the integration is built
+once per service instead of once per agent.
+
+## Contents
+
+- When MCP vs plain function calling
+- The protocol substrate
+- Tool design rules (apply to both)
+- Handling tool failure as normal control flow
+- Security (non-negotiable)
+- Operational notes
+
+## The protocol substrate
+
+All messages between an MCP client and server follow the
+[JSON-RPC 2.0 specification](https://www.jsonrpc.org/specification) — this is a **MUST** in the
+spec, not a convention. That is what makes the protocol language-agnostic: a server written in
+Python, TypeScript, or Go exposes the same request/response shape, so a client library needs to
+speak JSON-RPC once, not one dialect per server language.
+
+Discovery and invocation are two separate JSON-RPC methods (verify the exact method names
+against the current spec at <https://modelcontextprotocol.io/specification> — protocol versions
+can rename or add fields): the client asks the server to list its tools, gets back each tool's
+name, description and JSON-schema input shape, and later calls a tool by name with arguments
+that must validate against that schema. The description is not documentation for a human — it is
+what the model reads to decide whether and how to call the tool, which is why the tool design
+rules below treat descriptions as prompts.
+
+Authorization is scoped to the transport: MCP's authorization framework applies to HTTP-based
+transports; a server running over stdio is expected to get its credentials from the environment
+instead, not from an MCP-level auth handshake. Don't assume one auth story covers both.
 
 ## When MCP vs plain function calling
 
@@ -25,6 +55,34 @@ function calling is reuse: one server serves any MCP-capable client.
   destroys the context budget.
 - Timeouts and error text designed for the model: a clear "what went wrong + what to try"
   string beats a stack trace.
+- Registering a tool does not make the model use it. When a tool result must ground the answer,
+  the agent's instructions have to say so — call the tool first, and constrain the output to what
+  it returned. "You have a search tool" leaves the model free to answer from its training data
+  instead; "begin by calling `search`, and use only the sources it returns" is what actually
+  binds the answer to the tool. This is a persona/instruction job (`engineer-prompt-context`),
+  not something the tool schema can enforce on its own.
+
+## Handling tool failure as normal control flow
+
+Timeouts, malformed arguments, rate limits, and downstream outages are not edge cases for an
+agent that calls tools in a loop — they are the common case at scale, and how they're handled is
+what separates a demo from a production agent. Treat a tool failure the same way you'd treat any
+other observation: surface the error text back to the model (a clear "what went wrong" beats a
+raw stack trace — see the tool design rules above) and let the agent choose among a bounded set
+of moves, not an open-ended retry:
+
+- **Retry** — for transient failures (timeout, rate limit); cap the count, because an
+  uncapped retry loop is a cost incident waiting to happen.
+- **Fall back** — to a cheaper tool, a cached result, or a narrower query.
+- **Ask** — surface the failure to the user/orchestrator rather than guessing past it, when the
+  tool result was load-bearing for a consequential next step.
+- **Abandon** — return a partial result or an explicit "could not complete" rather than
+  fabricating what the tool would have returned.
+
+The cap is the part teams skip. Without one, a model that decides "let me try again" on every
+observed failure turns a single flaky dependency into an unbounded loop — the same failure mode
+`loop-engineering.md` names for autonomous loops generally, just triggered by a tool instead of a
+missing stop condition.
 
 ## Security (non-negotiable)
 

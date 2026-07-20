@@ -10,6 +10,16 @@ hybrid search stay in `memory-vector-db.md`; pipeline stages and failure modes s
 `rag-pipeline.md`; the router and critic *patterns* stay in `architectures.md` and are
 cross-referenced here rather than restated.
 
+## Contents
+
+- The decision rule: what vector top-k structurally cannot do
+- Building the graph: extraction is easy, resolution is hard
+- The GraphRAG index and its two query modes
+- text2cypher: natural language into a query language
+- Cost honesty: what a graph index actually costs
+- Routing between retrievers
+- Evaluation hooks
+
 ## The decision rule: what vector top-k structurally cannot do
 
 A vector retriever returns the `k` passages most similar to the query. That is the right

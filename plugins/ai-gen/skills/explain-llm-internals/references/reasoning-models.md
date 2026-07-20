@@ -13,6 +13,16 @@ of extra tokens is `inference-internals.md`.
 standing rule. The papers cited below report them; read them there, at the version you are
 actually considering.
 
+## Contents
+
+- RLVR: reinforcement learning with verifiable rewards
+- DeepSeek-R1: the open demonstration
+- Distillation: reasoning transfers by SFT
+- Inference-time scaling
+- What this changes for application work
+- Model-native reasoning vs a structured pattern on top
+- How to decide, in one line
+
 ## RLVR: reinforcement learning with verifiable rewards
 
 The training idea behind current reasoning models. **The term is introduced by Tülu 3**
@@ -121,6 +131,31 @@ Two further cautions:
   final answer's length. Measure **cost per solved task**, not per response
   (`evaluate-optimize-models/references/token-latency-cost.md`), or a reasoning model will look
   cheaper than it is.
+
+## Model-native reasoning vs a structured pattern on top
+
+A separate question from "should I use a reasoning model at all": given the reasoning capability
+a modern frontier model already has built in, when is that enough, and when do you still need to
+layer a structured pattern (ReAct, explicit planning, self-consistency — `prompt-techniques.md`)
+on top?
+
+**Native reasoning is usually enough** when the task has a short horizon (roughly one to three
+steps), the tool surface is small, a wrong action is cheap and reversible, and the model is a
+frontier reasoner operating inside its strong domains.
+
+**Layer a structured pattern** when any of the following holds: the task is long-horizon or
+branches into subgoals; the agent must choose carefully among many tools; a wrong action is
+expensive or irreversible (spending money, sending an external message, modifying production
+data); the domain sits outside the model's training strengths; or the reasoning trace itself
+needs to be auditable or reproducible, which built-in reasoning generally is not — it is opaque
+and varies between runs, while an explicit pattern gives you something to inspect and constrain.
+
+**Always** add the structured layer for safety-critical or regulated work, regardless of how
+capable the underlying model's native reasoning is. This is a practitioner heuristic, not a
+finding from the papers above — it composes with the RLVR material rather than restating it: a
+reasoning model with a good verifiable-reward training signal can still reason opaquely at
+inference time, and the two concerns (was it trained to reason well, can you inspect *this* run)
+are independent.
 
 ## How to decide, in one line
 

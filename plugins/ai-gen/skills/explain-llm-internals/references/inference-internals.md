@@ -4,6 +4,17 @@ This file explains **why** the serving knobs work. The knobs themselves — what
 order, and what to measure — are `evaluate-optimize-models/references/token-latency-cost.md`.
 Read that one to act; read this one to understand what you are trading away.
 
+## Contents
+
+- Prefill and decode are two different workloads
+- The KV cache, and why memory is the real constraint
+- Continuous batching
+- FlashAttention
+- Speculative decoding
+- Attention variants that change serving economics
+- Quantization
+- Summary: what each technique actually trades
+
 ## Prefill and decode are two different workloads
 
 A generation request has two phases with opposite hardware profiles:

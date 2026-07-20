@@ -9,6 +9,14 @@ Related: `loop-engineering.md` (the machinery the contract governs), `architectu
 (human-in-the-loop gates), `plan-ai-solution/references/handoff.md` (the per-session twin of
 this per-task document).
 
+## Contents
+
+- Contract vs gate
+- Anatomy
+- Template
+- Failure modes
+- When a task is not ready for a contract
+
 ## Contract vs gate
 
 Two different instruments, routinely confused:

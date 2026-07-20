@@ -3,6 +3,18 @@
 Every pattern is presented with what it buys, what it costs, and how it fails. Recommend the
 simplest one that covers the task; name the rejected alternative.
 
+## Contents
+
+- Workflows vs agents (decide this first)
+- Single call (baseline)
+- Workflow patterns
+- ReAct (reason + act loop)
+- RAG (retrieval-augmented generation)
+- Multi-agent
+- Human-in-the-loop / agent-in-the-loop
+- Capability levels (a scoping vocabulary)
+- Choosing
+
 ## Workflows vs agents (decide this first)
 
 Anthropic's "Building Effective Agents"
@@ -123,6 +135,25 @@ output), divergent agents re-doing or undoing work, deadlocked handoffs, cost bl
 thumb: multi-agent is justified when subtasks are genuinely parallel or need conflicting
 personas/permissions — not for decorating a linear pipeline with roles. A linear chain of
 prompts is a pipeline, not multi-agent, and is easier to test.
+
+**Some problems are multi-agent by definition**, not by choice of architecture: social
+simulations, market/negotiation models, and adversarial red-team/blue-team setups require
+multiple actors with genuinely distinct, sometimes conflicting goals — a single agent cannot
+role-play both sides of an adversarial evaluation without the evaluation losing its point.
+
+**How agents share state — a practitioner distinction, not a new pattern**, worth naming because
+the choice changes both cost and failure mode:
+
+| Substrate | How it works | Buys | Costs |
+|---|---|---|---|
+| Shared thread | Every agent reads and writes one conversation history | Full context for every agent | Grows unbounded; downstream agents drown in details irrelevant to their step |
+| Blackboard | Agents post intermediate results under named keys in a shared structured store | Organized, selectively readable state | The team must agree on a schema up front; a key nobody reads is silent waste |
+| Chained (handoff) | Each agent passes output only to the next, like a pipeline stage | Simplest to implement and reason about | Discards everything the receiving agent didn't explicitly need — including context a later step turns out to want |
+
+Default to chained unless there's a concrete reason a downstream agent needs to see further
+upstream than its immediate predecessor's output — "more shared context" is not free, and the
+failure modes above (error compounding, divergent rework) get worse, not better, the more state
+agents share.
 
 ## Human-in-the-loop / agent-in-the-loop
 

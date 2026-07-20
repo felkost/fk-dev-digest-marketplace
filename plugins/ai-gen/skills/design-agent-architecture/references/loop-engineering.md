@@ -8,6 +8,17 @@ machinery around the model.
 Primary source for the component set: Addy Osmani, "Loop Engineering",
 <https://addyosmani.com/blog/loop-engineering/>. Where a claim is not his, it is marked.
 
+## Contents
+
+- The frame
+- The five components
+- The sixth thing: external state
+- Maker-checker, stated as a rule
+- Where loops sit in the capability taxonomy
+- What the loop does not do for you
+- When not to build a loop
+- Recommending a loop: the minimum viable set
+
 ## The frame
 
 A single agent invocation is a transaction: prompt in, answer out. A *loop* is a standing
