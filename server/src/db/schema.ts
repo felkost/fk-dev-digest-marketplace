@@ -24,10 +24,18 @@ export const events = pgTable(
  * days — summing this column is "unique clones per day, added up", not a distinct-user count).
  * Upserted by `day` so re-running the harvest safely corrects the last couple of days as GitHub
  * finalizes them, without duplicating history already recorded.
+ *
+ * `ciCount` is this repository's OWN GitHub Actions checkouts for that day. GitHub counts every
+ * `actions/checkout` as a clone, so a CI-heavy day inflates `count` with traffic we generated
+ * ourselves. The Traffic API carries no attribution at all, so the only way to separate the two is
+ * to count our own workflow runs from the Actions API and subtract. Both numbers are stored side
+ * by side so the correction stays auditable and reversible instead of being baked into one opaque
+ * figure.
  */
 export const cloneStats = pgTable("clone_stats", {
   day: date("day", { mode: "string" }).primaryKey(),
   count: integer("count").notNull(),
   uniques: integer("uniques").notNull(),
+  ciCount: integer("ci_count").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -10,12 +10,23 @@ export interface PluginUsage {
   plugin_view?: number;
 }
 
+/**
+ * Clone traffic, split into what we caused and what we did not. GitHub counts every
+ * `actions/checkout` as a clone of the repo, so `raw*` is inflated by this repo's own CI; `ci*` is
+ * that self-generated share, measured from the Actions API, and `external*` is the remainder.
+ * Only the `external*` numbers are fit to publish — and even those still include crawlers and
+ * mirrors, so they read as an interest trend, not as installs.
+ */
 export interface ClonesSummary {
   since: string | null;
   recordedDays: number;
-  totalSinceTracking: number;
-  last14dCount: number;
-  last14dUniques: number;
+  rawTotal: number;
+  ciTotal: number;
+  externalTotal: number;
+  raw14d: number;
+  ci14d: number;
+  external14d: number;
+  uniques14dSummed: number;
 }
 
 export interface StatsResponse {
@@ -29,8 +40,8 @@ export interface StatsResponse {
 export interface StatsSummary {
   copyInstalls: number;
   views: number;
-  clonesTotal: number;
-  clones14d: number;
+  externalClones: number;
+  externalClones14d: number;
 }
 
 const base = (import.meta.env.VITE_STATS_API as string | undefined)?.replace(/\/+$/, "");
@@ -80,7 +91,7 @@ export async function fetchSummary(): Promise<StatsSummary | null> {
   return {
     copyInstalls: data.totals?.copy_install ?? 0,
     views: data.totals?.plugin_view ?? 0,
-    clonesTotal: data.clones?.totalSinceTracking ?? 0,
-    clones14d: data.clones?.last14dCount ?? 0,
+    externalClones: data.clones?.externalTotal ?? 0,
+    externalClones14d: data.clones?.external14d ?? 0,
   };
 }

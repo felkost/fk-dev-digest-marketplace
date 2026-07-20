@@ -13,7 +13,7 @@ no session ids are ever stored.
 | Route | Method | Description |
 |---|---|---|
 | `/api/events` | POST | Record one event. Body: `{ "type": "copy_install" \| "plugin_view", "plugin": "<kebab-case-name>" }`. Strict schema (unknown fields rejected), rate-limited 30/min per IP. Returns 204. |
-| `/api/stats` | GET | Aggregated counts: `{ generatedAt, perPlugin: { <plugin>: { copy_install, plugin_view } }, totals, clones }`. `clones` is the harvested GitHub clone-traffic aggregate (see below) — `{ since, recordedDays, totalSinceTracking, last14dCount, last14dUniques }`, all `0`/`null` until the harvester has run at least once. Cached 60 s. |
+| `/api/stats` | GET | Aggregated counts: `{ generatedAt, perPlugin: { <plugin>: { copy_install, plugin_view } }, totals, clones }`. `clones` is the harvested GitHub clone-traffic aggregate (see below) — `{ since, recordedDays, rawTotal, ciTotal, externalTotal, raw14d, ci14d, external14d, uniques14dSummed }`, all `0`/`null` until the harvester has run at least once. Cached 60 s. |
 | `/healthz` | GET | Liveness + database check. |
 
 CORS allows only the origins in `CORS_ORIGINS`; everything else is browser-blocked.
@@ -56,23 +56,53 @@ site builds with stats collection fully disabled and works exactly as before.
 
 Real `/plugin install` runs never touch this website or backend — they `git clone`/`fetch` the
 repository directly. GitHub's own **Traffic API** (`GET /repos/<owner>/<repo>/traffic/clones`) is
-the closest available proxy for that, but it only retains a rolling **14-day window**, so history
-is lost unless something persists it. [`.github/workflows/harvest-clones.yml`](../.github/workflows/harvest-clones.yml)
+the only window onto that, but it retains a rolling **14-day window**, so history is lost unless
+something persists it. [`.github/workflows/harvest-clones.yml`](../.github/workflows/harvest-clones.yml)
 runs [`src/harvestClones.ts`](src/harvestClones.ts) once a day to upsert each day's clone
 count/uniques into the `clone_stats` table here — safe to re-run any time, since it upserts by day
 (refining the last day or two as GitHub finalizes them) rather than duplicating history.
+
+### Why the raw number is not a usage metric
+
+GitHub counts **every `actions/checkout` as a clone of the repository**. This repo runs four
+workflows, so a busy day of pushes and PRs manufactures dozens of clones of itself — traffic that
+says nothing about anyone's interest in the plugins. The Traffic API returns no attribution at all
+(no actor, no source, no user agent), so the raw figure cannot be filtered directly.
+
+The harvester therefore also reads this repo's **own workflow runs** (`GET /actions/runs`, filtered
+to the same days the Traffic API just returned) and stores that count in `clone_stats.ci_count`.
+`GET /api/stats` publishes `externalTotal = Σ max(0, count − ci_count)` alongside the untouched raw
+figures, so a published number can always be traced back to what it was corrected from.
+
+Two things this correction does **not** claim:
+
+- **It is an upper bound on our own traffic, not an exact one.** Runs cancelled by a concurrency
+  group or skipped by a path filter are counted even though they may never have checked out, and
+  re-runs are counted per attempt. Overshooting is the safe direction — it understates outside
+  interest rather than inflating it, and the per-day result is floored at zero.
+- **What remains is not "users".** Crawlers, mirrors and AI scrapers clone public repositories
+  constantly, and nothing distinguishes them from a real `claude plugin marketplace add`. Read
+  `externalTotal` as an interest trend. The only counters here that record a deliberate human
+  action are `copy_install` and `plugin_view`.
+
+Because `ci_count` defaults to `0`, days recorded before this correction existed — and any day that
+has already scrolled out of the 14-day window — keep whatever correction they were last written
+with. Only days inside the current window are re-corrected on each run.
 
 **One-time setup:**
 
 1. Add the repo secret `STATS_DATABASE_URL` — the same Neon/PostgreSQL connection string used by
    the Render service (Settings → Secrets and variables → Actions → New repository secret).
-2. Nothing else — the workflow uses the default `GITHUB_TOKEN` GitHub Actions provides. If the
-   harvest job fails with a `403`, the Traffic API requires push access the default token doesn't
-   have here; create a classic PAT with the `repo` scope from an account with push access, save it
-   as the repo secret `TRAFFIC_PAT`, and change the `GITHUB_TOKEN` line in the workflow to
-   `${{ secrets.TRAFFIC_PAT }}`.
+2. Add the repo secret `TRAFFIC_PAT`. The Traffic API needs push access, which the default
+   `GITHUB_TOKEN` does not have here — without the PAT the harvest job fails with `403`. Use a
+   fine-grained PAT scoped to this repo with **Administration: Read-only**, or a classic PAT with
+   the `repo` scope, created by an account with push access. The workflow already prefers
+   `TRAFFIC_PAT` and falls back to `GITHUB_TOKEN` only so it stays valid before the secret exists.
+   The `/actions/runs` call needs no extra scope while the repo is public; if it ever goes private,
+   add **Actions: Read-only** as well.
 
 **Reading caveat:** `uniques` is GitHub's *per-day* unique-cloner count — summing it across days
-(as `last14dUniques` does) is "daily-uniques added up," not a distinct-visitor count over the whole
-period (the same machine cloning on two different days counts twice). Treat these numbers as an
-engagement trend, not a precise headcount.
+(as `uniques14dSummed` does) is "daily-uniques added up," not a distinct-visitor count over the
+whole period (the same machine cloning on two different days counts twice). It also gets no CI
+correction, so it is the one field still inflated by our own runners. Treat it as an engagement
+trend, not a headcount.

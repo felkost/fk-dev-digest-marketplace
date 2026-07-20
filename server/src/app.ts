@@ -74,21 +74,36 @@ export async function buildApp(db: Db, opts: AppOptions) {
         totals[row.type] = (totals[row.type] ?? 0) + row.count;
       }
 
-      // Clone counts harvested from the GitHub Traffic API (see harvestClones.ts) — the closest
-      // proxy for actual `/plugin install` runs, since installs clone the repo directly and never
-      // touch this site or backend. `since` is null until the harvester has run at least once.
+      // Clone counts harvested from the GitHub Traffic API (see harvestClones.ts). GitHub counts
+      // every `actions/checkout` as a clone, so the raw figure includes this repo's own CI; the
+      // `external*` numbers subtract that per day (floored at zero, since the CI correction is an
+      // upper bound — see fetchCiCheckoutsByDay). Raw and correction are both exposed so the
+      // published number can always be traced back. `since` is null until the harvester has run.
+      //
+      // What survives the subtraction is "clones we did not cause" — which still includes crawlers,
+      // mirrors and AI scrapers. It is an interest trend, never an install count. The only counters
+      // here that measure a deliberate human action are the copy_install/plugin_view totals above.
       const cloneRows = await db
         .select()
         .from(cloneStats)
         .orderBy(desc(cloneStats.day))
         .limit(3650); // ~10 years — effectively "all of it" without an unbounded scan
       const last14 = cloneRows.slice(0, 14);
+      const externalOn = (r: (typeof cloneRows)[number]) => Math.max(0, r.count - r.ciCount);
+      const sum = (rows: typeof cloneRows, pick: (r: (typeof cloneRows)[number]) => number) =>
+        rows.reduce((total, r) => total + pick(r), 0);
       const clones = {
         since: cloneRows.length ? cloneRows[cloneRows.length - 1].day : null,
         recordedDays: cloneRows.length,
-        totalSinceTracking: cloneRows.reduce((sum, r) => sum + r.count, 0),
-        last14dCount: last14.reduce((sum, r) => sum + r.count, 0),
-        last14dUniques: last14.reduce((sum, r) => sum + r.uniques, 0),
+        rawTotal: sum(cloneRows, (r) => r.count),
+        ciTotal: sum(cloneRows, (r) => r.ciCount),
+        externalTotal: sum(cloneRows, externalOn),
+        raw14d: sum(last14, (r) => r.count),
+        ci14d: sum(last14, (r) => r.ciCount),
+        external14d: sum(last14, externalOn),
+        // GitHub's per-day unique-cloner counts, added up. The same machine cloning on two days
+        // counts twice, so this is an activity measure, not a headcount — hence the name.
+        uniques14dSummed: sum(last14, (r) => r.uniques),
       };
 
       statsCache = {

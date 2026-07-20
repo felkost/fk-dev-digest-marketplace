@@ -83,10 +83,13 @@ looks unchanged until real numbers exist. Each tile updates on its own schedule:
   `POST /api/events` to the backend, which writes it to Postgres. The tile re-reads `/api/stats` on
   each page load (the server caches it for 60 s), so the numbers grow by themselves as people use
   the site — no redeploy, no manual step.
-- **repo clones / clones · last 14 days** — updated **once a day**. They stay hidden (0) until the
-  `harvest-clones` GitHub Action has run successfully at least once (it needs the `TRAFFIC_PAT`
-  secret — see [`server/README.md`](../server/README.md) § Clone harvesting). After that it runs on
-  a daily cron with no further action needed.
+- **external clones / external clones · last 14 days** — updated **once a day**. They stay hidden
+  (0) until the `harvest-clones` GitHub Action has run successfully at least once (it needs the
+  `TRAFFIC_PAT` secret — see [`server/README.md`](../server/README.md) § Clone harvesting). After
+  that it runs on a daily cron with no further action needed. "External" means GitHub's raw clone
+  count minus this repository's own CI checkouts, which GitHub counts as clones; the remainder
+  still includes bots and mirrors, so treat it as an interest trend rather than an install count.
+  The 14-day tile stays hidden while it still equals the total.
 
 ### Nothing to do on the GitHub Pages side
 
