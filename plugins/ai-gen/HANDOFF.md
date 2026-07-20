@@ -1,10 +1,89 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 8** — the
-GraphRAG reference, the first content round off the round-7 roadmap. Written for a fresh Claude
+Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 9** — ANN
+index internals and chunking strategies in `memory-vector-db.md`. Written for a fresh Claude
 session with no conversation history — read this whole file before touching anything.
 
-## What just happened (round 8 — GraphRAG reference, 2026-07-20, branch `feat/ai-gen-graph-rag` off `main`)
+## What just happened (round 9 — ANN indexes + chunking strategies, 2026-07-20, branch `feat/ai-gen-ann-chunking` off `main`)
+
+Second content round off round 7's roadmap. `memory-vector-db.md` 133 → **268 lines** (the brief
+said ~220–260; the overshoot is real and was not trimmed to hit a number). No new file, so the
+reference count stays 28 and the skill-list twins check stayed silent by design.
+
+### The decision taken at the start of the round: `ingest.py` was NOT changed
+
+The brief asked for an explicit verdict on closing `rag-example.md:148` by adding an ANN index to
+the example. **Verdict: no**, and the reasoning is recorded so it is not re-litigated:
+
+- That line lives in the example's "what to change for production" section. It is correct
+  documentation, not an outstanding defect.
+- An approximate index over a demo corpus of a handful of chunks speeds up nothing measurable and
+  teaches reaching for ANN before the exact scan is a measured bottleneck — the opposite of what
+  the rest of the plugin teaches.
+- Verifying it live would spend the user's OpenRouter credit for no functional gain (round 6's
+  discipline binds any code change here, and it is the right discipline).
+
+Instead the *documentation* got stronger: `rag-example.md` now says the exact scan is deliberate,
+that the index goes in when the scan is the measured bottleneck, and points at the new section
+for family and parameter names. The gap is closed by explanation rather than by code.
+
+### Attribution corrections this round (round 8's rule earning its keep)
+
+- **The brief itself carried the wrong parameter names.** It asked for "`m`, `nlist`" and
+  "`ef_search`, `nprobe`" — that mixes two libraries. **pgvector** uses `m`, `ef_construction`,
+  `hnsw.ef_search`, `lists` and `ivfflat.probes`; `nlist`/`nprobe` are **FAISS**. The reference
+  now carries a side-by-side table precisely because mixing them produces config that silently
+  does nothing. `CLAUDE.md` gained the general rule: never copy a parameter name from one library
+  into a sentence about another.
+- **Doc URLs rotted mid-round**: LangChain's `python.langchain.com/docs/concepts/text_splitters`
+  308-redirects to a generic overview, and LlamaIndex's docs moved to `developers.llamaindex.ai`.
+  Class names differ between LangChain's new integrations page and its API reference
+  (`MarkdownHeaderMetadataSplitter` vs `MarkdownHeaderTextSplitter`), so the reference names the
+  *technique* and flags identifiers as check-at-write-time rather than pinning names that are
+  visibly drifting.
+
+Primaries verified before writing, per the standing rule: HNSW = Malkov & Yashunin
+(<https://arxiv.org/abs/1603.09320>, layered proximity graphs, logarithmic scaling); product
+quantization = Jégou, Douze & Schmid (*IEEE TPAMI* 33(1):117–128, 2011, doi:10.1109/TPAMI.2010.57);
+RRF = Cormack, Clarke & Büttcher (SIGIR 2009). pgvector's defaults and `lists` guidance were read
+from its README, not from the books — Jia Huang's translation artifacts (round 7) make it
+unusable as a mechanism source.
+
+### What the two new sections argue
+
+**ANN.** Leads with the contract rather than the taxonomy: every ANN index buys speed by agreeing
+not to always return the true nearest neighbours, and pgvector says so in its own README. Then
+the recall/latency/memory triangle, with the honest warning that a change appearing to improve
+all three has something unmeasured — usually recall, because nothing in the system complains when
+it drops. Families table (Flat/IVF/HNSW/PQ/LSH) with how each fails, not just what it buys; the
+build-time vs query-time knob split as the economically important distinction; the pgvector/FAISS
+name table; pgvector's quantization types and the six distance operators, including that the
+operator must match the index or the index simply is not used. Closes with sparse-vs-dense: a
+rare token contributes almost nothing to a compressed dense vector and cannot be recovered from
+it, which is why "our RAG cannot find ticket `INC-4471`" is a structural failure and hybrid + RRF
+is a fix rather than a hedge.
+
+**Chunking.** A ten-row strategy table (recursive character, structural, code-aware, regex,
+table-aware, time-based, metadata-grouped, semantic, hierarchical/parent-child, sentence-window),
+each with when it fits and what it costs — labelled explicitly as **practitioner technique
+verified against tool docs**, per round 7's rule (в), not dressed as citation. Two closing rules:
+carry metadata through every strategy (a chunk that cannot say where it came from cannot be
+cited), and no strategy wins by argument — measure recall@k on your own set.
+
+### Verification actually run
+
+`check_docs.py` 7/7 (8 skills / 28 references) · `smoke_test.py` 14/14 · `npm run lint` (8
+plugins, 0 warnings) · `lint:markdown` (399 files, 0 errors) · `lint:format` clean · zip rebuilt
+(130,292 bytes; `gpt_instructions.md` unmoved at 6928) · CJK scan over all English references: 0.
+Non-ASCII in the edited file is `é`, `ü`, `–`, `—`, `⁵`, `→`, `≤` — all intentional.
+`build:catalog` correctly skipped: the Довідки list in `SKILL.md` changed, the frontmatter
+`description` did not.
+
+**The zip rebuild mattered this round for the reason round 8 recorded**: `check_docs.py` check 5
+counts references and would have passed happily while shipping the *old* 133-line file inside the
+archive. Content-only changes need the rebuild too.
+
+## What happened before (round 8 — GraphRAG reference, 2026-07-20, branch `feat/ai-gen-graph-rag` off `main`, merged as `3fac365` via PR #13)
 
 Round 7's roadmap named this round completely, so it needed no new material from the user: a new
 `skills/design-agent-architecture/references/graph-rag.md` (235 lines) closing the plugin's only
@@ -1127,16 +1206,16 @@ path filled in) at the start of the analysis — it is self-contained:
 ## Open threads / not done
 
 - **The fixed roadmap (rounds 1–4) is COMPLETE; rounds 5 (reasoning models), 6 (live RAG
-  verification), 7 (source triage) and 8 (GraphRAG) shipped on top of it.** `main` has rounds 0–7
-  (round 7 merged as `de3f084` via PR #12); round 8 is on `feat/ai-gen-graph-rag` awaiting the
-  user's merge. The plugin is no longer a scaffold: 8 skills, **28** references, a runnable
-  example, two test guards.
-- **Rounds 9–10 remain planned, not open** — see the round-7 entry for the full brief, which round
-  8 did not change. Round 9 (ANN index internals + chunking strategies in `memory-vector-db.md`)
-  is the next unit of work and needs no new material from the user; the sources are already
-  triaged and named. Round 8 left it one extra hook: `memory-vector-db.md` now separates store
-  choice from retrieval architecture in prose, so the ANN section lands under a heading that
-  already exists.
+  verification), 7 (source triage), 8 (GraphRAG) and 9 (ANN + chunking) shipped on top of it.**
+  `main` has rounds 0–8 (round 7 merged as `de3f084` via PR #12, round 8 as `3fac365` via PR #13);
+  round 9 is on `feat/ai-gen-ann-chunking` awaiting the user's merge. The plugin is no longer a
+  scaffold: 8 skills, **28** references, a runnable example, two test guards.
+- **Round 10 is the last planned one** — see the round-7 entry for the full brief, which neither
+  round 8 nor 9 changed: production RAG in `rag-pipeline.md` (hallucination detection *and*
+  correction, guardrails and prompt injection on the retrieval surface, index freshness at scale)
+  plus eval-set construction in `evaluation.md` (42 → ~90–120 lines), which is where the round-7
+  Karim article finally lands. It needs no new material from the user. After round 10 the
+  triaged batch is fully spent and the next unit of work needs a new user request.
 - **Decisions still waiting on the user, not on work:**
   1. ~~Whether to place the Cameron Wolfe reasoning-models source~~ — **done in round 5**; that
      content gap is closed. The other triaged source (Hao Hoang, rejected) stays rejected.
@@ -1148,8 +1227,8 @@ path filled in) at the start of the analysis — it is self-contained:
      plugin cache lagging behind `main` until its own refresh; see the round-5 postscript.
   4. Whether references should keep growing: 12 of **28** are still 37–63 lines (the original
      scaffold set), against an eda-skills mature band of ~250–380. Rounds 1–5 deepened the ones
-     the roadmap named; rounds 9–10 will deepen `memory-vector-db.md` and `evaluation.md`, which
-     takes two more off that list.
+     the roadmap named; round 9 took `memory-vector-db.md` to 268, and round 10 will take
+     `evaluation.md` off that list — leaving 11 stubs and no plan for them.
 - Books for any future internals work are in
   `F:\Data\Lenovo\Документы\AI_courses\BigData_Course\Books\LLM\` (Raschka ×2, Godoy, Huyen ×2,
   Labonne, Alammar, Berryman/Ziegler) — round 0 recorded the wrong path.
