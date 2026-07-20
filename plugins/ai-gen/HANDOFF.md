@@ -1,10 +1,86 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 9** — ANN
-index internals and chunking strategies in `memory-vector-db.md`. Written for a fresh Claude
-session with no conversation history — read this whole file before touching anything.
+Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 10** —
+production RAG and eval-set construction. **This closes the round-7 roadmap; there is no round 11
+planned and the next unit of work needs a new user request.** Written for a fresh Claude session
+with no conversation history — read this whole file before touching anything.
 
-## What just happened (round 9 — ANN indexes + chunking strategies, 2026-07-20, branch `feat/ai-gen-ann-chunking` off `main`)
+## What just happened (round 10 — production RAG + label production, 2026-07-20, branch `feat/ai-gen-production-rag-evalset` off `main`)
+
+The last round of the round-7 roadmap. Three files, no new references (still 8 skills / 28):
+`rag-pipeline.md` 233 → **322 lines**, `evaluation.md` 42 → **100**, `loop-engineering.md`
+179 → **186**.
+
+### The finding that matters most: our own triage record was wrong
+
+Round 7 filed this in its Tier A entry as verified: *"prompt injection overwriting stored
+annotations as a measured failure, not a hypothetical (§10.1)"*. Re-opening the PDF before
+writing showed the article contains **zero** instances of "prompt injection" as a finding of its
+own. The phrase appears exactly once, in §1, saying that robustness against adversarial and
+prompt-injection attacks is *rarely covered* by existing surveys. §10.1 does carry a real
+incident — adversarial control steering an annotator into rewriting stored product tags at scale
+before rollback — but it is not called prompt injection, and its record count is cited to another
+work, so the figure does not transfer either.
+
+The round-7 entry now carries an inline `CORRECTION` block rather than being silently rewritten,
+and `CLAUDE.md` gained the general rule: **a brief is not a source, and neither is this project's
+own triage record.** That rule now has three consecutive instances behind it — round 8's brief
+misattributed an implementation feature to a paper, round 9's brief mixed FAISS parameter names
+into pgvector, round 10's own HANDOFF misreported a source.
+
+Everything else in the round-7 Tier A paragraph re-verified as accurate, with one wording fix:
+§7.2 says confirmation bias arises when both agents share **similar** training data, not "the
+same". Also verified fresh and used: the §7 ladder (single → dual generator-reviewer → multi-agent
+role-based → HITL-as-agent, with CoAnnotating framed as *dynamic work allocation*), and Figure 4's
+QA loop (orchestrator → annotator → quality checker → accept-or-re-annotate with human
+intervention available → aggregator). **No numbers from the article were carried**, per the
+standing rule the article itself motivated.
+
+Access note: MDPI returns **403 to WebFetch** (Cloudflare). The PDF from the round-7 batch was
+still in `C:\Users\felko\Downloads\` and PyMuPDF read it fine — that is how verification was
+possible at all. If it is gone in future, the article is CC BY and mirrors exist.
+
+### What the three edits argue
+
+**`rag-pipeline.md` — a production section after the diagnosis table.** Hallucination handling
+split into detection *and* correction, because pipelines routinely implement the first and stop:
+per-claim checking (mechanical citation verification first — a citation pointing at a passage
+that does not support the sentence is catchable in code, with no model), then a correction table
+keyed on *where* the failure lives, with re-retrieval **using the failed claim as the query**
+since a specific claim beats the original question. Abstention is named a first-class measured
+outcome. Then the retrieval-surface security section, built on the rule `architectures.md`
+already states — retrieved documents *are* tool output — and led by enumerating write paths to
+the index, because that list is the threat model. Then index freshness, where deletion is called
+out as the hard direction and staleness is defined as a property of *retrieved passages*, not of
+the indexer job.
+
+**`evaluation.md` — the gap it created for itself.** The file demanded labelled question→passage
+pairs and never said where labels come from. Now: the Karim ladder as a cost-ordered table, the
+backwards trick for RAG labels (sample a chunk, generate a question it answers, and the gold
+passage is free) together with its flattering failure mode — questions written from a chunk reuse
+its vocabulary, so lexical overlap alone retrieves them and recall@k looks excellent; the QA-loop
+topology; and the rule that keeps it honest, **explicitly marked as this plugin's engineering
+discipline and not a finding of the review**: a machine-labelled eval set measures the labeller
+until a human-verified subsample bounds it.
+
+**`loop-engineering.md` — one sentence, as briefed.** The maker-checker rules were already
+correct and were not touched; the added sentence gives point 2's "different model is optionally
+useful" a named mechanism and the citation.
+
+### Verification actually run
+
+`check_docs.py` 7/7 (8 skills / 28 references) · `smoke_test.py` 14/14 · `npm run lint` (8
+plugins, 0 warnings) · `lint:markdown` (399 files, 0 errors) · `lint:format` clean · zip rebuilt
+(135,046 bytes; `gpt_instructions.md` unmoved at 6928) · CJK scan over all English references: 0
+(non-ASCII is `§`, `–`, `—`, `→` only). `build:catalog` skipped correctly — the Довідки body list
+in `evaluate-optimize-models/SKILL.md` changed, the frontmatter `description` did not.
+
+**Worth flagging for whoever works here next:** `rag-pipeline.md` is now 322 lines, the longest
+reference in the plugin and past the ~300 soft band the sibling `agent-ml-interviewer` plugin
+enforces. It was not trimmed to hit a number, but it is the first candidate for a split (the
+production layer would stand alone) if it grows again.
+
+## What happened before (round 9 — ANN indexes + chunking strategies, 2026-07-20, branch `feat/ai-gen-ann-chunking` off `main`, merged as `1a9864d` via PR #14)
 
 Second content round off round 7's roadmap. `memory-vector-db.md` 133 → **268 lines** (the brief
 said ~220–260; the overshoot is real and was not trimmed to hit a number). No new file, so the
@@ -191,6 +267,17 @@ role-based ensemble → HITL-as-agent, §7/Table 5); **dual-agent review degener
 bias when both agents share training data** (§7.2) — a citable source for a rule the plugin
 already teaches in `loop-engineering.md`; the QA-loop topology (§6.2, Fig. 4); prompt injection
 overwriting stored annotations as a measured failure, not a hypothetical (§10.1).
+
+> **CORRECTION (round 10, verified against the PDF):** the last item is wrong as written. The
+> article contains **no** instance of "prompt injection" as a finding of its own — the phrase
+> occurs once, in §1, in a sentence stating that robustness against adversarial and
+> prompt-injection attacks is *rarely covered* by existing surveys. What §10.1 does carry is an
+> incident of **adversarial control** steering an annotator into rewriting stored product tags at
+> scale before rollback, with the conclusion that hallucination, bias and adversarial control are
+> measurable failures rather than theoretical risks — and the record count attached to it is
+> second-hand (cited to another work), so it does not transfer either. Round 10 wrote the
+> corrected version into `rag-pipeline.md`. The rest of this paragraph re-verified as accurate,
+> with one wording fix: §7.2 says "similar training data", not "the same".
 
 **Its numbers do not transfer**, and the reason is now a `CLAUDE.md` rule: the paper prints the
 same cost pair as `$0.00006 vs $0.082` in Table 6 (p. 19) and as `CNY 0.00006 vs CNY 0.082` in
@@ -1205,17 +1292,25 @@ path filled in) at the start of the analysis — it is self-contained:
 
 ## Open threads / not done
 
-- **The fixed roadmap (rounds 1–4) is COMPLETE; rounds 5 (reasoning models), 6 (live RAG
-  verification), 7 (source triage), 8 (GraphRAG) and 9 (ANN + chunking) shipped on top of it.**
-  `main` has rounds 0–8 (round 7 merged as `de3f084` via PR #12, round 8 as `3fac365` via PR #13);
-  round 9 is on `feat/ai-gen-ann-chunking` awaiting the user's merge. The plugin is no longer a
-  scaffold: 8 skills, **28** references, a runnable example, two test guards.
-- **Round 10 is the last planned one** — see the round-7 entry for the full brief, which neither
-  round 8 nor 9 changed: production RAG in `rag-pipeline.md` (hallucination detection *and*
-  correction, guardrails and prompt injection on the retrieval surface, index freshness at scale)
-  plus eval-set construction in `evaluation.md` (42 → ~90–120 lines), which is where the round-7
-  Karim article finally lands. It needs no new material from the user. After round 10 the
-  triaged batch is fully spent and the next unit of work needs a new user request.
+- **Every planned round is now done.** The fixed roadmap (rounds 1–4) plus rounds 5 (reasoning
+  models), 6 (live RAG verification), 7 (source triage), 8 (GraphRAG), 9 (ANN + chunking) and 10
+  (production RAG + label production) have all shipped. `main` has rounds 0–9 (round 7 =
+  `de3f084`/PR #12, round 8 = `3fac365`/PR #13, round 9 = `1a9864d`/PR #14); round 10 is on
+  `feat/ai-gen-production-rag-evalset` awaiting the user's merge. 8 skills, **28** references, a
+  runnable example, two test guards.
+- **There is no round 11 planned. The next unit of work needs a new user request** — do not
+  invent one from the leftovers below.
+- **What the round-7 source batch still has left in it**, if the user ever wants more:
+  - **Polzer's cookbook recipes** (agentic chunking, embedding hypothetical questions, metadata
+    filtering, Ollama, Pydantic structured outputs, multimodal parsing) were triaged as a recipe
+    index for `build-ai-examples` and **never used** — rounds 8–10 all landed in
+    `design-agent-architecture` and `evaluate-optimize-models` instead.
+  - **汪鹏/谷清水/卞龙鹏, 大模型RAG实战** (Chinese) stays the marginal fallback it was: only its
+    RAG-paradigm-evolution and joint retriever/generator training framing are not better covered
+    elsewhere, and round 8 did not need it.
+  - **Mendelevitch & Bao** and **Jia Huang** are spent as maps; **Dhyani** is spent on round 9's
+    chunking table; the **Karim article** is spent across rounds 10's three edits.
+  - The rejected list stands and must not be re-mined — see the round-7 entry.
 - **Decisions still waiting on the user, not on work:**
   1. ~~Whether to place the Cameron Wolfe reasoning-models source~~ — **done in round 5**; that
      content gap is closed. The other triaged source (Hao Hoang, rejected) stays rejected.
@@ -1225,10 +1320,17 @@ path filled in) at the start of the analysis — it is self-contained:
   3. Whether to add the plugin to `~/.claude/settings.json` → `enabledPlugins`. **No longer
      blocked on the merge** — that already happened. The one remaining wrinkle is the installed
      plugin cache lagging behind `main` until its own refresh; see the round-5 postscript.
-  4. Whether references should keep growing: 12 of **28** are still 37–63 lines (the original
-     scaffold set), against an eda-skills mature band of ~250–380. Rounds 1–5 deepened the ones
-     the roadmap named; round 9 took `memory-vector-db.md` to 268, and round 10 will take
-     `evaluation.md` off that list — leaving 11 stubs and no plan for them.
+  4. Whether references should keep growing. **Measured in round 10, not carried forward: 9 of
+     28 references are ≤63 lines**, the rest span 64–322. The "12 of 27/28" figure this file
+     repeated from round 4 onward was never re-counted and was wrong — same lesson as the round-7
+     triage correction above, applied to our own arithmetic. The nine, smallest first:
+     `python-visualization.md` (37), `react19-frontend.md` (37), `local-docker.md` (41),
+     `openrouter.md` (44), `task-to-model.md` (46), `cloud-aws-gcp-azure.md` (47),
+     `mcp-tools.md` (47), `handoff.md` (49), `model-landscape.md` (52). **They have no plan at
+     all now** — deepening them is a user decision, not a queued task, and it would need new
+     material since the round-7 batch is spent. Note two of them are deliberately thin:
+     `openrouter.md` and `model-landscape.md` describe a catalog that changes weekly, which the
+     standing rule says not to freeze.
 - Books for any future internals work are in
   `F:\Data\Lenovo\Документы\AI_courses\BigData_Course\Books\LLM\` (Raschka ×2, Godoy, Huyen ×2,
   Labonne, Alammar, Berryman/Ziegler) — round 0 recorded the wrong path.

@@ -122,6 +122,13 @@ window ends.
 4. A checker that never rejects anything is not calibrated; measure its rejection rate before
    trusting it.
 
+Point 2's optional part has a named mechanism behind it: coordinating a generator–reviewer pair
+introduces confirmation bias when both agents share similar training data, so a reviewer drawn
+from a different model family is what turns the check into independent evidence rather than a
+second opinion from the same prior (Karim, Khan, Van, Liu, Wang & Qu, "Transforming Data
+Annotation with AI Agents", *Future Internet* 2025, 17(8), 353, §7.2,
+<https://doi.org/10.3390/fi17080353>).
+
 This is the same shape as the **evaluator-optimizer** workflow in Anthropic's "Building
 Effective Agents" (<https://www.anthropic.com/research/building-effective-agents>): one call
 generates, another evaluates and feeds back, in a loop. Anthropic's condition for it applies

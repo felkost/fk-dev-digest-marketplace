@@ -13,7 +13,7 @@ asked to touch another plugin or the marketplace root.
   persona). Each `skills/<name>/agents/openai.yaml` is a custom-GPT/Codex packaging descriptor
   consumed by the `chatgpt/` pipeline (`build_gpt_package.ps1` → `dist/*.zip`) — unrelated to the
   plugin-level `agents/` convention, and not scanned as such.
-- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–9 have shipped on
+- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–10 have shipped on
   top of it; it is no longer a bare scaffold (8 skills, 28 references), but version stays `0.0.1`
   and untagged until the user says otherwise. Read `HANDOFF.md` first in every new session, and
   keep it updated at the end of a working session (the handoff protocol is part of the plugin's
@@ -41,6 +41,15 @@ asked to touch another plugin or the marketplace root.
   it (round 5), and GraphRAG's *local search* mode exists only in the Microsoft implementation's
   docs — the paper describes the global map-reduce mode alone (round 8). Cite the artifact that
   actually documents the feature, and say which one it is.
+- **A brief is not a source, and neither is this project's own triage record.** Three rounds in a
+  row found an error in what they were handed: round 8's brief attributed an implementation
+  feature to the paper, round 9's brief mixed FAISS parameter names into pgvector, and round 10
+  found a claim recorded as verified in `HANDOFF.md`'s own round-7 triage entry ("prompt
+  injection overwriting stored annotations, §10.1") that the article does not make — the phrase
+  appears once, in a sentence saying the *literature rarely covers* such attacks. Re-open the
+  primary source and check the specific claim you are about to write, even when a trusted local
+  note already says it was checked. When a record turns out wrong, correct it in place with a
+  marker rather than silently rewriting it.
 - **Tool documentation is a moving target: cite the technique, treat the identifier as volatile.**
   Class names, parameter names and doc URLs drift between releases — round 9 found LangChain's
   concept URLs 308-redirecting to a generic overview and LlamaIndex's docs on a new host, and the
