@@ -237,6 +237,12 @@ def leverage_diagnostics(df: pd.DataFrame, cols: Optional[Sequence[str]] = None,
     influence, 0 = perfectly balanced), the ``top`` rows, and ``clt_safe`` --
     False when the design is concentrated enough that interval coverage should
     be checked by bootstrap rather than assumed.
+
+    **Leverage says who *could* move the estimate, never who *does*** -- which
+    is exactly what "no outcome is involved" costs. A row can sit at seven times
+    the leverage flag and move the fitted slope by 0.02 because its outcome
+    happens to fall on the line. Use `influence_diagnostics` for the half of the
+    question that needs `y`.
     """
     num = df[list(cols)] if cols is not None else df.select_dtypes(include=[np.number])
     X = num.dropna().to_numpy(dtype=float)
@@ -620,10 +626,196 @@ def range_restriction(r_observed: float, sd_selected: float, sd_reference: float
     }
 
 
+def influence_diagnostics(df: pd.DataFrame, target: str,
+                          predictors: Optional[Sequence[str]] = None,
+                          top_n: int = 10, dropna: bool = True) -> pd.DataFrame:
+    """Which rows actually move the fit -- outlier, leverage and influence separated.
+
+    `leverage_diagnostics` answers "who could?" from `X` alone. This answers
+    "who does?", which needs the outcome. **Three different things wear the name
+    "outlier"** and they come apart completely:
+
+    ==============================  ===============================================
+    ``outlier``                     a large studentized deleted residual: the row
+                                    is far from the fitted surface
+    ``leverage``                    a large hat value: the row sits far out in `X`
+                                    and has room to pull the surface
+    ``influence``                   a large Cook's D or DFFITS: removing the row
+                                    actually changes the estimate
+    ==============================  ===============================================
+
+    Measured on one clean base (n=60, ``x ~ U(0,3)``, ``y = 2 + 1*x + N(0,1)``,
+    clean slope 1.0979) with **exactly one planted point per dataset** -- flags
+    at 2p/n = 0.0656, 4/n = 0.0656, 2*sqrt(p/n) = 0.3621, |r_del| > 3:
+
+    =========================  ======  ========  =======  =======  =====  ===========
+    planted point              h       stud.del  Cook D   DFFITS   shift  flags
+    =========================  ======  ========  =======  =======  =====  ===========
+    A x at the mean, y off +6  0.0166  +5.449    0.1685   +0.708   +0.013 out+infl
+    B x=6, on the true line    0.3081  -0.183    0.0076   -0.122   +0.017 lev
+    C x=6, y off -9            0.3081  -6.826    5.8510   -4.554   +0.623 all three
+    =========================  ======  ========  =======  =======  =====  ===========
+
+    Only C matters, and only C carries all three flags. Swept over 60 seeds of
+    the same design, the separation is total: A's leverage stays in
+    [0.0164, 0.0193], always *below* the flag; B's studentized deleted residual
+    stays in [-1.16, +1.54], never near 3; C's Cook's D never falls below 3.76.
+
+    **The thresholds are scale-free and do not know what is material.** A is
+    flagged ``influence`` in 60 seeds out of 60 -- its Cook's D (0.126-0.265)
+    and DFFITS (0.58-1.06) clear their conventional flags every time -- while
+    the slope it actually moves has a 60-seed **median of -0.0007** against a
+    coefficient of 1.10. It is a real outlier that changes nothing, because a
+    point at the centre of `x` moves the intercept and not the slope. That is
+    why ``slope_shift_if_top_dropped`` carries the actual refit: it is the only
+    number here denominated in the units of the answer.
+
+    **B is not reliably "clean" either, and the honest version says so:** with
+    its outcome on the *true* line but not on the *fitted* one, 5x leverage
+    amplifies a small residual enough to trip Cook's D in **27 of 60 seeds**.
+    What holds across every seed is the pair of facts the trichotomy is about --
+    B is a leverage point (h at 4-6x the flag) and B is not an outlier.
+
+    **These are screening rules, not tests.** On perfectly clean normal data
+    with no influential structure whatsoever, **8-13% of all rows are flagged**,
+    and the share of datasets containing at least one flagged row is 0.9985 at
+    n=30 and **1.0000 at every n from 50 to 1000** (p in {2,4,8}, 2000 reps).
+    "My data has influential points" is the normal condition, not a finding.
+
+    A briefed expectation died here: heavy-tailed errors were supposed to raise
+    the flag rate, and **they do not**. Lognormal errors give 0.1190 of rows
+    flagged at n=100/p=2 against 0.1203 for normal errors -- indistinguishable.
+    The rules are studentized, so inflating the error spread inflates the
+    estimated scale with it and the rate self-normalizes.
+
+    **Masking, measured rather than assumed.** Duplicating point C (two copies
+    at x-separation 0 to 2) drops the largest single-deletion Cook's D from
+    5.8510 to 1.76-2.23 -- a real 3x dilution, since deleting either copy leaves
+    the other holding the fit. But 1.76 is still **27x the 4/n flag**, so the
+    points are not hidden; only the magnitude is. Meanwhile the damage doubles:
+    the slope falls to 0.146 with two copies against 0.475 with one, from a
+    clean 1.0979. So masking here costs accuracy in the *diagnostic*, not the
+    detection -- which is the opposite of the usual warning, and is what this
+    design actually produced.
+
+    Returns one row per flagged observation (at most ``top_n``, ordered by
+    Cook's D). ``.attrs`` carries the thresholds, per-flag counts, the full
+    per-predictor DFBETAS frame, and the refit.
+    """
+    cols = list(predictors) if predictors is not None else [
+        c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+    empty = pd.DataFrame(columns=["index", "leverage", "residual",
+                                  "studentized_deleted_residual", "cooks_d",
+                                  "dffits", "dfbetas_max", "dfbetas_argmax", "flags"])
+    if not cols:
+        empty.attrs["verdict"] = "no_predictors"
+        return empty
+
+    work = df[[target] + cols]
+    work = work.dropna() if dropna else work.fillna(work.mean(numeric_only=True))
+    y = work[target].to_numpy(dtype=float)
+    n = len(y)
+    X = np.column_stack([np.ones(n), work[cols].to_numpy(dtype=float)])
+    p = X.shape[1]
+    if n <= p + 2:
+        empty.attrs["verdict"] = "insufficient_rows"
+        empty.attrs["n"], empty.attrs["p"] = int(n), int(p)
+        return empty
+
+    XtX_inv = np.linalg.pinv(X.T @ X)
+    beta = XtX_inv @ X.T @ y
+    e = y - X @ beta
+    h = np.clip(np.einsum("ij,jk,ik->i", X, XtX_inv, X), 0.0, 1.0 - 1e-12)
+    dof = n - p
+    s2 = float(e @ e) / dof
+    if s2 <= 0:
+        empty.attrs["verdict"] = "perfect_fit_no_residual_variance"
+        return empty
+
+    # every quantity below is closed-form from the one pinv above: no refit loop
+    r_int = e / np.sqrt(s2 * (1.0 - h))
+    s2_i = np.clip((dof * s2 - e ** 2 / (1.0 - h)) / (dof - 1), 1e-300, None)
+    r_del = e / np.sqrt(s2_i * (1.0 - h))
+    cooks = (r_int ** 2 / p) * (h / (1.0 - h))
+    dffits = r_del * np.sqrt(h / (1.0 - h))
+    # beta - beta_(i) = (X'X)^-1 x_i e_i / (1 - h_i), standardized by s_(i)
+    delta = (XtX_inv @ X.T) * (e / (1.0 - h))
+    dfbetas = delta / (np.sqrt(np.diag(XtX_inv))[:, None] * np.sqrt(s2_i)[None, :])
+
+    thr_lev, thr_cook = 2.0 * p / n, 4.0 / n
+    thr_dffits, thr_dfbetas = 2.0 * np.sqrt(p / n), 2.0 / np.sqrt(n)
+    THR_RESID = 3.0                      # a screening cutoff, not a 5%-level test
+
+    is_out = np.abs(r_del) > THR_RESID
+    is_lev = h > thr_lev
+    is_inf = (cooks > thr_cook) | (np.abs(dffits) > thr_dffits)
+
+    coef_names = ["intercept"] + cols
+    idx = work.index.to_numpy()
+    abs_db = np.abs(dfbetas)
+    db_argmax = np.argmax(abs_db, axis=0)
+
+    rows = []
+    for i in np.flatnonzero(is_out | is_lev | is_inf):
+        flags = [nm for nm, on in (("outlier", is_out[i]), ("leverage", is_lev[i]),
+                                   ("influence", is_inf[i])) if on]
+        rows.append({
+            "index": idx[i],
+            "leverage": round(float(h[i]), 6),
+            "residual": round(float(e[i]), 6),
+            "studentized_deleted_residual": round(float(r_del[i]), 4),
+            "cooks_d": round(float(cooks[i]), 6),
+            "dffits": round(float(dffits[i]), 4),
+            "dfbetas_max": round(float(abs_db[db_argmax[i], i]), 4),
+            "dfbetas_argmax": coef_names[int(db_argmax[i])],
+            "flags": "+".join(flags),
+        })
+
+    out = (pd.DataFrame(rows).sort_values("cooks_d", ascending=False)
+           .head(top_n).reset_index(drop=True)) if rows else empty
+
+    # the refit: what dropping the single most influential row actually costs
+    top_i = int(np.argmax(cooks))
+    keep = np.ones(n, dtype=bool)
+    keep[top_i] = False
+    beta_drop = np.linalg.pinv(X[keep].T @ X[keep]) @ X[keep].T @ y[keep]
+    shifts = {nm: round(float(b1 - b0), 6)
+              for nm, b0, b1 in zip(coef_names, beta, beta_drop)}
+
+    out.attrs["n"], out.attrs["p"] = int(n), int(p)
+    out.attrs["thresholds"] = {
+        "leverage_2p_over_n": round(float(thr_lev), 6),
+        "cooks_d_4_over_n": round(float(thr_cook), 6),
+        "dffits_2_sqrt_p_over_n": round(float(thr_dffits), 6),
+        "dfbetas_2_over_sqrt_n": round(float(thr_dfbetas), 6),
+        "studentized_deleted_residual": THR_RESID,
+    }
+    out.attrs["n_outlier"] = int(is_out.sum())
+    out.attrs["n_leverage"] = int(is_lev.sum())
+    out.attrs["n_influence"] = int(is_inf.sum())
+    out.attrs["n_flagged_total"] = int((is_out | is_lev | is_inf).sum())
+    out.attrs["dfbetas"] = pd.DataFrame(dfbetas.T, columns=coef_names, index=idx).round(4)
+    out.attrs["slope_shift_if_top_dropped"] = {
+        "dropped_index": idx[top_i],
+        "dropped_cooks_d": round(float(cooks[top_i]), 6),
+        "coefficients": {nm: round(float(b), 6) for nm, b in zip(coef_names, beta)},
+        "shifts": shifts,
+        "max_abs_shift": round(float(max(abs(v) for v in shifts.values())), 6),
+    }
+    out.attrs["verdict"] = ("influential_rows_present" if bool(is_inf.any())
+                            else "flagged_rows_are_not_influential" if rows
+                            else "no_flagged_observations")
+    out.attrs["note"] = ("conventional flags are scale-free and fire routinely on "
+                         "clean data; slope_shift_if_top_dropped is the number "
+                         "denominated in the units of the answer")
+    return out
+
+
 __all__ = [
     "benjamini_hochberg", "cramers_v", "correlation_ratio", "distance_correlation",
     "mutual_information", "mi_permutation_pvalue", "auto_association",
     "quetelet_table", "tabular_regression", "leverage_diagnostics",
+    "influence_diagnostics",
     "semipartial_correlations", "range_restriction",
     "holm_bonferroni", "pairwise_group_differences",
 ]

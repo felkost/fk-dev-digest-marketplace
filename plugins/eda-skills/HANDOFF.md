@@ -1,6 +1,6 @@
 # Session handoff — eda_skills
 
-Written 2026-07-19, last updated at the end of round 28 (latent factor structure), for a fresh Claude session with no conversation history. Read this whole file before touching anything. Newest round first: 28 is the top section, 27 (the marketplace migration) below it.
+Written 2026-07-19, last updated 2026-07-20 at the end of round 29 (measurement quality: reliability, influence, ordinal data), for a fresh Claude session with no conversation history. Read this whole file before touching anything. Newest round first: 29 is the top section, then 28 (latent factor structure), then 27 (the marketplace migration).
 
 ## What this project is
 
@@ -20,6 +20,74 @@ Each has `SKILL.md` (Ukrainian body, Claude-facing) + `references/*.md` (English
 - `dist/eda_skills_knowledge.zip`: rebuilt in round 28 — **25 references + 29 scripts**, up from the 24 + 28 that round 27 established. (Round 27 is where those counts became trustworthy at all: the previously-committed zip showed 21/27 because `chatgpt/build_gpt_package.ps1` had the same path bug and was silently packaging a stale pre-migration snapshot.) The five per-skill `dist/<name>.zip` files are a pre-migration artifact of the standalone-repo build pattern (see "No per-skill build script exists" further down) and were not part of this fix.
 - **`chatgpt/gpt_instructions.md` is at 7,014 / 8,000 UTF-8 bytes** (986 B headroom, up from 20 B). Round 27 moved the modality-routing table out of the instructions and into `plan-eda-dataset/references/modality-routing.md`, leaving only a branch index + pointer inline — freeing ~1,000 bytes that had been the single largest non-procedural section. Every modality added from now on costs 0 instruction bytes.
 - **The authoritative history for rounds 1–26 is `MEMORY.md` → `eda-skills-deliverable.md`**, but that auto-memory account key was tied to the pre-migration working directory (`...F--Data-Neoversity-ai-eda-skills...`). Post-migration, auto-memory is keyed to `C:\Users\felko\.claude\projects\F--Data-Neoversity-ai-fk-dev-digest-marketplace\memory\` — a **different** memory scope with no round history of its own yet. If the old memory file is still reachable, it has one dense paragraph per round (26 rounds) with exact measured numbers and reasoning for every pre-migration design decision; if not, this HANDOFF plus round 27 below is what a fresh session has to work from.
+
+## What just happened (round 29 — measurement quality: reliability, influence, ordinal data, 2026-07-20, branch `feat/eda`)
+
+A **gap round**, not a correction round: three clusters that had zero coverage project-wide, each one a completion of something this project deliberately left half-finished. Smoke went **76 → 84**, all green; `check_docs.py` exits 0; all six CI gates pass locally.
+
+**Shipped:** `discover-eda-structure/scripts/reliability.py` (new, 9 public functions), `ordinal_data.py` (new, 6 public functions), an `influence_diagnostics` extension to `associations.py` (629 → 821 lines), references `measurement-reliability.md` and `ordinal-dichotomization.md` (new), plus guards added to `associations.md`, `factor-structure.md` and `audit-.../consistency-validity.md`, four new `mentoring.md` myth rows, and the Ukrainian SKILL.md / README / README-beginner updates.
+
+**Module boundaries were argued on layering, not size**, and that held up: `ordinal_data.py` manufactures a correlation matrix `R` which both `factor_analysis` and `reliability` consume (`mcdonald_omega(X, R=...)`, `principal_axis_factoring(R, k)`), so it sits *below* both. Putting polychoric inside `reliability.py` would have made the factor path depend on the reliability path — backwards.
+
+**Routing was deliberately not touched.** `check_docs.py [6]` diffs `modality-routing.md` against `plan-eda-dataset/SKILL.md`. Round 29 adds no *modality* — reliability, influence and ordinality are properties of tabular columns already routed to `discover-eda-structure`. Adding the new references to one copy and not the other is the exact drift `[6]` exists to catch; adding them to both would misclassify a method as a modality. Recorded so a future session does not "fix" it.
+
+### Measured numbers worth not re-deriving
+
+**Reliability** (population values are exact; sampling arms noted):
+
+- `alpha == omega` under exact tau-equivalence is an **algebraic identity**, gap ±1.11e-16 at loadings 0.4/0.6/0.8. Congeneric gap (mean λ=0.60, k=6) runs 0.0000 / 0.0020 / 0.0081 / **0.0183** as sd(λ) goes 0 → 0.2245, reaching only ~0.031 at the extreme. So "alpha underestimates reliability" is true and **nearly always negligible**.
+- **α is not a dimensionality statistic** (the headline). Two *orthogonal* factors, r=0 by construction, λ=0.75: α = 0.7692 / 0.8790 / **0.9179** at 5/10/15 items per factor. The 30-item mean score correlates **0.6833** and **0.6912** with the two true factors — representing neither.
+- **Spearman-Brown trap**: 30 items at λ=0.30 → α = **0.7479** (r̄ = 0.09); 40 at λ=0.25 → **0.7273** (r̄ = 0.0625). Hence `k_for_alpha_070`.
+- **item_total_r vs item_rest_r are both wrong at small k, in opposite directions** (true λ=0.50, n=1000, 500 reps): 0.7074/0.3171 at k=3 → 0.5235/0.4750 at k=30. Total is inflated from above, rest attenuated from below; neither is trustworthy on a three-item scale. `item_rest_r` is reported because its error is shared equally across items so the *ranking* survives.
+- **Disattenuation impossibility rate** (two 6-item scales, `rel` from sample alpha, 1500 reps): at r_true=0.80 — 0.0000/0.0687/**0.2947** for rel 0.90/0.70/0.50 at n=50. At r_true=0.95, rel=0.50 it is still **0.2347 at n=500**. Decomposition with `rel` plugged in at truth: 0.2033 vs 0.2947 → **~2/3 of failures come from noise in `r_obs`, ~1/3 from noise in `α̂`**.
+- **Formative screen fires but cannot diagnose** (n=1000): formative (3 uncorrelated causes) α=−0.0397, ω=0.0285, r̄=−0.0129; *bad reflective* (6 items at λ=0.15) α=0.0878, ω=0.0983, r̄=0.0158. Indistinguishable — only column meaning separates them.
+
+**Influence** (n=60 base, x~U(0,3), clean slope 1.0979; flags 2p/n=0.0656, 4/n=0.0656, 2√(p/n)=0.3621, |r_del|>3):
+
+| point | h | stud. del. | Cook's D | DFFITS | slope shift | flags |
+|---|---|---|---|---|---|---|
+| A (x at mean, y +6) | 0.0166 | +5.449 | 0.1685 | +0.708 | +0.013 | outlier+influence |
+| B (x=6, on the line) | 0.3081 | −0.183 | 0.0076 | −0.122 | +0.017 | leverage |
+| C (x=6, y −9) | 0.3081 | −6.826 | 5.8510 | −4.554 | +0.623 | all three |
+
+60-seed sweep: A's h ∈ [0.0164, 0.0193] always below flag; B's |r_del| ∈ [−1.16, +1.54] never near 3; C's Cook's D ≥ 3.76 always. **A is flagged `influence` in 60/60 seeds while its 60-seed median slope shift is −0.0007** — the thresholds are scale-free and do not know what is material.
+
+**Clean-data flag rates** (no influential structure at all, 2000 reps): **8–13% of rows** flagged, and the share of datasets with ≥1 flag is 0.9985 at n=30 and **1.0000 at every n from 50 to 1000**.
+
+**Ordinal**: Pearson on codes at true r=0.60, n=200 000 — 0.4121/0.4981/0.5489/0.5659/0.5742 at k=2/3/5/7/10 (retention 0.687→0.957), and **skewed cuts worse at every k**. Polychoric RMSE beat Pearson in **all 12 cells**. Dichotomization power 0.682→0.568 at d=0.35, 0.936→0.827 at d=0.50. `_bvn_cdf` agrees with scipy to **2.220e-16**.
+
+### Claims that died on contact with data — and design bugs caught by measuring
+
+**This is the important half of the round.** Nine things were wrong; all were replaced with what the data said rather than softened.
+
+1. **"Alpha rises when junk items are added" is FALSE** (carried in from the plan, re-confirmed dead). α *falls* monotonically 0.8522 → 0.7681 → 0.7168 → **0.6823** as 0/2/4/6 items at λ=0.10 are appended to six at λ=0.70. Replaced by the Spearman-Brown trap.
+2. **My own `loading_sd < 0.05` cutoff in `tau_equivalence_check` was the round-21/23 threshold bug again.** It declares genuinely tau-equivalent data congeneric **95.2% of the time at n=50 and 83.3% at n=100**, because the sd of six *estimated* loadings is positive even when the true loadings are identical. The null scales as **0.75/√n** (mean·√n flat at 0.760/0.757/0.754/0.746). Shipped cutoff is now `max(0.10, 1.4/√n)`: false alarm 0.023/0.014/0.001/0.000 at n=50/100/300/1000, power vs sd(λ)=0.15 of 0.329/0.742/0.999/1.000.
+3. **The gap-based verdict is unusable at every n, and not for the reason briefed.** The plan assumed sampling *noise* swamps the gap. Measured: the estimated gap has a positive **bias** of ~0.27/n and a 95th percentile of ~0.6/n under exact tau-equivalence. At n=100 the null's p95 (0.0065) exceeds a mildly congeneric scale's whole population gap (0.0020); at n=1000 the gap is detectable but worth 0.002. **Either below its own noise floor or too small to act on.**
+4. **My first `invariance_screen` threshold claimed "≤0.06 false alarm in every cell" and actually measured 0.237.** Refit to the null: the p95 of the max loading range scales as `√(2·ln(groups))/√n` with implied constant 2.10–2.72 over twelve cells. Shipped `max(0.20, 2.6·√(2·ln(groups))/√n_min)` — false alarm max 0.092, and power stated honestly (0.307 at n=50/group vs 0.910 at n=300), with an `underpowered` flag and an `underpowered_no_flag_is_not_evidence` verdict below 300.
+5. **The influence trichotomy design was wrong at first.** Point A at `x=0` sits at the edge of a U(0,3) design and picked up a *leverage* flag (h=0.0681 > 0.0656), muddying the separation. Moving A to the **x-mean** gives the clean version and a sharper finding (median slope shift −0.0007). Separately, R2 reproduced: with B and C in one dataset, B's Cook's D rises from a median 0.057 to **0.455** and clears the flag in 60/60 seeds. Both are asserted in the smoke test.
+6. **Heavy-tailed errors do NOT raise the influence flag rate.** Briefed to; measured 0.1190 (lognormal) vs 0.1203 (normal) at n=100/p=2, and the same everywhere else. The rules are studentized, so inflating the error spread inflates the estimated scale and the rate self-normalizes.
+7. **Polychoric was expected to lose to Pearson on RMSE at k=2 / small n. It did not — it won in all twelve cells**, including k=2/n=200 (0.0787 vs 0.1997). Pearson's bias (0.19 at k=2) is simply too large for its low variance to rescue.
+8. **Pearson-on-ordinal does NOT raise the Heywood rate** (briefed hypothesis): **0 improper solutions in both paths across all twelve cells**. The artefact is an *extra factor*, not a boundary estimate — Pearson extracts ≥2 factors in **100%** of reps at every k from 2 to 7 under extreme threshold spread, splitting exactly along the easy/hard grouping. **New limitation found: at k=2 with extreme spread polychoric is WORSE than Pearson** (0.96 vs 1.00 over-extraction) because every table goes sparse. And at *moderate* spread Pearson only over-extracts at k=2 — the guard matters far less than briefed for ordinary Likert data.
+9. **"Dichotomizing two correlated additive predictors manufactures an interaction" — DEAD.** Measured on `y = 0.4·x1 + 0.4·x2 + ε` with both predictors median-split: false-positive rate **0.043–0.059 at every correlation 0.0–0.7 and every n 200–2000**, nominal, flat in n, indistinguishable from the continuous control (0.048–0.060). The plan called the rising-with-n version "the sharp part"; it is not there. Recorded as a negative result — stating a second cost that does not exist would weaken the power/effective-n cost, which is large and real.
+
+**Three smaller implementation bugs, fixed:**
+
+- **`np.polynomial.legendre.leggauss(48)` was being recomputed on every `_bvn_cdf` call** — 1.77 ms each (it eigendecomposes a 48×48 companion matrix) against 0.2 µs cached. A polychoric fit evaluates the integrand ~14 times, so this added ~25 ms to a 13 ms fit; a 12-column `polychoric_matrix` went from ~2.5 s to 0.69 s. This is what made the first measurement run exceed 600 s and get killed. Now `@lru_cache`d.
+- **`mcdonald_omega` rounded omega to 4 decimals**, which made the alpha==omega identity unassertable (0.5333333 vs 0.5333). Moved to 6 decimals — the project's "identities get 6" convention, and this identity is the module's headline claim.
+- **The sparse-table smoke case was not actually sparse** (min expected cell 5.3, just above the guard). Base rates made genuinely extreme.
+
+### Facts to correct in the sections below
+
+- **Round 28 (PR #3) IS merged into `main`** (`ead1008`). The round-28 section still says "not merged as of this writing" — true when written, not any more.
+- **`validate-plugins.mjs` accepts FOUR warnings, not one** — one plugin-root `CLAUDE.md` per plugin that carries one (agent-database, agent-ml-interviewer, ai-gen, eda-skills). The note below saying "exactly one" is stale.
+- **`dist/discover-eda-structure.zip` had been stale since round 28** — it was missing `factor_analysis.py` and `factor-structure.md`. Rebuilt this round (19 files) alongside `dist/eda_skills_knowledge.zip` (64 files). `dist/` is gitignored, so neither is committed; they still must be rebuilt locally because `check_docs.py [2]` validates cited paths against the knowledge zip. There is still no per-skill build script — the staging pattern is a 10-line inline `zipfile` walk over `SKILL.md`, `agents/*.yaml`, `references/*.md`, `scripts/*.py`.
+- **The ChatGPT package cost of this round was zero instruction bytes**, as predicted: `gpt_instructions.md` stays at 7014 / 8000 bytes because the build script walks `references/`/`scripts/` wholesale and cites no individual reference.
+
+### Deliberately out of scope, recorded so it is not re-mined
+
+Multi-group and longitudinal CFA (only `invariance_screen` kept, from S1E12/S4E24), item-parcel allocation studies (only "a mean score IS a parcel" kept, from S3E06), IRT (S5E19), structural-after-measurement (S6E07), local fit (S5E20), multilevel FA (S5E21), identification (S4E10), model fit/modification (S1E14/S1E06), MANOVA (S2E09), mediation (S2E08), degrees of freedom (S3E08), moderation probing (S3E02/S2E07), regularized selection (S5E09 — round 21's winner's curse covers the selection side), multilevel models (S2E29 — round 21 covers ICC/design effect). **Already fully mined:** S5E14 (round 20), S5E02/S4E01/S2E18/S3E09 (rounds 16/18), S2E14 (round 18), S3E03/S3E15 (round 28). **Still open, one paragraph's worth:** S4E17's Box-Cox residue — "a nonlinear transformation changes the correlation structure, a linear one does not" — not scoped into this round.
+
+**Deliberately excluded from `README-beginner.md`** (recorded so it does not look like an oversight): the polychoric estimator itself, the omega formula, DFBETAS, tau-equivalence, and Gauss-Legendre quadrature. It got plain-language trap entries and three glossary terms only.
 
 ## What just happened (round 28 — latent factor structure, 2026-07-19, branch `feat/eda`)
 
@@ -331,8 +399,10 @@ For every external source (course PDFs, a chart+FAQ, podcast episodes): extract/
 
 ## Open threads / not done
 
-- Nothing is currently broken or half-finished as of round 28: 76/76 smoke checks, `check_docs.py` exits 0, `npm run lint` at the marketplace root passes (8 plugins, 0 warnings), `dist/eda_skills_knowledge.zip` rebuilt with correct paths.
-- **Round 28 lives on branch `feat/eda` (PR #3), not on `main`** — it is not merged as of this writing, so a fresh session on `main` will not see `factor_analysis.py` or `factor-structure.md`. Check the PR's state before assuming either exists.
+- Nothing is currently broken or half-finished as of round 29: **84/84** smoke checks, `check_docs.py` exits 0, and all six CI gates pass locally (prettier, markdownlint, `validate-marketplace.mjs` at 8 plugins / 0 warnings, `validate-plugins.mjs` at 9 targets / 4 accepted warnings, the evals static gate at 59 skills / 0 failures, and `build:catalog` + the Vite site build). Both zips rebuilt.
+- **Round 29 lives on branch `feat/eda` and is not merged as of this writing** — check the PR's state before assuming `reliability.py`, `ordinal_data.py`, `influence_diagnostics`, `measurement-reliability.md` or `ordinal-dichotomization.md` exist on `main`. The plan it was built from is at `C:\Users\felko\.claude\plans\feat-eda-swift-sunset.md`; the section at the top of this file records where the plan was wrong, which is the part worth reading.
+- **Correction to the round-28 section below: PR #3 IS merged into `main`** (commit `ead1008`). That section still says "not merged as of this writing" — it was true when written and is not any more. `factor_analysis.py` and `factor-structure.md` both exist on `main`.
+- **The `discover-eda-structure` reliability/ordinal work has one unexplored edge**: `invariance_screen` is calibrated for loadings around 0.60 (the constant 2.6 was fitted at that level). Very high or very low mean loadings shift the null's width, and the shipped formula does not carry the `√(1−λ²)` term that would adjust for it — dropped deliberately because fitting the constant empirically absorbed it at λ≈0.60. If a future round wants the screen to hold its false-alarm rate across loading levels, that is the term to add and re-fit.
 - **Two ideas from the round-27 KNIME/scoring-metrics PDF review were identified as worthwhile and NOT yet implemented:** a break-even classification threshold computed straight from the cost/profit matrix already gathered in the dataset contract (`p* = Cost_FN / (Cost_FN + Profit_TN)`, computable before any model exists), and the known-form correction to predicted probabilities after resampling (the ebook's prior-correction formula, p.27). Neither needed new measurement to justify — they were deprioritized in favor of the cheaper kappa fix and the larger graph-modality gap, not rejected.
 - **The graph modality's `discover` branch (centrality/community detection as features, latent-space vs. ERGM model families) is deliberately deferred** — round 27 shipped only the `audit` branch (profile/split/dyadic design effect), by explicit user agreement to split the work into two steps. The audit branch already closes the modality's worst leakage risk (features computed on the full graph), so the gap is real but not urgent.
 - **Nine round-21 transcripts are at `C:\Users\felko\Downloads\*.transcript.txt`** (S2E11, S2E12, S2E15, S2E25, S2E32, S2E33, S3E01, S3E07, S3E10). S2E32 (sampling) and S2E11 (replication) are fully mined; S2E12/S2E15/S2E25 were judged out of scope with reasons recorded above. S3E10 (Tukey) still has usable material on *plot-reading practice* if a future round wants to extend `visualization.md` — only its exploratory/confirmatory framing was taken. These files use the OpenRouter `whisper-large-v3` pipeline, so they repeat a 4-line header many times before the body: skip to the first `[00:00]`.

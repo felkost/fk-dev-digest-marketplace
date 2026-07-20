@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-20T07:03:39.461Z",
+  "generatedAt": "2026-07-20T09:56:05.642Z",
   "marketplace": {
     "name": "fk-dev-digest-marketplace",
     "displayName": "Dev Digest",
@@ -426,7 +426,7 @@
         },
         {
           "name": "discover-eda-structure",
-          "description": "Discover relationships, redundancy, clusters, manifolds, latent factor structure, and temporal structure during pre-model EDA. Use when choosing correlation or association measures, mutual information, clustered correlation maps, clustering algorithms for numeric/categorical/mixed/high-dimensional/time-series data, dimensionality-reduction methods, factor analysis versus PCA, how many factors to extract, factor rotation, Heywood cases, whether correlated columns should become one scale, image or text embeddings, autoencoder/VAE probes, or lag/rolling/seasonal features. Require method assumptions, leakage controls, stability analysis, and domain interpretation. Respond in Ukrainian unless the user requests another language."
+          "description": "Discover relationships, redundancy, clusters, manifolds, latent factor structure, measurement quality, and temporal structure during pre-model EDA. Use when choosing correlation or association measures, mutual information, clustered correlation maps, clustering algorithms for numeric/categorical/mixed/high-dimensional/time-series data, dimensionality-reduction methods, factor analysis versus PCA, how many factors to extract, factor rotation, Heywood cases, whether correlated columns should become one scale, scale reliability, Cronbach's alpha, McDonald's omega, attenuation correction, influential observations, Cook's distance, leverage versus outliers, polychoric correlation, ordinal or Likert items, median splits, image or text embeddings, autoencoder/VAE probes, or lag/rolling/seasonal features. Require method assumptions, leakage controls, stability analysis, and domain interpretation. Respond in Ukrainian unless the user requests another language."
         },
         {
           "name": "engineer-select-eda-features",

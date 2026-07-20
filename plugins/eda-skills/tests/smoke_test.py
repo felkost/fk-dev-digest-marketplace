@@ -1919,6 +1919,357 @@ def _():
     assert cmp["mean_communality_pca"] > cmp["mean_communality_fa"]
 
 
+def _pop_alpha(R):
+    """Population standardized alpha straight from a correlation matrix."""
+    k = R.shape[0]
+    r_bar = (R.sum() - k) / (k * (k - 1))
+    return k * r_bar / (1 + (k - 1) * r_bar)
+
+
+def _one_factor_R(loadings):
+    R = np.outer(loadings, loadings)
+    np.fill_diagonal(R, 1.0)
+    return R
+
+
+@check("reliability: alpha equals omega under tau-equivalence; mediocre items still clear 0.70")
+def _():
+    import reliability as REL
+
+    # Exact algebraic identity, so this is a population check with no sampling in
+    # it at all: measured gap +-1.11e-16 at every equal loading tried.
+    # (1e-5 is the reporting floor: omega is rounded to 6 decimals, so the
+    # underlying 1.11e-16 agreement cannot be asserted more tightly than this.)
+    for lam in (0.4, 0.6, 0.8):
+        R = _one_factor_R(np.full(6, lam))
+        om = REL.mcdonald_omega(None, R=R)
+        assert abs(_pop_alpha(R) - om["omega"]) < 1e-5, (lam, _pop_alpha(R), om["omega"])
+
+    # Congeneric loadings: assert DIRECTION only. The population gap is
+    # 0.002-0.018 over the realistic range, which is smaller than the sampling
+    # noise a magnitude bound would really be bounding.
+    Rc = _one_factor_R(np.linspace(0.40, 0.80, 6))
+    gap = REL.mcdonald_omega(None, R=Rc)["omega"] - _pop_alpha(Rc)
+    assert gap > 0, gap
+    assert gap < 0.05, gap                      # measured 0.0081; not a tight bound
+
+    # The Spearman-Brown trap: 30 items sharing 9% of their variance post
+    # alpha 0.7479 in the population. Both branches, because a one-sided assert
+    # would pass on a verdict that always fires.
+    X30 = _factor_data(np.full((30, 1), 0.30), np.eye(1), 1000, seed=51)
+    a30 = REL.cronbach_alpha(X30)
+    assert 0.68 < a30["alpha"] < 0.82, a30["alpha"]
+    assert a30["mean_inter_item_r"] < 0.15, a30["mean_inter_item_r"]
+    assert a30["verdict"] == "inflated_by_item_count", a30["verdict"]
+
+    X6 = _factor_data(np.full((6, 1), 0.70), np.eye(1), 1000, seed=51)
+    a6 = REL.cronbach_alpha(X6)
+    assert a6["alpha"] > 0.80, a6["alpha"]
+    assert a6["verdict"] != "inflated_by_item_count", a6["verdict"]
+
+
+@check("reliability: alpha is not a unidimensionality statistic")
+def _():
+    import reliability as REL
+
+    # Two ORTHOGONAL factors -- true factor correlation is 0 by construction.
+    # Population alpha 0.9179 at 15 items each; the mean score correlates ~0.69
+    # with each true factor and represents neither.
+    L = np.zeros((30, 2))
+    L[:15, 0] = 0.75
+    L[15:, 1] = 0.75
+    X = _factor_data(L, np.eye(2), 800, seed=53)
+
+    al = REL.cronbach_alpha(X)
+    assert al["alpha"] > 0.85, al["alpha"]       # reassuringly high, and meaningless
+
+    import factor_analysis as FA
+    pa = FA.parallel_analysis(X, n_iter=60, random_state=53)
+    assert pa["n_factors"] == 2, pa["n_factors"]
+
+    rep = REL.scale_score_report(X, n_iter=60, random_state=53)
+    assert rep["verdict"] == "not_unidimensional_alpha_is_not_evidence", rep["verdict"]
+    # the sub-report survives the verdict that outranked it (R9)
+    assert rep["alpha_report"]["alpha"] > 0.85
+    assert "parallel_analysis:2_dimensions" in rep["also_fired"], rep["also_fired"]
+
+
+@check("reliability: the reverse-keyed item surfaces; disattenuation reports the impossible case")
+def _():
+    import reliability as REL
+
+    X = _factor_data(np.full((6, 1), 0.68), np.eye(1), 500, seed=57)
+    X[:, 5] = -X[:, 5]                          # never recoded
+    its = REL.item_statistics(X)
+    # threshold-free: a comparison, not a cutoff
+    assert its.iloc[0]["item"] == "item5", its[["item", "item_rest_r"]].to_dict()
+    assert "item5" in its.attrs["items_raising_alpha_if_dropped"], its.attrs
+    assert its.attrs["verdict"] == "reverse_keyed_or_off_construct_item_present"
+    assert its.loc[its["item"] == "item5", "item_rest_r"].iloc[0] < 0
+
+    # deterministic arithmetic, both branches
+    bad = REL.disattenuate(0.8, 0.5, 0.5)
+    assert bad["r_disattenuated"] == 1.6, bad             # reported, NOT clipped
+    assert bad["r_disattenuated_clipped"] == 1.0, bad
+    assert bad["exceeds_unity"] is True
+    assert bad["verdict"] == "exceeds_unity_reliability_estimates_are_too_low"
+
+    ok = REL.disattenuate(0.5, 0.7, 0.7)
+    assert abs(ok["r_disattenuated"] - 0.7143) < 1e-3, ok
+    assert ok["exceeds_unity"] is False
+    assert REL.attenuation_ceiling(0.7, 0.7)["max_observable_r"] == 0.7
+
+
+@check("reliability: formative indicators refused; the invariance screen is calibrated")
+def _():
+    import reliability as REL
+
+    rng = np.random.default_rng(59)
+    # three uncorrelated CAUSES of a composite: alpha is a category error here
+    form = REL.indicator_direction_check(rng.standard_normal((600, 3)))
+    assert form["verdict"] == "formative_or_broken_reflective_scale_suspected", form
+    # a real reflective scale must not fire
+    refl = REL.indicator_direction_check(_factor_data(np.full((6, 1), 0.65),
+                                                      np.eye(1), 600, seed=59))
+    assert refl["verdict"] == "consistent_with_reflective_indicators", refl
+
+    # The round-21 ICC lesson: an uncalibrated range threshold is a sample-size
+    # detector. A FIXED 0.20 cutoff flags 75-100% of invariant data at n=50.
+    # Sweep the false-alarm bound hard rather than trusting one seed.
+    def run(shift, n, seed):
+        Xs, gs = [], []
+        for gi in range(2):
+            lam = np.full((6, 1), 0.60)
+            if shift and gi == 0:
+                lam[0, 0] = 0.30
+            Xs.append(_factor_data(lam, np.eye(1), n, seed=seed * 10 + gi))
+            gs.append(np.full(n, gi))
+        return REL.invariance_screen(np.vstack(Xs), np.concatenate(gs))
+
+    false_alarms = sum(run(False, 1000, s).attrs["n_flagged"] > 0 for s in range(12))
+    assert false_alarms <= 1, f"{false_alarms}/12 false alarms on invariant data"
+    hits = sum(run(True, 1000, s).attrs["n_flagged"] > 0 for s in range(12))
+    assert hits >= 10, f"only {hits}/12 detections of a 0.30 loading shift"
+
+    # and it refuses to pretend it is powered when it is not
+    small = run(False, 60, 1)
+    assert small.attrs["underpowered"] is True
+    assert small.attrs["verdict"] == "underpowered_no_flag_is_not_evidence", small.attrs
+
+
+@check("associations.influence_diagnostics: outlier, leverage and influence are three different things")
+def _():
+    import associations as AS
+
+    def planted(px, offset, seed):
+        rng = np.random.default_rng(seed)
+        x = rng.uniform(0, 3, 60)
+        y = 2 + 1.0 * x + rng.standard_normal(60)
+        xx, yy = np.append(x, px), np.append(y, 2 + px + offset)
+        res = AS.influence_diagnostics(pd.DataFrame({"x": xx, "y": yy}), "y")
+        row = res[res["index"] == 60]
+        shift = float(np.polyfit(xx[:-1], yy[:-1], 1)[0] - np.polyfit(xx, yy, 1)[0])
+        return res, (row.iloc[0] if len(row) else None), shift
+
+    # One planted point PER DATASET. Three in one dataset contaminate each other
+    # -- that trap is asserted explicitly at the end of this check.
+    for seed in (300, 311, 322):                # 60-seed sweep backs every bound
+        thr = None
+
+        # A: a real outlier sitting at the centre of x, so it has no leverage
+        res, a, shift_a = planted(1.5, +6.0, seed)
+        thr = res.attrs["thresholds"]
+        assert a is not None, "point A was not flagged at all"
+        assert a["leverage"] < thr["leverage_2p_over_n"], a["leverage"]   # 0.0164-0.0193
+        assert abs(a["studentized_deleted_residual"]) > 3.0, a            # 4.45-8.23
+        assert a["flags"] == "outlier+influence", a["flags"]
+        # ...and the conventional flags fire while it moves nothing: 60-seed
+        # median slope shift -0.0007 against a coefficient of ~1.10
+        assert a["cooks_d"] > thr["cooks_d_4_over_n"], a["cooks_d"]
+        assert abs(shift_a) < 0.15, shift_a
+
+        # B: far out in x, outcome on the true line -- leverage without outlyingness
+        res, b, shift_b = planted(6.0, 0.0, seed)
+        assert b is not None
+        assert b["leverage"] > 2 * thr["leverage_2p_over_n"], b["leverage"]  # 0.256-0.383
+        assert abs(b["studentized_deleted_residual"]) < 3.0, b              # -1.16..+1.54
+        assert "outlier" not in b["flags"], b["flags"]
+        assert abs(shift_b) < 0.15, shift_b
+
+        # C: both -- and only C actually moves the answer
+        res, c, shift_c = planted(6.0, -9.0, seed)
+        assert c is not None
+        assert c["flags"] == "outlier+leverage+influence", c["flags"]
+        assert c["cooks_d"] > 20 * thr["cooks_d_4_over_n"], c["cooks_d"]    # 3.76-8.95
+        assert abs(shift_c) > 0.30, shift_c                                 # 0.45-0.85
+        assert abs(shift_c) > 3 * max(abs(shift_a), abs(shift_b)), (shift_a, shift_b, shift_c)
+
+    # R2, encoded so a refactor cannot silently reintroduce it: with B and C in
+    # ONE dataset the leverage-only point inherits C's influence. Measured over
+    # 60 seeds, B's Cook's D rises from a median 0.057 to a median 0.455 and
+    # exceeds the 4/n flag in 60 of 60 seeds.
+    rng = np.random.default_rng(300)
+    x = rng.uniform(0, 3, 60)
+    y = 2 + 1.0 * x + rng.standard_normal(60)
+    xx = np.concatenate([x, [6.0, 6.0]])
+    yy = np.concatenate([y, [2 + 6.0, 2 + 6.0 - 9.0]])
+    both = AS.influence_diagnostics(pd.DataFrame({"x": xx, "y": yy}), "y")
+    rowB = both[both["index"] == 60]
+    assert len(rowB), "B vanished when C shared its x-position"
+    assert rowB.iloc[0]["cooks_d"] > both.attrs["thresholds"]["cooks_d_4_over_n"], \
+        rowB.iloc[0]["cooks_d"]
+
+
+@check("associations.influence_diagnostics: conventional thresholds fire on clean data")
+def _():
+    import associations as AS
+
+    # No influential structure whatsoever. Measured: 8-13% of ROWS flagged, and
+    # essentially every dataset carries at least one flag.
+    rng = np.random.default_rng(71)
+    flagged, total, datasets_with_a_flag = 0, 0, 0
+    REPS = 60
+    for _ in range(REPS):
+        Xr = rng.standard_normal((100, 2))
+        d = pd.DataFrame(Xr, columns=["x0", "x1"])
+        d["y"] = 2 + Xr.sum(axis=1) + rng.standard_normal(100)
+        res = AS.influence_diagnostics(d, "y", top_n=10 ** 6)
+        k = res.attrs["n_flagged_total"]
+        flagged += k
+        total += 100
+        datasets_with_a_flag += int(k > 0)
+
+    rate = flagged / total
+    # The LOWER bound is the important half of this assertion: it fails loudly if
+    # someone "improves" these screening rules into a 5%-level test.
+    assert 0.04 < rate < 0.25, rate                          # measured 0.1203
+    assert datasets_with_a_flag >= REPS * 0.9, datasets_with_a_flag
+
+    # the refit is the confirmation the flags are not: on clean data it is tiny
+    Xr = rng.standard_normal((300, 2))
+    d = pd.DataFrame(Xr, columns=["x0", "x1"])
+    d["y"] = 2 + Xr.sum(axis=1) + rng.standard_normal(300)
+    res = AS.influence_diagnostics(d, "y")
+    assert res.attrs["n_flagged_total"] > 0, "clean data produced no flags at all"
+    assert res.attrs["slope_shift_if_top_dropped"]["max_abs_shift"] < 0.15, \
+        res.attrs["slope_shift_if_top_dropped"]
+
+
+def _ordinalize(col, k, shift=0.0):
+    """Slice one column into k categories, shifting every threshold by `shift`."""
+    return np.searchsorted(np.quantile(col, np.arange(1, k) / k) + shift, col)
+
+
+@check("ordinal_data: polychoric recovers the latent r that Pearson attenuates")
+def _():
+    import ordinal_data as OD
+
+    # the engine first: Drezner vs scipy, measured 2.220e-16 over 200 triples
+    from scipy.stats import multivariate_normal as MVN
+    rng = np.random.default_rng(83)
+    for _ in range(15):
+        h, kk = rng.uniform(-3, 3, 2)
+        rho = float(rng.uniform(-0.95, 0.95))
+        mine = float(OD._bvn_cdf(np.array(h), np.array(kk), rho))
+        theirs = float(MVN.cdf([h, kk], mean=[0, 0], cov=[[1, rho], [rho, 1]]))
+        assert abs(mine - theirs) < 1e-12, (h, kk, rho, mine, theirs)
+
+    # k=3, n=2000: the tolerance comes from the sampling sd measured AT k=3,
+    # n=2000 (0.0199) -- not read off a k=5 sweep, which is the round-23/27 error
+    hits = 0
+    for s in range(40):
+        r = np.random.default_rng(200 + s)
+        t1 = r.standard_normal(2000)
+        t2 = 0.60 * t1 + np.sqrt(1 - 0.36) * r.standard_normal(2000)
+        a, b = _ordinalize(t1, 3), _ordinalize(t2, 3)
+        res = OD.polychoric_correlation(a, b)
+        assert res["verdict"] == "measured", res["verdict"]
+        assert abs(res["rho"] - 0.60) < 0.08, res["rho"]        # 4x the measured sd
+        # Pearson attenuates to ~0.4981 in the population; polychoric must beat it
+        if res["rho"] > res["pearson_r"]:
+            hits += 1
+    assert hits >= 38, f"polychoric beat Pearson in only {hits}/40 seeds"
+
+    # the other verdict branch: too many categories is not an ordinal problem
+    r = np.random.default_rng(97)
+    cont = r.standard_normal(500)
+    many = OD.polychoric_correlation(np.round(cont, 3), np.round(cont + r.standard_normal(500), 3))
+    assert many["verdict"] == "too_many_categories_treat_as_continuous", many["verdict"]
+
+    # a median split discards rows: nested comparison, no threshold at all
+    x = r.standard_normal(4000)
+    y = 0.5 * x + np.sqrt(0.75) * r.standard_normal(4000)
+    med = OD.dichotomization_cost(x, y, "median")
+    extreme = OD.dichotomization_cost(x, y, 0.9)
+    assert 0.50 < med["information_retained"] < 0.75, med["information_retained"]
+    assert extreme["information_retained"] < med["information_retained"], (med, extreme)
+    assert extreme["effective_n_equivalent"] < med["effective_n_equivalent"]
+    assert med["effective_n_equivalent"] < 4000
+    assert extreme["verdict"] == "severe_information_loss", extreme["verdict"]
+
+
+@check("ordinal_data: Pearson on ordinal items manufactures a second factor; polychoric does not")
+def _():
+    import ordinal_data as OD
+
+    # One latent factor, p=12, n=500. Half the items get thresholds shifted one
+    # way and half the other, so the ONLY structure beyond the single factor is
+    # item difficulty. Ground truth is 1 factor. Rates over seeds, not one seed.
+    def counts(k, shift, seed):
+        rng = np.random.default_rng(seed)
+        n, p, lam = 500, 12, 0.70
+        f = rng.standard_normal((n, 1))
+        X = f @ np.full((1, p), lam) + rng.standard_normal((n, p)) * np.sqrt(1 - lam ** 2)
+        O = np.column_stack([_ordinalize(X[:, j], k, -shift if j < 6 else shift)
+                             for j in range(p)])
+        names = [f"i{j}" for j in range(p)]
+        R_pe = np.corrcoef(O, rowvar=False)
+        R_po = np.asarray(OD.polychoric_matrix(pd.DataFrame(O, columns=names))["R"])
+        # the parallel-analysis null depends only on (n, p), never on the data,
+        # so one simulated threshold serves both matrices
+        sim = np.empty((60, p))
+        rs = np.random.default_rng(7)
+        for i in range(60):
+            sim[i] = np.sort(np.linalg.eigvalsh(np.corrcoef(
+                rs.standard_normal((n, p)), rowvar=False)))[::-1]
+        thr = np.percentile(sim, 95, axis=0)
+
+        def keep(R):
+            obs = np.sort(np.linalg.eigvalsh(R))[::-1]
+            c = 0
+            for a, b in zip(obs, thr):
+                if a > b:
+                    c += 1
+                else:
+                    break
+            return c
+
+        return keep(R_pe), keep(R_po)
+
+    # k=5, extreme spread: measured Pearson over-extracts 100%, polychoric 0%
+    pe_bad = po_bad = 0
+    for s in range(12):
+        cpe, cpo = counts(5, 1.4, 400 + s)
+        pe_bad += int(cpe >= 2)
+        po_bad += int(cpo >= 2)
+    assert pe_bad >= 11, f"Pearson invented a second factor in only {pe_bad}/12"
+    assert po_bad <= 1, f"polychoric invented one in {po_bad}/12"
+
+    # control: with identical thresholds neither path over-extracts
+    cpe, cpo = counts(5, 0.0, 401)
+    assert cpe == 1 and cpo == 1, (cpe, cpo)
+
+    # ...and the honest boundary: at k=2 with extreme spread polychoric is WORSE
+    # than Pearson (measured 0.96 vs 1.00 over-extraction), because every table
+    # goes sparse. Assert the guard that catches it rather than a clean win.
+    rng = np.random.default_rng(411)
+    a = (rng.standard_normal(300) > -1.8).astype(int)      # ~96% in one category
+    b = (rng.standard_normal(300) > 1.8).astype(int)       # ~4% in one category
+    sparse = OD.polychoric_correlation(a, b)
+    assert sparse["verdict"] == "sparse_table_unstable", sparse["verdict"]
+    assert sparse["min_expected_cell"] < 5, sparse["min_expected_cell"]
+
+
 @check("contracts manifests serialize")
 def _():
     import contracts as ct

@@ -240,10 +240,20 @@ it is asymmetric between the two sides of an analysis:
 
 Practical step: keep a `measured_or_proxy` note per column in the data
 dictionary, flag proxies in the audit manifest, and prefer the directly
-measured column when both exist. If repeated measurements or parallel
-instruments are available, they are the only in-data evidence of reliability;
-otherwise it is a domain question. See
-`discover-eda-structure/references/associations.md` for how this propagates
+measured column when both exist.
+
+**When several columns measure the same construct, reliability stops being a
+domain question and becomes computable.** A multi-item scale *is* the repeated
+measurement this problem asks for — the items are the parallel instruments — so
+`discover-eda-structure/scripts/reliability.py` estimates `rel` from the items
+themselves (`scale_score_report`, `mcdonald_omega`) and turns it into the
+ceiling every downstream correlation is capped by. Two scales at reliability
+0.70 cannot correlate above 0.70 even when they measure the same thing, and a
+true 0.80 between them reads as 0.56 — which is worth knowing before a
+hypothesis is declared dead. It remains a domain question only for a **single**
+column with no parallel measurement. See
+`discover-eda-structure/references/measurement-reliability.md` for the estimator
+and its limits, and `.../associations.md` for how the attenuation propagates
 into association estimates.
 
 ### The target is a proxy too, and it is the expensive one
