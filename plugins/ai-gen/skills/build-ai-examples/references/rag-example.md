@@ -9,13 +9,36 @@ are in `design-agent-architecture/references/rag-pipeline.md`; this file covers 
 
 ```bash
 cd scripts/rag_example
-cp .env.example .env          # fill in OPENROUTER_API_KEY
+cp .env.example .env          # fill in OPENROUTER_API_KEY -- get one at openrouter.ai
 docker compose up -d          # Postgres + pgvector, with a healthcheck
 ollama pull nomic-embed-text  # local embeddings; see the provider note below
 pip install -r requirements.txt
 python ingest.py ./docs       # load -> split -> embed -> store
 python agent.py "what does the handbook say about refunds?"
 ```
+
+**Getting the key:** create an account at <https://openrouter.ai>, open the API Keys section of
+the dashboard, and create a key. It draws from your own OpenRouter balance per call — top up a
+small amount before running this. Paste it into `.env` yourself; never paste it into a chat with
+an AI assistant, and never commit the filled-in file (`.env` is gitignored repo-wide, `.env.example`
+is the tracked template).
+
+`ingest.py` and `agent.py` load `.env` themselves via `python-dotenv`, anchored to this
+directory regardless of your current working directory — `settings.py` stays stdlib-only (see
+"Pure logic is separated from framework wiring" below) and only reads `os.environ`; the
+dotenv loading is what populates it. Without `python-dotenv` in `requirements.txt`, a filled-in
+`.env` sitting next to the scripts does **nothing** — this was a real bug in an earlier version
+of this example, found by actually running it, not by review.
+
+**This has been run end to end against live services** (Ollama, a real Postgres/pgvector
+container, and a real OpenRouter key) — not just the database layer. `ingest.py` embedded and
+stored a small test corpus; `agent.py` retrieved the right chunk and answered with a citation,
+e.g. *"customers may return unopened items within thirty days... [handbook.md#0]"*. One
+non-blocking finding from that run: `langgraph.prebuilt.create_react_agent` is deprecated as of
+LangGraph V1.0 in favor of `langchain.agents.create_agent`, planned for removal in V2.0. The
+example still works today; if you hit a removal, that migration is the fix — verify the new
+function's signature against LangChain's current docs before swapping it in, don't assume it's a
+drop-in replacement.
 
 ## Layout
 
@@ -89,8 +112,31 @@ Each was verified by deliberately breaking it: an env var added to code but not 
 `.env.example`, a `numpy` import added to `chunking.py`, and an off-by-one in the stride all
 produced the expected failure.
 
-The live path — real embeddings, real Postgres, real OpenRouter — is **manual** verification,
-not CI. It needs keys and services; document it in the user's README, do not fake it in a test.
+**The Postgres/pgvector half of the live path has been run against a real container** (not just
+reviewed): a genuinely fresh `docker compose up` database, the actual `SCHEMA`/`build_schema()`
+DDL, the actual insert-with-upsert path, and the actual `<=>` ranking query from `search_docs`.
+That exercise caught three real bugs the offline smoke test cannot see (it never touches a
+database) — all three are fixed in the shipped code, and are worth naming because each is a
+common enough pgvector/psycopg trap to recognize elsewhere:
+
+1. `register_vector(conn)` was called **before** `CREATE EXTENSION IF NOT EXISTS vector` in both
+   `ingest.py` and `agent.py`. `register_vector` looks up the `vector` type's OID, so on a
+   genuinely fresh database — exactly what a first-time user's `docker compose up` produces — it
+   raised `vector type not found in the database`. Fixed by creating the extension first.
+2. `vector(%(dim)s)` as a bound parameter inside `CREATE TABLE` failed with `type modifiers must
+   be simple constants or identifiers`: Postgres does not allow a server-side bind parameter as a
+   DDL type modifier, only as a value. Fixed by building the DDL string with the (int-validated)
+   dimension formatted in directly, in `build_schema()`.
+3. Passing a plain Python list as the query vector to the `<=>` operator failed with `operator
+   does not exist: vector <=> double precision[]`. An `INSERT` can infer the `vector` type from
+   the target column, but a comparison has no column to infer from, so psycopg's default list
+   adapter sends a bare array instead. Fixed by wrapping the query embedding in
+   `pgvector.Vector(...)` before binding it, in `agent.py`.
+
+**Still unverified, because it needs things this session does not have:** the embedding call
+(Ollama is not installed here) and the OpenRouter chat call (needs the user's own key, and
+spending against it is not this session's call to make). Both are still manual verification, not
+CI — document them in the user's README rather than faking them in a test.
 
 ## Production deltas (state these with the example)
 

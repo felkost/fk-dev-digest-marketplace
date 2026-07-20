@@ -13,17 +13,40 @@ import pathlib
 import sys
 
 import psycopg
+from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg import register_vector
 
 from chunking import Chunk, split_text
 from settings import load_settings
 
+# settings.py stays stdlib-only (a smoke_test.py check enforces this) and just
+# reads os.environ -- something has to populate it from .env first. Anchored to
+# this file's directory, not CWD, so `python ingest.py` works from anywhere.
+load_dotenv(pathlib.Path(__file__).parent / ".env")
+
+# Split from SCHEMA and applied first: pgvector.psycopg's register_vector() looks
+# up the `vector` type's OID in the connected database, so it must run AFTER the
+# extension exists -- on a fresh database, register-before-create raises
+# "vector type not found in the database". Verified against a real container.
+EXTENSION = "CREATE EXTENSION IF NOT EXISTS vector;"
+
 # The index is versioned by embedding-model ID: changing the model means
 # re-embedding the whole corpus, which is a planned migration and not a config
 # edit. Mixing vectors from two models degrades silently to noise.
-SCHEMA = """
-CREATE EXTENSION IF NOT EXISTS vector;
+def build_schema(dim: int) -> str:
+    """DDL for the chunks table, with the vector dimension baked in.
+
+    Postgres rejects a bound parameter as a type modifier ("vector(%(dim)s)")
+    with "type modifiers must be simple constants or identifiers" -- DDL type
+    parameters cannot be server-side bind parameters the way DML values can.
+    Verified against a real container. `dim` is len(vectors[0]), an int from
+    the embedding response, not user input; the isinstance check keeps it that
+    way rather than trusting the call site.
+    """
+    if not isinstance(dim, int) or dim <= 0:
+        raise ValueError(f"dim must be a positive int, got {dim!r}")
+    return f"""
 CREATE TABLE IF NOT EXISTS chunks (
     id          bigserial PRIMARY KEY,
     source      text        NOT NULL,
@@ -31,7 +54,7 @@ CREATE TABLE IF NOT EXISTS chunks (
     content     text        NOT NULL,
     model_id    text        NOT NULL,
     ingested_at timestamptz NOT NULL DEFAULT now(),
-    embedding   vector(%(dim)s) NOT NULL,
+    embedding   vector({dim}) NOT NULL,
     UNIQUE (source, chunk_index, model_id)
 );
 """
@@ -82,8 +105,9 @@ def main(corpus_dir: str) -> None:
         print(f"  embedded {min(start + 64, len(chunks))}/{len(chunks)}")
 
     with psycopg.connect(settings.database_url) as conn:
+        conn.execute(EXTENSION)
         register_vector(conn)
-        conn.execute(SCHEMA, {"dim": len(vectors[0])})
+        conn.execute(build_schema(len(vectors[0])))
         with conn.cursor() as cur:
             for chunk, vector in zip(chunks, vectors):
                 cur.execute(

@@ -10,16 +10,25 @@ Run:  python agent.py "your question"
 
 from __future__ import annotations
 
+import pathlib
 import sys
 
 import psycopg
+from dotenv import load_dotenv
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from openai import OpenAI
+from pgvector import Vector
 from pgvector.psycopg import register_vector
 
 from settings import load_settings
+
+# settings.py stays stdlib-only (a smoke_test.py check enforces this) and just
+# reads os.environ -- something has to populate it from .env first. Anchored to
+# this file's directory, not CWD, so `python agent.py` works from anywhere.
+# Must run before load_settings() below, which reads os.environ immediately.
+load_dotenv(pathlib.Path(__file__).parent / ".env")
 
 settings = load_settings()
 
@@ -46,6 +55,10 @@ def search_docs(query: str) -> str:
     ).data[0].embedding
 
     with psycopg.connect(settings.database_url) as conn:
+        # register_vector() looks up the `vector` type's OID -- must run after the
+        # extension exists. Cheap no-op once ingest.py has already created it; kept
+        # here too so agent.py does not depend on ingest.py having run first.
+        conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         register_vector(conn)
         rows = conn.execute(
             """
@@ -55,7 +68,12 @@ def search_docs(query: str) -> str:
             ORDER BY embedding <=> %s          -- pgvector cosine distance
             LIMIT %s
             """,
-            (settings.embedding_model, vector, settings.top_k),
+            # Vector(...) is required here, not optional: an INSERT can infer
+            # `vector` from the target column's type, but this parameter has no
+            # target column to infer from. An un-wrapped list is sent as
+            # double precision[], and Postgres has no `vector <=> double
+            # precision[]` operator -- verified against a real container.
+            (settings.embedding_model, Vector(vector), settings.top_k),
         ).fetchall()
 
     if not rows:
