@@ -1,0 +1,12 @@
+interface:
+  display_name: "Будова LLM"
+  short_description: "Токенізація, увага, масштабування, сервінг, LoRA/QLoRA"
+  default_prompt: Use $explain-llm-internals to explain the mechanism behind the observed model
+    behaviour and what decision follows from it, citing primary sources; answer in Ukrainian.
+policy:
+  products:
+    - chatgpt
+    - codex
+    - api
+    - atlas
+  allow_implicit_invocation: true

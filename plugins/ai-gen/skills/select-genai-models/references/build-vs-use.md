@@ -9,6 +9,11 @@ A capable hosted model with a well-structured prompt (role, constraints, output 
 few examples inline). Covers the majority of real tasks. Exhaust this first: most "the model
 can't do it" cases are prompt or decomposition defects.
 
+How to exhaust it properly — prompt anatomy, technique choice with its cost, and what to measure
+before declaring this rung insufficient — is `engineer-prompt-context`
+(`references/prompt-techniques.md`). Climbing to rung 2 or 3 without that evidence is the most
+common expensive mistake on this ladder.
+
 ## Rung 1 — few-shot / in-context learning
 
 Add 3–10 curated examples of input→output into the prompt (or via prompt caching). Fixes format
@@ -19,7 +24,10 @@ cached.
 
 When the failure is *missing or stale knowledge*: attach an encoder + vector store and inject
 retrieved passages. Fixes grounding and citation; does NOT fix style, format discipline, or
-reasoning. See `design-agent-architecture` for the architecture itself.
+reasoning. See `design-agent-architecture/references/rag-pipeline.md` for the stage-by-stage
+anatomy, the failure mode of each stage, and the order to work in when RAG underperforms —
+and note the cheaper rung *below* this one: if the corpus is small and stable enough to fit in
+the context window, put it in the prompt and skip the pipeline entirely.
 
 ## Rung 3 — fine-tuning (LoRA/QLoRA or full)
 
@@ -30,6 +38,11 @@ keeps changing and fine-tuned facts go stale; that is RAG's job.
 
 Decision test: "would showing the model better *instructions/examples* fix it?" → rungs 0–1.
 "Does it lack *information*?" → rung 2. "Does it know and still misbehave?" → rung 3.
+
+Once this rung is chosen, the mechanics — LoRA/QLoRA, dataset shape and chat templates, the
+training loop, and how an adapter is served — are
+`explain-llm-internals/references/fine-tuning-mechanics.md`. It also lists the failure modes
+that make a fine-tune wasted, the commonest being an attempt to add *facts* this way.
 
 ## Rung 4 — training from scratch
 

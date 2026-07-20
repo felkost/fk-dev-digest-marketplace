@@ -1,0 +1,13 @@
+# Pin exact versions at build time -- look them up when generating the example,
+# do not trust remembered version numbers. Ranges are shown here so the file
+# stays honest about what it has NOT been resolved against.
+#
+# chunking.py, retrieval.py and settings.py import none of this on purpose:
+# the pure logic is testable with a bare interpreter (see tests/smoke_test.py).
+
+langchain-core
+langchain-openai
+langgraph
+openai            # OpenAI-compatible client, used for the embeddings endpoint
+psycopg[binary]
+pgvector

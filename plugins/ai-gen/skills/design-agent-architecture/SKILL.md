@@ -1,6 +1,6 @@
 ---
 name: design-agent-architecture
-description: Design LLM/agent system architecture with explicit trade-offs and risks. Covers ReAct, RAG, multi-agent, and human-in-the-loop (agent-in-the-loop) patterns, connecting models to MCP servers and tools, short-term and long-term memory design, and vector databases for retrieval. Use for agent architecture decisions, RAG pipeline design, tool integration via MCP, memory/state design, and vector store selection. Respond in Ukrainian unless the user requests another language.
+description: Design LLM/agent system architecture with explicit trade-offs and risks. Covers workflow patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) versus agents, ReAct, RAG, multi-agent, and human-in-the-loop patterns, connecting models to MCP servers and tools, short-term and long-term memory including persistent knowledge bases, vector databases for retrieval, and autonomous loops with stop contracts and maker-checker separation. Use for agent architecture decisions, RAG pipeline design, tool integration via MCP, memory/state design, vector store selection, and deciding what an agent may do unattended. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Архітектура агентних систем
@@ -16,12 +16,28 @@ description: Design LLM/agent system architecture with explicit trade-offs and r
 - [references/mcp-tools.md](references/mcp-tools.md) — приєднання інструментів через MCP-сервери:
   дизайн інструментів, безпека, версіонування.
 - [references/memory-vector-db.md](references/memory-vector-db.md) — короткотривала і
-  довготривала пам'ять, векторні бази даних: вибір, чанкінг, гібридний пошук, оцінка retrieval.
+  довготривала пам'ять, векторні бази даних: вибір, чанкінг, гібридний пошук, оцінка retrieval;
+  постійна база знань (LLM-wiki), запис і консолідація пам'яті.
+- [references/rag-pipeline.md](references/rag-pipeline.md) — RAG як два конвеєри (ingestion і
+  serving): стадії з режимами відмови, вибір ембединг-моделі як процедура, просунутий retrieval
+  (реранкінг, multi-query, компресія, HyDE) з ціною кожного, порядок дій при поганому RAG.
+- [references/loop-engineering.md](references/loop-engineering.md) — система навколо моделі:
+  автоматизації, worktrees, скіли, конектори, субагенти; maker-checker; зовнішній стан; ризики
+  автономного циклу.
+- [references/autonomy-contracts.md](references/autonomy-contracts.md) — контракт автономії:
+  вимірювана мета, машинно-перевірні критерії, межі, бюджети, стоп-фактори; шаблон і режими
+  відмови.
 
 ## Обов'язкові правила
 
-- Починати з найпростішої архітектури, що закриває задачу: один виклик моделі → виклик з
-  інструментами → ReAct-цикл → multi-agent. Кожне ускладнення — лише з виміряною причиною.
+- Починати з найпростішої архітектури, що закриває задачу: один виклик моделі → workflow за
+  наперед заданим кодовим шляхом → виклик з інструментами → ReAct-цикл → multi-agent. Кожне
+  ускладнення — лише з виміряною причиною. Спершу відповісти на розвилку «workflow чи агент»:
+  workflow тестується покроково й коштує передбачувано, агент — ні.
+- Автономний цикл (агент діє без підтвердження кожного кроку) проєктується **лише разом з
+  контрактом зупинки** ([references/autonomy-contracts.md](references/autonomy-contracts.md)):
+  вимірювана мета, машинно-перевірні критерії, межі доступу, ліміти ітерацій/часу/вартості,
+  стоп-фактори. Перевіряльник не ділить контекст і промпт із виконавцем — інакше це не перевірка.
 - Для кожного патерна називати: що він **дає**, що він **коштує** (латентність, токени,
   складність налагодження) і як він **ламається** (накопичення помилок, галюцинації поверх
   пошуку, зациклення, розбіжність агентів).
@@ -49,6 +65,11 @@ description: Design LLM/agent system architecture with explicit trade-offs and r
    публікації, витрати), як виглядає ескалація.
 6. **План відмов**: що відбувається при таймауті інструмента, порожньому retrieval, зацикленні
    (ліміт ітерацій), недоступності моделі (fallback з `select-genai-models`).
+7. **Режим автономії**: чи працює система без людини між точками контролю. Якщо так —
+   виписати контракт зупинки ([references/autonomy-contracts.md](references/autonomy-contracts.md))
+   і мінімальний набір компонентів циклу
+   ([references/loop-engineering.md](references/loop-engineering.md)); якщо критерій успіху
+   не формулюється як команда — рекомендувати не автономію, а gated-workflow і пояснити чому.
 
 ## Формат результату
 
