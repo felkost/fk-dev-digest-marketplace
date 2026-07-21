@@ -134,6 +134,24 @@ manipulated by prompt injection.** The recommended posture is hybrid, defense-in
 Order matters: a guard model is a mitigation, a policy engine is a limit. Do not sell the first
 as the second.
 
+**The guardrail cost ladder**, sharpening the two-tier split above into what to reach for first:
+code/schema/regex checks (free, deterministic, catches shape and policy violations) → a small
+classifier model (cheap, catches patterns a regex cannot name) → a full LLM guardrail (most
+flexible and most expensive — and it can rival the agent's own inference cost once every turn
+passes through one). Climb only when the cheaper rung is measured insufficient, the same
+discipline as `select-genai-models/references/build-vs-use.md`'s ladder. The caution worth
+stating plainly: an LLM guardrail can be wrong in the *same* direction as the agent it is
+checking, since it is drawn from the same kind of model — it is a mitigation, not a proof.
+
+**Callbacks observe; guardrails block.** A callback that logs a step is not a guardrail: it has
+no power to stop anything, and treating the two as interchangeable is how a step meant to
+*prevent* a bad action turns out to have only *recorded* it. A guardrail acts as a semantic
+circuit breaker — it halts the flow *before* the risky action executes, not a post-hoc filter on
+what already happened.
+`design-agent-architecture/references/architectures.md`'s handoff-failure-modes section names
+where to place these; a worked, polarity-tested example (and the exact inverted-guardrail bug
+this distinction exists to catch) is `build-ai-examples/references/guardrail-example.md`.
+
 **Agent identity** is the whitepaper's third pillar and the one most easily overlooked: an agent
 is a new class of principal, distinct from the user who invoked it and the developer who built
 it, and it needs its own verifiable identity so it can carry **least-privilege** permissions.

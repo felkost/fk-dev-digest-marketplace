@@ -1,11 +1,1027 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-21, end of **round 14** — the
-first content round off round 13's fixed roadmap: `mcp-tools.md` in depth plus a runnable,
-tested `mcp_example`. Rounds 15–18 remain, same cadence (one chapter's worth of gaps per round,
-each shipping a code example with tests — the user's standing requirement from round 13). Written
-for a fresh Claude session with no conversation history — read this whole file before touching
-anything.
+Newest entry on top (eda-skills convention). Last updated 2026-07-21, round **17** (retrieval
+authorization + memory architecture). Skills stay at **8**, references stay at **34** — no new
+reference file this round; `rag-pipeline.md` and `memory-vector-db.md` both grew instead, matching
+round 16's precedent of growing existing files. Round 18 is next (the agent loop, ch. 9's layer
+taxonomy), then 19–22. Written for a fresh Claude session with no conversation history — read this
+whole file before touching anything.
+
+## What just happened (round 17 — retrieval authorization + memory architecture, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same session and branch as rounds 15–16, per the user's "use the current branch" instruction)
+
+**Same-session continuation, not a fresh read.** The user said "продовжити" (continue) right
+after being pointed at this file's own "prompt for the next round" from round 16; this round
+proceeded from that prompt rather than re-deriving the plan. A fresh session picking this up
+later should still read the whole file first, per the standing rule above.
+
+### What shipped
+
+- **`rag-pipeline.md`** grew two new `###` subsections inside "Production concerns the stage list
+  does not cover": **"Grounding has degrees; the stakes pick which one you need"** (weak = answer
+  consistent with context, cheap; strong = every claim traceable to a citation, the bar the
+  existing hallucination-detection techniques already enforce — placed first in that section so
+  the existing techniques read as tools *for* strong grounding rather than free-floating), and
+  **"Read-side authorization is a different failure class from injection"** (a benign query over
+  an index mixing confidentiality levels can leak a document with no adversary involved at all; a
+  trust tier stops a document from *outranking*, an ACL stops it from being *returned* at all;
+  authorization is a retrieval-time filter enforced in the index, never a prompt-time instruction
+  to withhold; cross-linked to `document-loading.md`'s existing tenant/owner metadata field and
+  forward to "Index freshness at scale" for the revocation-is-like-deletion parallel).
+- **`memory-vector-db.md`** grew a new `##` section, **"The memory taxonomy — vocabulary, not
+  architecture"** (sensory/working/episodic/semantic/procedural, framed exactly the way
+  `architectures.md`'s capability-levels section already frames a borrowed taxonomy: useful for
+  talking to someone who already knows the terms, not a blueprint — with a table mapping each
+  label to what you actually build, and a closing pivot to the four real operational pieces
+  this file's neighbours already name: context window / external storage / state management /
+  retrieval), plus three additions inside "Write-back and consolidation": **consolidation named
+  as a concrete mechanism** (cluster → summarize → re-index, with the point that memory benefits
+  from running this repeatedly while a knowledge corpus mostly benefits from it once, at
+  ingestion, and *why* — knowledge is re-ingested wholesale on source change, memory is appended
+  to continuously), a new **eviction/forgetting bullet** framed as a compliance question before a
+  storage one (retention mandates make aggressive pruning risky; erasure/minimization mandates cut
+  the other way), and a closing paragraph naming **an MCP memory server as a thin wrapper** — the
+  same shape `reasoning-patterns.md` already established for `sequential-thinking` ("it does no
+  thinking; it is external storage for the outputs of thinking"), applied here to
+  `@modelcontextprotocol/server-memory`'s nine CRUD/search tools over an entities/relations/
+  observations graph. One small precision fix in the pre-existing "Sparse, dense, and why BM25
+  refuses to die" section: the RRF paragraph now gives the actual formula and `k=60`'s
+  near-flat sensitivity from the primary source, and corrects "the other returns BM25 scores" to
+  name what PostgreSQL's own `ts_rank`/`ts_rank_cd` actually are — not BM25 — cross-linked to the
+  new runnable proof in `rag-example.md`.
+- **A second reconciliation, required by a standing instruction this round's own planning text
+  carried and almost missed**: round 13's addendum on a second triaged source (Richmond Alake,
+  "The Agent Loop Decoded", Oracle Developers blog, 11 June 2026) explicitly flagged that its
+  **six** memory types must be reconciled with Lanham's five *at round 17*, "rather than
+  duplicating." That source is not quoted anywhere in this file in enough detail to reconcile
+  from the record alone, so it was re-fetched fresh (via the browser tool — `WebFetch` still 403s
+  `blogs.oracle.com`, the same gotcha round 13 recorded). Its six — conversational, knowledge
+  base, workflow, toolbox, entity, summary — turned out to make the reconciliation easy: the
+  article's own text labels three of them with three of Lanham's cognitive terms verbatim
+  ("conversational" is "**episodic** chat history"; "knowledge base" is "**semantic** memory";
+  "workflow" is "**procedural** memory"), the other three (toolbox, entity, summary) have no
+  cognitive-science counterpart at all, and Lanham's own sensory/working have no counterpart in
+  Oracle's six. Two practitioner sources naming implementation choices for two different systems,
+  not measuring one discovered structure — which is the concrete, citable proof of the abstract
+  claim the taxonomy section already made, not a competing list to merge. `memory-vector-db.md`
+  now cites this directly. The one real engineering idea inside Oracle's six (`toolbox` = a
+  vector-indexed tool registry for semantic tool discovery) was independently confirmed to
+  already be covered, correctly, in `mcp-tools.md` (round 14's `langgraph-bigtool` material) —
+  filed under tool design, not under any memory label, which is stated as the worked example of
+  what "keep the idea, drop the taxonomy slot" means in practice.
+- **Example: extended the existing `rag_example`**, no new directory, per the standing per-round
+  requirement — **hybrid retrieval**. `retrieval.py` gained `reciprocal_rank_fusion` (pure,
+  stdlib-only): fuses ranked id lists by `1/(k+rank)` summed per system, no score normalization
+  needed between a cosine distance and a lexical rank, ties break by ascending id. `ingest.py`
+  gained `FTS_COLUMN` (`ALTER TABLE chunks ADD COLUMN IF NOT EXISTS content_tsv tsvector
+  GENERATED ALWAYS AS (to_tsvector('english', content)) STORED`) and `FTS_INDEX` (a GIN index),
+  run unconditionally after `build_schema()` — idempotent on both a brand-new table and one that
+  predates this round, verified both ways (see below). `agent.py`'s `search_docs` now runs the
+  existing vector query *and* a new lexical query (`websearch_to_tsquery` + `ts_rank_cd`) and
+  fuses them with `reciprocal_rank_fusion`; its docstring now tells the calling model to prefer
+  short, specific phrases, a change earned by a live finding (see below), not a guess.
+- **`tests/smoke_test.py` 43 → 47 checks**, all four new ones pure `retrieval.py` logic, all
+  renumbered end to end (every later check's number shifts by 4; the module docstring and every
+  section-comment banner were updated to match, verified by grep afterward). The four: agreement
+  across two systems outranks a solo top hit (Cormack et al.'s own stated reason RRF exists); a
+  lexical-only hit missing from the vector ranking still surfaces (the "cannot find ticket
+  `INC-4471`" property, made concrete); ties break by ascending id, not insertion order; `k<=0`
+  rejected.
+- **Wiring**: `rag-example.md` grew a fifth "decision worth explaining" (hybrid retrieval, FTS-
+  not-BM25, RRF's no-normalization property, the schema-time-baked search config, why
+  `websearch_to_tsquery`), its own smoke-check share note (14 → 18), a new live-verification
+  paragraph, and its "Production deltas" list lost the now-stale "Hybrid search" bullet and
+  gained "Cross-encoder reranking on the fused result" and "Read-side authorization" (the latter
+  cross-linking straight back to this round's new `rag-pipeline.md` section). `mcp-example.md`,
+  `reflexion-example.md`, `guardrail-example.md`: stale "43 checks" / check-number-range prose
+  fixed to 47 / their shifted ranges (three files, four call sites total). `skill-router.md`
+  gained two new bilingual rows (read-side authorization → `rag-pipeline.md`; "RAG can't find a
+  ticket number" → `rag-example.md`), following the router's own established convention. No
+  `SKILL.md` touched this round, so `build:catalog` was not re-run (same call as round 16).
+
+### Verified fresh before writing
+
+- **PostgreSQL's full-text-search identifiers**, against the current docs (`textsearch-controls.html`,
+  `textsearch-tables.html`): `ts_rank`/`ts_rank_cd` signatures and the docs' own "only examples"
+  caveat about relevance; `GENERATED ALWAYS AS (...) STORED` plus `CREATE INDEX ... USING GIN` as
+  the documented modern pattern (superseding a trigger-based approach); `websearch_to_tsquery` as
+  the function the docs themselves recommend for raw, unsanitized user input, specifically because
+  it "will never raise syntax errors."
+- **BM25 vs core PostgreSQL FTS**, against ParadeDB's docs: `pg_search` is the extension that adds
+  actual BM25 ranking on top of a separate Tantivy-backed index; core `tsvector`/GIN/`ts_rank*` is
+  not BM25 and PostgreSQL's own docs do not claim it is.
+- **The RRF formula itself**, from the primary source (Cormack, Clarke & Büttcher, SIGIR 2009,
+  fetched as a PDF and read directly, not summarized): `RRFscore(d) = Σ 1/(k + r(d))`, `k=60`
+  "fixed during a pilot investigation and not altered during subsequent validation," and the
+  paper's own table showing MAP essentially flat from `k=10` to `k=500` — the source for this
+  round's "not a tuned value to chase" phrasing, not an inference from the abstract.
+  - `mcp-tools.md` re-checked to confirm "semantic tool discovery" is filed there correctly before
+  citing it as the resolution to Oracle's `toolbox memory` (see above) — not trusted from memory.
+- **The MCP memory server's actual README** (`modelcontextprotocol/servers`, `src/memory/`),
+  fetched directly rather than trusted from the ch. 7–11 triage's own same-day note that the
+  server "is current": the exact tool list (nine tools), the entities/relations/observations
+  definitions, and — the part worth writing down explicitly — that the README's only "what to
+  remember" guidance is a *suggested system prompt for the calling client*, not server code, and
+  that `search_nodes` has no documented ranking behavior beyond "search for nodes based on query."
+- **Richmond Alake's Oracle Developers article**, re-fetched in full via the browser tool (see the
+  reconciliation note above) rather than trusted from the round-13 addendum's own summary of it —
+  the six memory types and their cognitive-label self-descriptions were read from the article's
+  own paragraph, not inferred from the addendum's passing "six memory types" mention.
+
+### Design decisions worth carrying forward
+
+- **The FTS search config is baked into the generated column at schema time, deliberately not an
+  env var.** A `GENERATED ALWAYS AS (...) STORED` column's expression is fixed when the column is
+  created; an env var that looked like it controlled the language per query would silently do
+  nothing for existing rows, which is a worse lie than not offering the knob at all. This mirrors
+  the embedding-model-ID versioning discipline already in this file, applied to text search.
+  Consequently `.env.example`/`settings.py` needed **zero** new variables this round — the same is
+  true of `top_k`, deliberately reused as both retrievers' candidate depth rather than adding a
+  separate widening knob with an unverified default.
+- **`FTS_COLUMN` is a standalone, idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, not baked
+  into `build_schema()`'s `CREATE TABLE`.** Two copies of the same column definition that must be
+  kept in sync is its own failure mode; one statement, run unconditionally after `build_schema()`,
+  handles both a brand-new table and a table that predates this round identically. Verified live,
+  both paths (see below) — this was not left to the DDL's syntax being plausible.
+- **RRF fuses ranked id lists, not vectors or scores**, matching `rank()`'s own existing shape in
+  the same file. The function does not know or care whether a ranking came from pgvector, from
+  PostgreSQL FTS, or from a third system added later — it is the generic seam the "no score
+  normalization needed" property depends on structurally, not by convention.
+
+### A live check that found a real gap, not just confirmed correctness
+
+Docker Desktop was not running at session start; started it, waited for the daemon, then ran a
+genuinely fresh `docker compose up` against the actual shipped `ingest.py` constants (imported,
+not re-typed) and the actual `agent.py` SQL. Four things were verified, not assumed: the
+fresh-database DDL path; **the migration path** (dropped `content_tsv` and its index to simulate a
+table that predates this round, confirmed `FTS_COLUMN` backfills all existing rows with no data
+loss — this is the one path a smoke test cannot reach, since it never touches a database); a
+second idempotent re-run of the FTS DDL; and the fusion property itself (a synthetic chunk crafted
+to be vector-close but keyword-unrelated to the query, another crafted to be keyword-exact but
+vector-far, both surfaced near the top of the fused result, the keyword-irrelevant third chunk
+ranked last).
+
+That run also found a real, previously-unknown limitation, the way round 14's first test draft
+found a genuine bug: a first attempt queried with a full natural-language question and got **zero**
+rows from the lexical side. `websearch_to_tsquery` ANDs every significant term by default —
+confirmed directly (`SELECT websearch_to_tsquery(...)` printed the literal query plan) — and the
+target document did not contain every word of the question, only the identifier it was actually
+about. A short, keyword-style query found it immediately. Fixed by changing `search_docs`'s
+docstring to tell the calling model to prefer short, specific phrases — a one-line, low-risk change
+directly earned by the live run, not a guess about what might help. The container was `docker
+compose down -v`'d afterward, leaving the environment exactly as found (no pre-existing containers
+or volumes before this session started).
+
+### Verification actually run
+
+`python tests/smoke_test.py` (**47/47**, up from 43 — 4 new, all `retrieval.py`) ·
+`python tests/check_docs.py` (**7/7**, 8 skills / **34** references, unchanged) · the live Docker
+Postgres check above (fresh DDL, idempotent re-run, migration-with-existing-rows, and the fusion
+property — 4/4, real container, zero API spend) · a mutation-testing pass on the two new
+correctness-sensitive tests (deliberately broke the tie-break and the `k` damping constant in
+`retrieval.py`, confirmed each mutation was caught, confirmed the *first* version of the
+tie-break test was **not** strong enough — it passed even with the tie-break removed, because
+Python's stable sort plus the test's own id ordering coincidentally reproduced the correct
+output; both tests were redesigned with ids chosen so a broken implementation cannot coast on
+insertion order — reverted every mutation and re-confirmed 47/47 clean before moving on) ·
+`& .\chatgpt\build_gpt_package.ps1` (run twice, once after the main content and once after the
+Oracle-reconciliation addition; zip **202,889 bytes**, `gpt_instructions.md` unmoved at 6,928
+bytes, headroom 1,072 — rebuilt even though no reference file was added or removed this round,
+because the zip's packaged *content* for three heavily-edited files would otherwise be stale in a
+way `check_docs.py`'s count-based check 5 cannot detect) · from the repo root: `npm run lint`
+(8 plugins, 0 warnings), `lint:plugins` (9 targets, 4 accepted warnings, unchanged),
+`lint:markdown` (**405** files, 0 errors — unchanged, no `.md` file added or removed),
+`lint:format` clean. **`build:catalog` deliberately not re-run**: no `SKILL.md` touched this
+round.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 17 is newest. Skills stay at 8, references at 34.
+Default next unit of work is **round 18: the agent loop**, fixed in round 13 and re-based on ch.
+9's layer taxonomy by the ch. 7–11 triage — both already written, do not re-derive the plan. New
+`design-agent-architecture/references/agent-loop.md`. It must open by disambiguating 'loop':
+`loop-engineering.md` is Osmani's *outer development* loop (automations, worktrees, sub-agents,
+maker-checker); this new file is the *inner execution* loop of a single agent turn — without that
+sentence the plugin gets its third terminology collision after the two meanings of 'handoff'.
+
+Content, from ch. 9's layer taxonomy as the spine (layer 1 keeps goal/plan/state/decision inside
+the agent; layer 2 externalizes them into deterministic code wrapping the agent; layer 3 hands
+them to another agent — orchestration when one delegator owns them, collaboration when peers
+share them) plus the Oracle article's model-vs-harness framing (model = the inference engine
+reasoning; harness = the code assembling context, executing tools, enforcing constraints,
+persisting state — 'most agent engineering work happens in the harness, not the model'): the loop
+definition itself; stop conditions `autonomy-contracts.md` does not already have (a terminal
+message with no pending tool calls ends the model's *turn*, not the *task* — the harness needs its
+own goal-completion predicate, and that predicate is a biased self-assessment when the agent
+grades its own work); the programmatic-vs-agent-triggered boundary (which memory reads are always
+loaded vs always left to the agent's own decision, with the two-sided failure — context bloat one
+way, missed context the other); stagnation as *harder to detect than failure* (the plugin's
+existing stop factor is 'the same error signature repeats,' which a stagnating-but-not-failing
+agent never trips — tool-call repetition and oscillation are the concrete detectable instances);
+context economics in the loop (window monitoring, compaction preserving originals rather than
+deleting, tool-output offloading cross-referenced to `mcp-tools.md`, the append-don't-rewrite
+cache-prefix rule); separation of concerns (the explorer must not write the report); breadth vs
+depth as which end of a queue gets popped; and the surrounding training/feedback/human loops,
+including the line that already grounds round 15's Reflexion correction: apparent in-session
+learning is not a weight update, it is retrieval.
+
+**Three numbered scales collide in this file and must be named as orthogonal, explicitly, not
+left for a reader to guess**: Google's capability **Levels 0–4** (`architectures.md`, capability,
+not operational maturity), the Oracle article's harness **Levels 1–3** (harness structure — Level
+1 is a bare tool-calling loop with no persistent memory; Level 2 adds memory operations
+read-before/write-after the loop; Level 3 moves operations to both sides of the loop boundary and
+adds context-window monitoring, compaction, tool-output offloading, semantic tool discovery, and
+idempotency keys — most of which already landed in round 14's `mcp-tools.md`, cross-link rather
+than re-teach), and ch. 9's own **Layers 1–3** (this file's spine, a different axis again). Plus
+the `loop-engineering.md` homonym: 'cognitive surrender' there is about the *human developer*
+outsourcing judgment to automation, not about anything in this new file.
+
+**Do not carry from the Oracle article**: Oracle/OCI product claims (the piece is a vendor blog
+whose last third is a pitch — admissible for technique, not fact, per round 7's rule, already
+applied once this round for its memory-type list); the unsourced 'three to four thousand tokens
+per web search' figure; the continual-learning definition spanning 'token space, weight space and
+latent space' presented as settled fact (it is the author's own framing — find a primary source or
+state it as the author's claim); 'the Codex implementation established this explicitly' about
+prefix caching (a claim about a third-party system, unverified this round — check or attribute
+before repeating it); the DeepLearning.AI course mention. The six-memory-types material itself is
+already spent — round 17 used it for the taxonomy reconciliation in `memory-vector-db.md` and it
+does not need re-litigating here.
+
+Example, per the standing per-round requirement (this would be the sixth in a row, and the
+cheapest to verify of any round planned, per the roadmap's own note): a minimal harness as pure,
+offline-testable logic — three exit conditions (iteration cap, wall-clock timeout, a repetition
+detector comparing the last N tool calls) plus tool-output offloading to a log keyed by an id, with
+the context receiving only the compact reference. Tests: the iteration cap halts before the
+wall-clock timeout would, and vice versa depending on which is tighter; the repetition detector
+trips on N identical consecutive tool calls and does not trip on N-1; offloading returns a stable
+id and the full payload is retrievable by it; and — the same discipline this round's own mutation
+testing caught a weak test with — deliberately break each exit condition and confirm the *specific*
+test written for it fails, not just that some test somewhere goes red.
+
+Verify every identifier fresh. This round re-fetched a source (the Oracle article) that a prior
+round had already summarized in HANDOFF, found the summary was accurate as far as it went but
+incomplete for what this round specifically needed (the six memory types themselves, not just
+their existence), and only the fresh fetch made the reconciliation possible — the same lesson
+round 15 drew from `sequential-thinking`, applied to a whole article rather than one tool name.
+
+Small carry-overs, easy to lose: `skill-router.md` rows continue the bilingual trigger-phrase
+convention; this round's two new rows followed it. Sync `check_docs.py`'s smoke-count guard when
+the count changes (it will), and rebuild the zip — a new reference means check 5 fails until
+`& .\chatgpt\build_gpt_package.ps1` runs, and even without a new reference, rebuild anyway if
+existing reference content changed materially (this round's own judgment call, see Verification
+above — check 5 cannot detect a content-stale zip on its own).
+
+The language migration (8 `SKILL.md` bodies, the plugin `README.md`, two references) is still
+open, still not blocking, and round 17 did not touch it for the same reason round 16 didn't — no
+`SKILL.md` body or `README.md` prose needed editing this round. Ask the user whether it should be
+its own round before the backlog grows further; it has now been deferred across three consecutive
+content rounds.
+
+If the user brings something else instead, nothing is blocking; state what round 18 would have
+been and let them redirect."*
+
+## What just happened (round 16 — multi-agent design axes + guardrails, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same session and branch as round 15, per the user's "use the current branch" instruction)
+
+**Same-session continuation, not a fresh read.** The user said "продовжити" (continue) right after
+round 15's summary; this round proceeded directly from round 15's own "prompt for the next round"
+rather than re-reading `CLAUDE.md`/memory/`HANDOFF.md` from scratch, since the conversation already
+had that context loaded. A fresh session picking this up later should still read the whole file
+first, per the standing rule at the top.
+
+### What shipped
+
+- **`architectures.md`** grew in three places, all inside the existing `## Multi-agent` section
+  plus two one-paragraph additions elsewhere — no line-count target was set for this round, since
+  it grows existing files rather than introducing a new one (round 14's `mcp-tools.md` precedent):
+  the three axes (decision-making / control / communication) plus coordination as a fourth,
+  presented as a table; a "check this is genuinely multi-agent" discriminator (if the orchestrator
+  could be replaced by a deterministic fan-out/fan-in join, it is parallelization, not
+  coordination); an orchestration-first default with collaboration reserved for tasks that cannot
+  be owned by one delegator; critique vs debate as two topologies sharing one requirement (an
+  explicit stop rule, or it is the multi-agent version of an unbounded Reflexion loop); handoff
+  failure modes (shape failure, context leakage, instruction injection) extending the existing
+  "Chained (handoff)" row of the state-substrate table; agent naming and a registry
+  (`domain.role.version`); a diversity point folded into the existing `Parallelization` → Voting
+  bullet (different models is the strong lever, different prompts the weak one); an overhead point
+  folded into the existing `Orchestrator-workers` bullet (deterministic dispatch when the split is
+  knowable in advance). **Disambiguated explicitly, inline**: this file's "handoff" (agent-to-agent
+  transfer) is a different word from `plan-ai-solution/references/handoff.md`'s session-continuity
+  protocol — one parenthetical states this where the term is first used this way.
+- **`agent-ops.md`** grew inside its existing "Security surface of a deployed agent" section: the
+  guardrail cost ladder (code/schema/regex → classifier model → LLM guardrail, with the caution
+  that an LLM guardrail can be wrong in the *same* direction as the agent it checks), and
+  "callbacks observe, guardrails block" — a guardrail is a semantic circuit breaker that halts
+  *before* a risky action, not a post-hoc filter, sharpening the whitepaper's existing two-tier
+  split rather than replacing it.
+- **New `build-ai-examples/references/guardrail-example.md`** + runnable code in
+  **`build-ai-examples/scripts/guardrail_example/`**: `guardrail_core.py` (pure —
+  `PlanReview`/`review_plan`/`attempt_passoff`, with `should_block` phrased as what it does to the
+  flow so there is no positive-sense field left to invert), `agent.py` (a real LangGraph
+  `StateGraph`: draft → guardrail → conditional edge → execute-or-blocked, two real model calls
+  around one deterministic gate), `.env.example`, `requirements.txt`.
+- **`tests/smoke_test.py` 34 → 43 checks**: 9 new, all pure `guardrail_core.py` logic — the
+  **polarity test** (blocks a thin plan AND approves a detailed one, in one check, the exact
+  direction `chapter_04/09_agent_passoff_guardrails.py` would have failed), a length-is-not-enough
+  check (a long plan missing one required section still blocks, named specifically), a
+  never-leaks-forward check on a blocked plan, an interleaved-calls-never-contaminate check
+  (mirroring `chapter_07/06`'s global-state bug), plus the two `.env.example` scaffolding checks
+  every example in this plugin now carries.
+- **Wiring**: `build-ai-examples/SKILL.md` §Довідки (+1 bullet); `skill-router.md` (+1 row for
+  `guardrail-example.md`); `README.md`'s API-keys section (+1 example paragraph, now covering four
+  examples). `design-agent-architecture/SKILL.md`'s own §Довідки bullet for `architectures.md` was
+  **not** touched — it already names "multi-agent" and stays accurate at its existing level of
+  generality, the same call round 14 made for `mcp-tools.md`'s bullet when that file grew inside an
+  unchanged topic list. No `SKILL.md` frontmatter `description` changed this round, so
+  `build:catalog` was not re-run (it was the description change specifically that required it in
+  round 15).
+- **Two stale prose counts fixed**, same class as every round: `mcp-example.md` and
+  `rag-example.md` both said "34 checks total"; both now say 43, and now name all four examples
+  instead of three.
+
+### Verified fresh before writing — and this time, nothing new turned up
+
+Three companion-repository files were re-fetched directly rather than trusted from HANDOFF's own
+(already twice-recorded) description of them, per the standing "verify every identifier fresh"
+rule: `chapter_04/09_agent_passoff_guardrails.py`
+(`tripwire_triggered=result.final_output.is_sufficiently_detailed`, no negation — confirmed),
+`chapter_04/08_agent_guardrails.py` (`tripwire_triggered=result.final_output.is_sufficiently_detailed
+is False` on the output guardrail, correct polarity — confirmed, and it also has an *input*
+guardrail, `tripwire_triggered=result.final_output.is_research_forbidden`, not previously recorded
+in this level of detail), and `chapter_07/06_RAG_grounding_with_guardrails.py`
+(`tripwire_triggered=result.is_answer_grounded is False`, correct polarity; `_last_context`
+written by `search_knowledge_by_keyword`, read via a tool the grounding agent calls optionally;
+`get_last_context()` returns the literal string `"No context available."` when empty — all
+confirmed verbatim). **Unlike round 15's `sequential-thinking` surprise, all three matched exactly
+what was already on record — worth stating plainly rather than treating a clean re-check as a
+no-op: it is the same discipline whether or not it finds something, and round 15 is the reason this
+round did not skip it.**
+
+### Design decisions worth carrying forward
+
+- **The guardrail's own return value is already phrased as block/pass.** `PlanReview.should_block`
+  exists specifically so there is no positive-sense field (`is_sufficiently_detailed`) for a caller
+  to forget to negate — the structural fix for `chapter_04/09`'s bug, the same shape of fix round
+  15 applied to the task-bound checker (bind the semantics to the name, not to a convention a
+  caller has to remember).
+- **No module-level state in the guardrail**, the structural non-answer to `chapter_07/06`'s
+  `_last_context` bug: `review_plan` takes the plan as its only argument, so there is nothing for a
+  second, concurrent call to contaminate. Pinned by an explicit interleaved-calls test rather than
+  left as an implicit property, the same way round 15 pinned task-predicate non-leakage even though
+  the design already made it structurally hard to get wrong.
+- **Two real model calls, not one**, unlike `reflexion_example`'s single solver call — because a
+  "pass-off" is specifically a transfer *between agents*, and collapsing the executor into a
+  deterministic stub would have taught gate mechanics without ever teaching the handoff they gate.
+  Both calls are cheap (a short draft, a short execute) and both are opt-in behind the user's own
+  key, so the added realism costs nothing until the user actually runs `agent.py`.
+
+### A live check that cost nothing, and a stronger assertion than round 15's version
+
+`agent.py`'s graph was compiled and `.invoke()`d against a scripted stub, same zero-cost discipline
+as round 15. The blocked-plan case is a strictly stronger check than "the output looks right": the
+stub is given exactly **one** scripted answer, for the draft call only. If `route_after_guardrail`
+were wired backwards — precisely the class of bug this round exists to prevent — `execute_node`
+would call `model.invoke()` a second time with no second answer queued, and the stub would raise
+`StopIteration` rather than silently returning a plausible-looking wrong result. The graph either
+proves it took the right branch or fails loudly; it cannot quietly do the wrong thing and still
+look fine. **Not run, and it needs the user's OpenRouter key to change that:** the real draft and
+execute calls in `agent.py`.
+
+### Verification actually run
+
+`python tests/smoke_test.py` (**43/43**, up from 34 — 9 new, all `guardrail_core.py`) ·
+`python tests/check_docs.py` (**7/7**, 8 skills / **34** references) · the live graph-wiring check
+above (2/2 cases, stub model, no key, no network) · `& .\chatgpt\build_gpt_package.ps1` (zip
+rebuilt, **193,859 bytes**; `gpt_instructions.md` unmoved at 6,928 bytes, headroom 1,072) · from
+the repo root: `npm run lint` (8 plugins, 0 warnings), `lint:plugins` (9 targets, 4 accepted
+warnings, unchanged), `lint:markdown` (**405** files — 404 + the 1 new reference, 0 errors),
+`lint:format` clean. **`build:catalog` deliberately not re-run**: no `SKILL.md` description
+changed this round, unlike round 15. **Not run, needs the user's OpenRouter key:** `agent.py`'s
+actual draft and execute model calls.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 16 is newest. Skills stay at 8, references at 34.
+Default next unit of work is **round 17: retrieval authorization + memory architecture**, fixed in
+round 13 and not touched by the ch. 7–11 triage — read the plan there, do not re-derive it. Update
+`rag-pipeline.md`: read-side authorization (ACLs, multi-tenancy) as a failure class distinct from
+injection — vector similarity can hand a confidential document to a user with no right to it, which
+is a permissions problem on the index, not a prompt-injection problem; degrees of grounding by
+stakes (weak = consistent with context; strong = every claim traceable to a passage with a
+citation). Update `memory-vector-db.md`: the memory vocabulary (sensory/working/episodic/semantic/
+procedural) taken the way this plugin already takes borrowed vocabulary elsewhere — a tool for
+communicating, not an architectural model, with the actual pieces (context window / external
+storage / state management / retrieval) doing the honest describing; compression as a mechanism
+(cluster → summarize → re-index — memory benefits from periodic passes, a knowledge store mostly
+from the first); eviction/forgetting as a compliance question (regulated retention requirements
+make aggressive pruning legally risky, and over-eager forgetting creates its own exposure); the
+honest line that an MCP memory server is a thin wrapper — the real work is the extraction logic
+deciding what to remember and the retrieval logic deciding what to surface.
+
+Example, per the standing per-round requirement (this would be the fifth in a row): **extend the
+existing `rag_example`**, do not start a new directory — add hybrid retrieval (Postgres full-text
+search fused with the existing vector search) plus a real Reciprocal Rank Fusion implementation in
+pure Python, offline-testable, in deliberate contrast with a triaged source's ad-hoc keyword
+scorer that never actually calls a fusion function despite its own prose teaching RRF as the
+production default. **Name the lexical side honestly**: Postgres full-text search is FTS, not
+BM25 — BM25-style ranking lives in the `pg_search`/similar extensions, not in core `ts_rank`/
+`ts_rank_cd`. Verify the exact function names and ranking behavior against current PostgreSQL docs
+at write time rather than assuming; this is exactly the kind of identifier this plugin's standing
+rule warns never to copy from one system's vocabulary (BM25's `k1`/`b`) into another's. Live
+verification against a real Docker Postgres container only, zero API spend — the same round-6
+discipline `rag_example`'s own docker-compose check already established, not a new live tier.
+
+Verify every identifier fresh. Round 16 re-checked three companion-repo files that were already on
+record and found no discrepancy — that is a real outcome, not a wasted check, and it is only
+knowable by actually doing the check rather than trusting the record. Actually run whatever the
+free tier allows, including a live-but-free wiring check if the shape supports one the way rounds
+15 and 16 did with a stubbed model — for a Postgres-only change with no LangGraph graph involved,
+the equivalent is exercising the real query against the real container, the way `rag_example`'s
+own live run already did once for the vector half.
+
+Small carry-over: `skill-router.md` rows continue to use the bilingual trigger-phrase convention
+(Ukrainian phrase + English gloss); this round's one new row followed it. Sync
+`check_docs.py`'s smoke-count guard when the count changes (it will), and rebuild the zip — a new
+reference means check 5 fails until `& .\chatgpt\build_gpt_package.ps1` runs.
+
+The language migration (8 `SKILL.md` bodies, the plugin `README.md`, two references) is still open,
+still not blocking, and round 16 did not touch it — no `SKILL.md` body or `README.md` prose needed
+editing this round the way round 15's wiring did, so no new judgment call arose. Ask the user
+whether it should be its own round before the backlog grows further.
+
+If the user brings something else instead, nothing is blocking; state what round 17 would have
+been and let them redirect."*
+
+## What just happened (round 15 — reasoning structures + `reflexion_example`, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same branch as the ch. 7–11 triage by the user's explicit instruction)
+
+**Branching decision, not a default:** the user's session-opening instruction was to work on the
+current branch, so this round lands as a second commit on `docs/ai-gen-lanham-ch7-11-triage`,
+after the triage's own bookkeeping commit — the same shape round 14 used on top of round 13's
+triage branch (both land in one PR). References: **31 → 33**
+(`design-agent-architecture/references/reasoning-patterns.md`,
+`build-ai-examples/references/reflexion-example.md`).
+
+### What shipped
+
+- **New `design-agent-architecture/references/reasoning-patterns.md`** (155 lines — the
+  "~180-220" estimate in the prompt was an orientation written before anyone had drafted the file,
+  not a target; coverage was checked against the round-15 content list item by item, not against a
+  line count, per round 9's precedent of not trimming to hit a number). Covers, in this order:
+  decomposition vs planning as independently-failing operations; a CoT/ReAct/ToT/Reflexion
+  selection table; what actually defines ReAct (verified against the primary source — Yao et al.'s
+  abstract defines it as reasoning traces and actions "in an interleaved manner", not the presence
+  of a tool call); why Tree of Thoughts needs orchestration code, illustrated with the book's own
+  `chapter_05/03_ToT_agents.py` (evaluates only the first level, no pruning, no backtracking —
+  carried from round 13's triage record, not re-fetched, since it is a description of code
+  behaviour rather than a quote); Reflexion from the primary source (Shinn et al., arXiv
+  2303.11366) with the feedback-signal-honesty correction the ch. 7–11 triage already worked out;
+  the plan as external, re-read state; `sequential-thinking` as the scratchpad instance.
+- **New `build-ai-examples/references/reflexion-example.md`** + runnable code in
+  **`build-ai-examples/scripts/reflexion_example/`**: `reflexion_core.py` (pure —
+  `Task`/`CheckResult`/`Attempt`/`ReflexionOutcome`, `make_arithmetic_task`, `should_stop`,
+  `run_reflexion`), `agent.py` (a real LangGraph `StateGraph`: a solver node backed by a model, a
+  deterministic critic node, a conditional edge sharing `should_stop` with the pure loop),
+  `.env.example`, `requirements.txt`.
+- **`tests/smoke_test.py` 23 → 34 checks**: 11 new, all pure `reflexion_core.py` logic — both of
+  the book's substring traps pinned by name (`"126"` must not read as containing `"26"`;
+  `"incorrect"` must not satisfy a `"correct" in answer` check), the task-bound-predicate
+  non-leakage property (two tasks from the same factory never accept each other's answers), the
+  loop's stopping condition, hint accumulation, and attempt cap, plus the two `.env.example`
+  scaffolding checks the other two examples already established the pattern for.
+- **Wiring**: `design-agent-architecture/SKILL.md` §Довідки (+1 bullet) and its frontmatter
+  `description` (added "Tree of Thoughts, Reflexion" and "choosing a reasoning structure" — small
+  enough to be worth the `build:catalog` re-run, see Verification); `build-ai-examples/SKILL.md`
+  §Довідки (+1 bullet); `skill-router.md` (+1 routing-table row for `reasoning-patterns.md`, +1 for
+  `reflexion-example.md`, +1 entry in the "Reasoning and planning" layer-coverage table);
+  `README.md`'s API-keys section (+1 example paragraph); `prompt-techniques.md` §Tree of Thoughts
+  (+1 bullet on needing orchestration code, cross-linked); `reasoning-models.md` §Model-native vs
+  structured (its one cross-link split into "which structure" → `reasoning-patterns.md` vs
+  "per-technique cost" → `prompt-techniques.md`).
+- **Two stale prose counts fixed** — the exact class `check_docs.py`'s check 7 exists to catch:
+  `mcp-example.md` and `rag-example.md` both said "23 checks total" in prose; both now say 34,
+  following round 14's own precedent of rewording the claim to the true count rather than deleting
+  it.
+
+### Verified fresh before writing, not carried from any prior round's citations
+
+- **ReAct's definition.** Yao et al., "ReAct: Synergizing Reasoning and Acting in Language Models"
+  (2022, <https://arxiv.org/abs/2210.03629>), fetched directly: "generate both reasoning traces and
+  task-specific actions in an **interleaved manner**" is the abstract's own phrase. This plugin had
+  already cited ReAct's *mechanics* (`architectures.md`, via the Google whitepaper) but never its
+  primary source's definition of what makes something ReAct rather than a CoT pass that happens to
+  end in a tool call.
+- **Reflexion's abstract.** Shinn et al. (arXiv 2303.11366) re-fetched rather than trusted from the
+  ch. 7–11 triage's own record — matched verbatim: "not by updating weights, but instead through
+  linguistic feedback"; "episodic memory buffer"; "external or internally simulated" feedback
+  sources.
+- **`chapter_05/03_reflexion_agents.py`** re-fetched directly from `cxbxmxcx/AI-Agent-Workflows`
+  rather than trusted from HANDOFF's own, already twice-verified record of it — `TARGET_DAYS =
+  "26"`, `has_correct_days = TARGET_DAYS in answer`, `says_claim_correct = "yes" in
+  answer.lower() or "correct" in answer.lower()`, and `problem` assigned twice, all matched
+  exactly.
+- **`sequential-thinking` MCP server** — and this is where the round found something new rather
+  than only re-confirming. The server's README, fetched and summarized by `WebFetch` (which runs
+  the page through a small, fast model), reported the tool's name as `sequential_thinking`.
+  Fetching `index.ts` directly showed the real registered name is `sequentialthinking` — one word
+  — while the **npm package** is `@modelcontextprotocol/server-sequential-thinking` (hyphenated),
+  version `0.6.2`, depending only on the MCP SDK, `chalk` and `yargs` — no model client, confirming
+  "it does no thinking; it is external storage for the outputs of thinking" from the source itself,
+  not only from the round-13 phrase. Recorded in `CLAUDE.md` as a **seventh instance** of the
+  tool-documentation rule — a distinct species from the other six: not staleness, but a
+  summarizing tool being wrong about a page that was not stale at all.
+
+### Design decisions worth carrying forward
+
+- **The critic is deterministic, not a second LLM call.** The book's flaw was an LLM critic handed
+  the answer directly; the fix here is not a cleverer critic prompt, it is removing the LLM from
+  the critic role entirely. `Task.check` extracts the last integer in the answer and compares it
+  numerically. Shinn et al.'s abstract explicitly allows an "external" signal — a deterministic
+  checker is the strongest form that can take, not a compromise, and it is also the only way this
+  example gets an offline-testable stopping condition at all.
+- **The task binds its own checker at construction.** `make_arithmetic_task(prompt, expected)`
+  builds both in one call — the structural fix for the book's bug (a module-level `TARGET_DAYS`
+  checked against whichever `problem` happens to be live), not a discipline to remember but a
+  shape that makes the bug harder to write. `tests/smoke_test.py`'s "predicate is derived from the
+  current task" check builds two tasks and proves neither accepts the other's answer.
+- **One stopping-rule function, shared by the pure loop and the LangGraph conditional edge.**
+  `should_stop(passed, attempt_number, max_attempts)` is called by both `run_reflexion`'s own loop
+  and `agent.py`'s `route_after_check`. Reimplementing the same decision twice is exactly the kind
+  of drift risk this plugin's examples exist to avoid; sharing the function makes the graph a real
+  orchestration of tested logic instead of a second, untested copy of it.
+
+### A live check that cost nothing, run before calling any of this done
+
+`agent.py`'s graph was **compiled and `.invoke()`d for real** against a scripted stub standing in
+for `ChatOpenAI` (`.invoke(message) -> object with .content`, no key, no network) — not only
+reviewed. Four cases: solved on the first attempt; failed once with the hint verified reaching the
+second `solve()` call; never solved, halting at `max_attempts` rather than hitting
+`recursion_limit` (proving `should_stop`'s cap actually stops the *graph*, not only the pure
+function); and the substring-trap answer resolving correctly inside the compiled graph. This is the
+same "run it for real" discipline that caught a genuine bug in round 14's first test draft — this
+round's version of the same check found no bug, which is itself informative: sharing `should_stop`
+meant there was only one place a stopping-condition bug could hide, and the eleven offline checks
+already covered it. **Not run, and it needs the user's OpenRouter key to change that:** `agent.py`'s
+actual model call.
+
+### A judgment call this round had to make on its own: new prose in not-yet-migrated files
+
+`CLAUDE.md`'s language ruling (2026-07-21, the same day) states every artifact including
+`SKILL.md` bodies and `README.md` is English, while also recording that 8 `SKILL.md` bodies and
+the plugin `README.md` are **known, deferred** backlog, not yet migrated. This round had to add new
+bullets to two of those `SKILL.md` files and a new paragraph to `README.md` as ordinary
+reference-wiring, not as migration work. Read literally, the ruling applies to all new writing from
+2026-07-21 onward regardless of which file it lands in — so every new sentence this round added to
+`design-agent-architecture/SKILL.md`, `build-ai-examples/SKILL.md` and `README.md` is in English,
+while the Ukrainian prose already in those files was left untouched (translating it is still
+separate, deferred work, per the three constraints the ch. 7–11 triage entry recorded below). This
+is a judgment call, not a re-litigation of the ruling — flagged here so it is visible rather than a
+silent inconsistency the eventual migration session has to rediscover. `skill-router.md`'s two new
+rows instead follow its own already-established bilingual convention (Ukrainian trigger phrase +
+English gloss), since that file was already mostly English before this round.
+
+### Verification actually run
+
+`python tests/smoke_test.py` (**34/34**, up from 23 — 11 new, all `reflexion_core.py`) ·
+`python tests/check_docs.py` (**7/7**, 8 skills / **33** references) · the live graph-wiring check
+above (4/4 cases, stub model, no key, no network) · `& .\chatgpt\build_gpt_package.ps1` (zip
+rebuilt, **182,176 bytes**; `gpt_instructions.md` unmoved at 6,928 bytes, headroom 1,072 —
+references keep riding free) · from the repo root: `npm run lint` (8 plugins, 0 warnings),
+`lint:plugins` (9 targets, 4 accepted warnings, unchanged), `lint:markdown` (**404** files — 402 +
+the 2 new references, 0 errors), `lint:format` clean, `build:catalog` (**61 skills**, unchanged —
+only `design-agent-architecture`'s description text actually changed, confirmed via `git diff` on
+`site/public/catalog.json` before reverting it). **Deliberately reverted, not committed:**
+`site/public/catalog.json`'s regenerated diff — root-level generated output, out of this plugin's
+scope per round 14's own precedent (that round's diff was only a timestamp; this round's was the
+real description-text change, reverted for the same scope reason, not because it was noise). **Not
+run, needs the user's OpenRouter key:** `agent.py`'s actual model call.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 15 is newest. Skills stay at 8, references at 33.
+Default next unit of work is **round 16: multi-agent design axes + guardrails**, fixed in round 13
+and amended in the ch. 7–11 triage — both already written, do not re-derive the plan. Update
+`architectures.md`: the three axes to settle before picking a multi-agent pattern (decision /
+control / communication, with coordination as a fourth); the parallel-flow-vs-hierarchical
+discriminator (could the orchestrator be replaced by fan-out/fan-in? then it's parallel flow, not
+orchestration); critique vs debate with stopping conditions; diversity in voting as the actual
+design problem inside that pattern (different models is the strong lever, different prompts the
+weak one — meets the Karim et al. §7.2 citation already in `loop-engineering.md` and
+`evaluation.md`, cross-link rather than re-cite); handoff failure modes (shape failure, context
+leakage, instruction injection); agent naming and a registry (`domain.role.version`); orchestrator
+overhead as an argument for deterministic dispatch where the split is knowable in advance, and
+orchestration-first / collaboration-when-adversarial as the default axis (both added by the ch.
+7–11 triage, filed here). **Disambiguate explicitly**: this file's 'handoff' (agent-to-agent
+transfer) is a different word from `plan-ai-solution/references/handoff.md`'s session protocol —
+the two now collide in this plugin and a reader needs one sentence telling them apart. Update
+`agent-ops.md`: the guardrail cost ladder (code/schema/regex → classifier → LLM guardrail);
+'callbacks observe, guardrails block, and the validator can be wrong in the same direction as the
+agent it checks.'
+
+Example, per the standing per-round requirement (`reflexion_example` is the fourth in a row, after
+`rag_example`, `mcp_example`): a typed pass-off flow — one deterministic decision point plus one
+guardrail, validators as pure logic, offline-testable. The test suite MUST include a **polarity
+test**: the guardrail has to trip on bad input AND pass good input, not just one direction. This is
+not a hypothetical requirement — the companion repo has two real specimens to check the example
+against without copying either: `chapter_04/09_agent_passoff_guardrails.py` is an inverted
+guardrail (`tripwire_triggered=result.final_output.is_sufficiently_detailed`, so good plans get
+rejected and thin ones pass — the sibling `08_agent_guardrails.py` has the correct polarity for the
+same field, and the book's own prose matches `08`, not `09`); `chapter_07/06_RAG_grounding_with_guardrails.py`
+has correct polarity but broken plumbing (a module-level `_last_context` global gets overwritten by
+every search, so a multi-search answer grounds against only the last search — the same
+shared-mutable-state failure shape as `chapter_03/06`'s `_journal`, this time inside a correctness
+control). A polarity test would have failed `09` outright; catching `chapter_07/06`'s bug needs a
+concurrency/accumulation test — consider whether the example's own test suite should include one
+for exactly that reason, the same way round 15's checker had to prove two tasks never leak into
+each other's predicate.
+
+Verify every identifier fresh rather than trusting this prompt's phrasing or HANDOFF's past records
+of the companion repo — round 15 re-fetched three primary sources that earlier rounds had already
+verified, and found one genuinely new discrepancy (the sequential-thinking tool name; see
+`CLAUDE.md`'s seventh tool-documentation instance) purely by not skipping the re-check. Actually run
+whatever the free tier of the test ladder allows — for a guardrail example that is the offline
+pure-logic tier plus, if the shape allows it, a live-but-free wiring check the way round 15
+exercised the real LangGraph graph against a stubbed model at zero cost.
+
+Small carry-over, easy to lose: `skill-router.md`'s two new rows this round used the router's own
+bilingual trigger-phrase convention; round 16 touching `skill-router.md` again should do the same
+rather than reverting to English-only rows. Sync `check_docs.py`'s smoke-count guard when the count
+changes (it will), and rebuild the zip — a new reference means check 5 fails until
+`& .\chatgpt\build_gpt_package.ps1` runs.
+
+One piece of open work still sits outside the round sequence, still not blocking: the language
+migration (8 `SKILL.md` bodies, the plugin `README.md`, plus the two partially-clean references).
+Round 15 made this slightly more visible, not more urgent — it added new English sentences into two
+of the not-yet-migrated `SKILL.md` files and into `README.md` as ordinary content wiring (see the
+'judgment call' note in round 15's entry above), so those three files are now genuinely mixed
+rather than uniformly Ukrainian. That is a reasonable, flagged default, not a decision to leave
+unreviewed — ask the user whether the migration should be its own round, folded into round 16, or
+left to accumulate a little longer.
+
+If the user brings something else instead — a fresh source, an audit, the language migration itself
+— nothing is blocking; state what round 16 would have been and let them redirect."*
+
+## What just happened (ch. 7–11 triage, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`; round 14 merged as `0ae0898`, PR #19)
+
+**Numbering, decided before anything else: this session is NOT round 15.** Round 13 created a
+collision by calling both a triage and a content round "13". The next *content* round is still
+**15** (reasoning structures), exactly as round 13 fixed it. The content rounds derived from this
+batch are **19–22**, queued after 15–18. Skills stay at **8**, references at **31** — no reference,
+script or test was edited this session.
+
+**User decisions from this session, not to be re-litigated:** treat the new files as the
+continuation of the same source; new branch off `main` (round 14's stay-on-the-old-branch was a
+one-off); write no reference content; the new material becomes its own rounds **after 18**;
+chapter 9 **folds into round 18** rather than becoming a separate round; **appendix A is out of
+scope entirely** (a closed position, not an open thread); and correct practitioner techniques are
+**always** carried into the plan (see the new rule below).
+
+### The source, and the fifth harness undercount
+
+`AI agents in the action 3.pdf` and `…4.pdf` — the user's own MEAP→Word export (both created
+2026-07-21). **The harness attachment listing undercounted for the fifth time: it claimed 28 + 13
+pages; `doc.page_count` reports 104 + 65 — 169, not 41.** Round 7's rule (check `page_count` via
+PyMuPDF *before* triage) has now paid for itself five times. Contents: **ch. 7** (evaluation and
+feedback), **ch. 8** (deployment), **ch. 9** (the agentic loop) in the first file; **ch. 10** (the
+cognitive agent), **ch. 11** (tips) and **appendix B** (Node/npx setup for MCP servers) in the
+second. The export flattens code and prose into one 11 pt Calibri font, so listings cannot be
+filtered by typography — a heuristic line filter was used instead.
+
+### Verified against primary sources before anything was planned on them
+
+- **MetaMedQA — VERIFIED, citable.** Griot et al., "Large Language Models lack essential
+  metacognition for reliable medical reasoning", *Nature Communications* 16 (2025),
+  <https://doi.org/10.1038/s41467-024-55628-6>. The book's claim (models answered confidently even
+  when the correct option was absent) matches the paper. Confirm the author list at write time.
+- **The DMC citation overstates its source.** See the new rule below. Real paper (Wang, Wu, Ye,
+  Cheng, Chen & Zheng, AAAI 2025, vol. 39, pp. 25353–25361), wrong claim attached.
+- **The MCP memory server is current**: `@modelcontextprotocol/server-memory`, knowledge-graph
+  based (entities / relations / observations), still an active reference server alongside
+  `filesystem`, `sequentialthinking`, `fetch`, `git`, `time`, `everything` (checked against the
+  `modelcontextprotocol/servers` README, 2026-07-21). This also re-confirms round 15's
+  `sequential-thinking` dependency.
+- **OpenRouter documents `logprobs` and `top_logprobs`** (`top_logprobs` 0–20, requires
+  `logprobs: true`), with **no** per-model support matrix stated — the same shape as structured
+  outputs, so round 11's two-sided rule applies: documented, per-model support unverified. Any
+  confidence-gating example must degrade gracefully when logprobs are absent. **The plugin has zero
+  mentions of logprobs today.**
+
+### Three new rules, all now in `CLAUDE.md`
+
+1. **A real citation can still be a misattribution — verify the sentence, not the existence of the
+   citation.** Ch. 10 attributes to "Wang et al. (2025) in the DMC framework" the finding that
+   token-likelihood confidence predicts correctness *better than* verbalized confidence. Authors,
+   year, framework name and venue are all correct; only the claim is not — the abstract says merely
+   that "various confidence elicitation methods impact the quantification of metacognitive ability
+   differently". **The correction carries its own caveat:** only the *abstract* was checked, so the
+   honest verdict is two-stage — round 22 either finds the claim in the paper's body and may cite
+   it, or cites DMC only for what the abstract supports. A flat rejection would have been a verdict
+   stronger than its evidence, which is the same error in the opposite direction.
+2. **An identifier in a source's code can be non-existent, not merely outdated — check the
+   registry, not the spelling.** Both npm packages `chapter_09` depends on return **HTTP 404**
+   (checked 2026-07-21). A 404 does not distinguish "never existed" from "private", but for a
+   reader running `npx -y` both are equally unusable. **This is also a fourth self-contradiction
+   species: code versus code inside one source** — the same book's appendix B correctly teaches
+   `@modelcontextprotocol/server-filesystem`.
+3. **A correct practitioner technique is always carried into the plan** (user's standing rule,
+   2026-07-21). This raises round 7's rule from a permission to an obligation: the only filters are
+   whether the technique holds against current specs/docs and whether it achieves its stated
+   result — never the prestige, novelty or repetitiveness of the source. "Already covered" remains
+   a reason not to duplicate text, never a reason to drop an uncovered delta. It reversed a call in
+   this very session — see ch. 10 below.
+
+### Other source-quality findings
+
+- **Ch. 8 repeats ch. 3's stale-by-protocol error**: its "three wires" names "HTTP + SSE (MCP)",
+  and the chapter summary repeats it. `mcp-tools.md` is already correct (rounds 13/14) — nothing to
+  fix, but nothing from ch. 8's transport table may be copied.
+- **Summary-vs-body, two more instances (the rule now has four).** Ch. 9's body names **four** loop
+  elements — goal, plan, state, decision — and the whole layer taxonomy is built on where they
+  live; its summary says "three pillars", silently dropping **state**. Ch. 7's body says long
+  system prompts are normal ("a clean separation, not a rule against long prompts"); its summary
+  says "keep prompts lean".
+- **Prose-vs-exercise, a new sub-species.** Ch. 9's sidebar defines stagnation as **semantic**
+  overlap (embeddings + cosine, "say, 85%"); its own exercise 2 defines it as **word** overlap
+  (">80%"). Different mechanism, different number, same chapter.
+- **The author states ch. 8's listings were AI-generated** ("vibe-coded") and then reviewed. That
+  is a source class below the bar for copying identifiers, and independently justifies carrying the
+  mechanism rather than the listing.
+- **Internal cross-reference drift**: ch. 10 cites "chapter 5 on memory and knowledge" — ch. 5 is
+  reasoning/planning, ch. 6 is RAG/memory. Do not cite the book's own internal pointers unchecked.
+- **Model-catalog noise**: ch. 8 names GPT-5, GPT-5.2, GPT-5.5 and Claude Opus 4.5 within a few
+  pages. Not carriable regardless; noted only as evidence of volatility.
+
+### The companion repository, `chapter_05`–`chapter_09` — seven findings
+
+Round 13's own findings were **re-opened against the source rather than trusted**, and one turned
+out to have been *under*-reported.
+
+1. **`chapter_09/04_deep_research_loop.py`: the termination gate the prose teaches does not exist
+   in the code.** §9.2.4 lists five layered conditions and devotes a sidebar to semantic-overlap
+   stagnation detection. The actual `should_continue` is three checks: status is `in_progress`,
+   `iteration_count < max_iterations`, and the follow-up queue is non-empty. **No cost cap, no
+   quality threshold, no stagnation detection anywhere.** `confidence` is parsed and used only in a
+   `print`. `follow_up_questions` grows every iteration with no de-duplication, so the "broken
+   record" failure ch. 10 names has nothing guarding it. Strongest prose-vs-code instance in the
+   source, and it lands exactly on round 18's material.
+2. **Non-existent npm packages** (rule 2 above).
+3. **`chapter_07/06_RAG_grounding_with_guardrails.py`: correct polarity, broken plumbing.** Unlike
+   `chapter_04/09`'s inverted tripwire, this one is right
+   (`tripwire_triggered=result.is_answer_grounded is False`). But §7.3.1's prose says the retrieved
+   context must reach **both** agents, while the code passes only `question` and `answer` and leaves
+   the grounding agent to *optionally* call a tool reading a module-level global `_last_context`.
+   **Concurrency is not even required to break it:** the global is overwritten by every search, so a
+   two-search answer is already grounded against the last search alone in a single-threaded run.
+   Same shared-mutable-module-state failure as `chapter_03/06`'s `_journal` — but inside a
+   correctness control. And `get_last_context` returns `"No context available."` instead of failing,
+   so a check with no context can still come back grounded.
+4. **`chapter_08/06_idempotent_key_example.py` is not an idempotency key.** It is content-addressed
+   caching — `sha256(name + args)` with **no caller-supplied operation id** — so two legitimately
+   distinct mutating calls with identical arguments collide and the second silently returns the
+   first's result. `CACHE` is an unbounded module-level dict with no TTL, in a chapter whose prose
+   insists on TTLs. Its own header comment names a third filename. **Our `mcp-tools.md` already
+   states the rule correctly** ("plus a caller-assigned operation id", round 14) — nothing to fix on
+   our side; the book's file is a ready-made anti-example with a test attached.
+5. **`chapter_08/Dockerfile` is weaker than our `local-docker.md` on four counts**: single-stage, so
+   `build-essential`/`curl` stay in the final image; **runs as root**; `COPY . /app` with no
+   `.dockerignore` in the folder; no healthcheck. Rounds 20–21 **cite** `local-docker.md`, they do
+   not rewrite it.
+6. **Import-time execution — a direct hazard to our own test discipline.**
+   `chapter_07/04_RAG_agent.py` runs its whole benchmark in a module-level loop; `chapter_09/04` and
+   `chapter_09/07` end in a bare `asyncio.run(main())`, and `chapter_09/04` also does
+   `os.environ["BRAVE_API_KEY"]`. **Importing any of them spends money or raises.** Our
+   `smoke_test.py` *imports* example modules, so round 2's "pure logic, no import-time side effects"
+   invariant just got its first external confirmation. The repo is inconsistent: `chapter_05/03` and
+   `chapter_07/06` do guard `__main__`.
+7. **`chapter_05/03_reflexion_agents.py`: round 13's record is verified and was *under*-reported.**
+   `TARGET_DAYS = "26"` is handed to the critic and success is `TARGET_DAYS in answer`, a substring
+   test — confirmed verbatim. **What round 13 missed:** the second half of the condition,
+   `says_claim_correct = "yes" in answer.lower() or "correct" in answer.lower()`, is a *second*
+   substring trap, and its root cause is that `problem` is assigned **twice** — the predicate is
+   left over from the overwritten first puzzle ("Am I correct?", a yes/no claim check). It therefore
+   breaks in both directions: a terse correct answer ("Alex spends 26 days") contains neither "yes"
+   nor "correct" and **fails**, while "the claim is incorrect… 26 days" **passes**. The lesson for
+   round 15 is wider than "avoid substrings": *derive the success predicate from the current task*,
+   or dead code turns out not to be dead.
+
+### Coverage verdicts — already covered, do not rewrite
+
+Confirmed by **reading the files**, not by grep alone (round 13's rule, which it broke twice).
+`local-docker.md` (Docker/Compose, secrets, healthcheck, 12-factor — stronger than the book);
+`cloud-aws-gcp-azure.md`; `evaluation.md` (metrics by class, eval sets, label production, judge
+biases, statistical hygiene); `agent-ops.md` (tracing, KPIs, sampled judging, metrics-gated deploy,
+incident→eval-case, agent identity, A2A); `autonomy-contracts.md` (iteration/wall-clock/cost caps,
+stop factors, gates vs contracts, rubber-stamping); `architectures.md` (orchestrator-workers,
+evaluator-optimizer, ReAct, state substrates, HITL placement, Google capability levels 0–4);
+`mcp-tools.md` (tool-count tax, retry cap + backoff/jitter, idempotency key, least privilege);
+prompt caching (six files); the five functional layers (`skill-router.md`); ANN/chunking/hybrid
+(`memory-vector-db.md`, `rag-pipeline.md`); graph vs vector (`graph-rag.md`).
+
+**Ch. 11 is almost entirely recap.** Under the new "always carry a correct technique" rule its
+advice is all admitted — most of it simply already exists above. The uncovered deltas are routed
+explicitly so they cannot be lost: persona-as-API-contract and dynamic instruction injection (with
+the over-injection warning) → `engineer-prompt-context`, in round 19; the explicit "I don't know"
+off-ramp → round 22; two-tier orchestration with deliberately stateless workers → round 20's
+front-door section; streaming partial output as checkpoint-approval UX → round 20, cross-linked to
+round 21's HITL; periodic cache clearing → already covered by round 20's TTL material.
+
+### Coverage verdicts — the real gaps
+
+**Ch. 7 → a new `evaluate-optimize-models` reference.** `evaluation.md` answers "what to measure",
+`agent-ops.md` "how to run it"; neither answers **"how do I develop an agent against tests"**.
+Gaps: TDAD as a loop; the **minimum-change ladder** (word → clause → sentence → section →
+tool → model, escalating only on failure); run each benchmark N times before believing a pass;
+test the trajectory not the answer; **defect localization** (two of the chapter's failures are
+evaluator bugs, one is an instruction bug — zero coverage of "which component is actually broken");
+rubric construction, validation against human judgment, and **threshold calibration** where
+rubric/human agreement peaks; **agent collusion and evaluation governance** (zero mentions —
+different models for evaluators, human review of flagged *and a random sample of unflagged*,
+authority hierarchy, logged agent-to-agent messages, escalation rules; an evaluation layer that
+colludes is worse than none because it manufactures false confidence); **retry ceiling as a design
+decision** (we have the cap, not what happens after it); grounding as a technique vs the grounding
+agent as one implementation; human feedback as noisy data (aggregation, outlier detection,
+stratified sampling); annotations becoming a regression set, plus an explicitly volatile note on the
+observability landscape.
+
+**Ch. 8 → two new `deploy-ai-environments` references.** That skill has **two references totalling
+~90 lines** and stops at "the container runs". Round 20: runtime choice by latency (edge / sync API
+/ event-driven worker); browser deployment as a security decision (extractable keys, CORS, shared
+rate limits, ephemeral server-minted secrets); the three wires **with the MCP transport corrected**;
+the front-door pattern; tunnels as development tools not deployment; release engineering (version
+prompts/tools/models, offline → shadow → canary → auto-rollback, pin and record exact versions per
+turn); the reliability ladder (time budgets at the caller, fallbacks, circuit breakers, graceful
+degradation); and into `token-latency-cost.md` the **cost-to-value framing**, the three levers with
+honest tradeoffs, measure-before-optimizing, and the **cache-candidacy rule**. Round 21: the threat
+model as an **asset↔surface mapping**; direct vs indirect injection; **tool sandboxing and egress
+allowlists** (zero coverage today); schema-first tools; **policy outside the prompt** (prompt policy
+is fragile and unauditable); and **HITL as a designed mechanism** — what triggers a checkpoint, what
+the reviewer sees, **how state survives the wait** (async resumption, durable state, timeout,
+escalation), and what happens when HITL is bypassed.
+
+**Ch. 9 → folds into round 18** (user's decision). Its **layer taxonomy** is the contribution: layer
+1 keeps goal/plan/state/decision inside the agent, layer 2 externalizes them into deterministic code
+wrapping the agent, layer 3 hands them to another agent (orchestration when one delegator owns them,
+collaboration when peers share them). **A third numbered triad now collides** — Google's capability
+**Levels 0–4**, the Oracle article's harness **Levels 1–3**, and now **Layers 1–3**; `agent-loop.md`
+must name all three as orthogonal, plus the fourth homonym already in `loop-engineering.md`
+("cognitive surrender" there is about the *human developer*). Also: layered termination with goal
+satisfaction named as a **biased self-assessment**; stagnation as harder to detect than failure (our
+stop factor is "the same *error signature* repeats", which a stagnating agent never trips);
+separation of concerns (the explorer must not write the report); breadth-vs-depth as which end of
+the queue you pop. Two items go to **round 16**: orchestrator overhead as an argument for
+deterministic dispatch, and orchestration-first / collaboration-when-adversarial.
+
+**Ch. 10 → a new `design-agent-architecture` reference (round 22).** Zero coverage of metacognition,
+confidence calibration, knowledge-boundary awareness or confidence gating. Carry: the **five failure
+modes as a diagnostic** (confident wrong answer / broken record / rigid plan / overcommitted guess /
+shallow composition, each with a missing capability and a structural fix — this is a *test suite for
+an existing agent*); reasoning patterns as primitives that something must choose among (cross-link
+to round 15, do not duplicate); confidence gating as a structural check, not a verbal one;
+stagnation detection and knowledge-boundary awareness; **evaluation-during vs Reflexion-after**;
+metacognitive calibration as a measurement (confidence vs accuracy, watch false positives beside
+false negatives); MetaMedQA as the verified citation. **Reversed by the new rule 3:** the four
+"emergent behaviours" (curiosity, adaptive persistence, selective depth, graceful degradation) were
+initially slated to be dropped — each is a correct routing technique with a checkable result, so
+they are **carried**; what is dropped is the *emergence framing*, since they are consequences of
+explicit rules and must be presented as rules. Still refused: the Minsky/Baars/Kahneman mapping as
+architectural warrant (borrowed vocabulary — the plugin's own ch. 6 rule applies: "the vocabulary is
+a tool, not a model"), the DMC attribution, and importing a second full module taxonomy as doctrine.
+
+### Roadmap: 15–18 unchanged, 19–22 added
+
+**Rounds 15–18 stand exactly as round 13 fixed them**, with three amendments folded in:
+
+- **Round 15** (still the next unit of work) — its anti-oracle test must now assert **three** things,
+  not one: `"126 days"` must not read as `26`; an answer containing `"incorrect"` must not satisfy a
+  `"correct" in answer` check; and the success predicate must be derived from the current task.
+- **Round 16** also gets orchestrator overhead and the orchestration-first rule, and now has two
+  real guardrail specimens to cite — `chapter_04/09` (inverted) and `chapter_07/06` (correct
+  polarity, broken plumbing).
+- **Round 18** is re-based on ch. 9's layer taxonomy as its spine, keeps every Oracle item already
+  assigned to it, must disambiguate three numbered scales plus the "cognitive surrender" homonym,
+  and its example implements the gate ch. 9's prose promises and its code omits: iteration cap **and**
+  cost cap **and** a real stagnation detector, with offline tests that halt on two near-identical
+  summaries, prove the follow-up queue is de-duplicated, and prove the module **imports without
+  executing anything** — which three of the repo's own loop files fail.
+
+**New rounds, each shipping a runnable example with tests** (standing requirement since round 13).
+All four have offline-testable cores needing no model, key or network:
+
+| Round | Content | Example (offline core) |
+|---|---|---|
+| **19** | New `evaluate-optimize-models` reference: TDAD loop, minimum-change ladder, defect localization, rubrics + threshold calibration, collusion and evaluation governance, retry ceiling, feedback noise | Benchmark harness whose evaluator **normalizes** instead of comparing strictly, plus a grounding check taking context as an **explicit argument**. Tests: `"Photons."` equals `"photons"`; a **polarity test** on the critic; a **concurrency test** proving neither of two interleaved requests validates against the other's context; and a test that a two-search answer grounds against the **accumulated** context, not the last search |
+| **20** | New `deploy-ai-environments` reference: serving runtimes, wires, front-door topology, release engineering, reliability ladder; plus cost-to-value and cache candidacy into `token-latency-cost.md` | Circuit breaker + time budget + fallback ladder as a pure state machine. Plus the idempotency contrast: two distinct operations with identical arguments but distinct operation ids must both execute, which `chapter_08/06`'s argument-hash cache silently collapses into one |
+| **21** | New `deploy-ai-environments` reference: threat model as asset↔surface mapping, injection defenses, sandboxing and egress allowlists, schema-first tools, policy outside the prompt, HITL as a designed mechanism | Egress allowlist + schema-first argument validator + a HITL checkpoint surviving a restart with a timeout and an escalation path. Container guidance **cites `local-docker.md`** |
+| **22** | New `design-agent-architecture` reference: five failure modes as a diagnostic, confidence gating, stagnation detection, knowledge-boundary awareness, calibration as a measurement | Confidence gate + stagnation detector: cosine similarity over injected stub vectors, a flatlined-confidence case, graceful degradation when logprobs are absent. Optional live tier needs the user's key |
+
+Reference filenames are deliberately not fixed and **ordinals are deliberately not pre-computed** —
+rounds 10 and 13 both had to delete rot-in-advance arithmetic. Count after writing.
+
+**Still no ninth skill.** Rounds 7 and 13 settled this and this batch does not reopen it: ch. 7 →
+`evaluate-optimize-models`, ch. 8 → `deploy-ai-environments` (which it finally fills out), ch. 9 and
+10 → `design-agent-architecture`.
+
+### Numbers and claims that must NOT be carried
+
+Cache savings ("30–80%", "up to 90% of input costs"), the 1,024-token minimum cacheable prefix, the
+3×–5× fast-path speedup, stagnation thresholds (85% semantic / 80% word — the book states both), the
+$0.50/$0.10/$50 cost illustration (the framing is carriable, the figures are not), per-turn tool
+schema token counts, every model name and version in ch. 8, and confidence thresholds
+(0.3 / 0.7 / 0.85) presented as tuned values. Any of these may be named as a practitioner starting
+point, never as a measured fact.
+
+### Verification actually run
+
+`python tests/check_docs.py` (**7/7**, 8 skills / 31 references) · `python tests/smoke_test.py`
+(**23/23**) · from the repo root `npm run lint` (8 plugins, 0 warnings), `npm run lint:markdown`,
+`npm run lint:format`. **Deliberately not run:** `chatgpt/build_gpt_package.ps1` (no reference added,
+so check 5 cannot fail), `npm run build:catalog`, the `site` build, `evals` — none of their inputs
+moved. The moment round 19 adds a reference the zip rebuild is mandatory again; and rounds 20/21,
+which substantially widen what `deploy-ai-environments` covers, will very likely need that skill's
+`description` updated too — which does require `build:catalog`.
+
+**Not committed.** The user asked for the bookkeeping only this session; the branch carries
+uncommitted edits to `CLAUDE.md` and this file.
+
+### A language discrepancy found while writing this entry — raised, and resolved by the user the same session
+
+`CLAUDE.md` claimed that "`SKILL.md` bodies, `README.md`, `HANDOFF.md`" are "written in Ukrainian by
+design". Measuring instead of assuming showed the claim was **already false for this file**:
+`HANDOFF.md` is 97% Latin (121,087 vs 4,415 Cyrillic), and has been written in English since at
+least round 12.
+
+**The user's ruling (2026-07-21): every written artifact in this plugin is English** — `CLAUDE.md`,
+`HANDOFF.md`, `README.md`, `SKILL.md` bodies and `references/*.md`. Ukrainian is for the
+*conversation*: chat explanations, reported results, implementation steps and branch/PR discussion,
+with technical terms and commands staying English even there. `CLAUDE.md`'s language bullet was
+rewritten accordingly, and the measured per-file state recorded in it so no future session has to
+re-derive it.
+
+**This creates one piece of open work, deliberately not done in this session** (it was scoped to
+bookkeeping): **8 `SKILL.md` bodies (62–85% Cyrillic) and the plugin `README.md` (62%) still need
+translating.** Two references are not clean either — `skill-router.md` (12.7%) and
+`plan-ai-solution/references/handoff.md` (0.3%).
+
+Three constraints for whoever picks it up, so the migration does not break things that currently
+pass:
+
+1. **Trigger phrases are exempt, and the exemption is bilingual** (user's rule, 2026-07-21).
+   Where Cyrillic is a *functional trigger phrase* — a quoted example of how a user actually asks,
+   which routing matches on — **keep it and add an English equivalent beside it**; never replace
+   it. Users ask in Ukrainian, so deleting the phrase deletes the match. Prose around those
+   phrases translates. **Decide row by row, never file by file.** Measured: **all 38 Cyrillic
+   lines in `skill-router.md` are trigger-table rows**, already bilingual in shape
+   (`«зроби handoff», session is ending, work continues next time`) — extend that pattern rather
+   than inventing one. `plan-ai-solution/references/handoff.md` has one inline trigger
+   (`"зроби handoff"`). The 8 `SKILL.md` bodies are mostly prose, but contain routing tables too —
+   check each table before treating it as prose.
+2. **The quarantine comes off last, not first.** `ai-gen` is one of four plugins in
+   `QUARANTINED_PLUGINS` in `scripts/validate-marketplace.mjs`, which exempts it from the
+   marketplace's Cyrillic ban. Removing it before every file is clean turns a green gate red. The
+   root `README.md`'s "Note on Ukrainian-language plugins" entry moves at the same time.
+3. **Translating a `SKILL.md` body does not touch its `description`** — those are already English
+   and third-person (round 12's audit). But if any `description` *does* change, `build:catalog`
+   must run.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — the ch. 7–11 triage is newest, and it is a triage entry, so no
+reference content changed (still 8 skills / 31 references). **The default next unit of work is
+round 15: reasoning structures** — a new `design-agent-architecture/references/reasoning-patterns.md`
+(~180–220 lines; do not pre-compute its ordinal, count it after writing). The user's decision from
+2026-07-21 stands and is not to be re-opened: a separate file, not scattered across
+`architectures.md` + `prompt-techniques.md` + `reasoning-models.md`. Content: decomposition vs
+planning as two operations that fail independently; a CoT/ReAct/ToT/Reflexion selection table; what
+actually defines ReAct (the feedback loop, not the presence of a tool call); ToT needs orchestration
+code, not a single prompt; Reflexion from the primary source (Shinn et al., arXiv 2303.11366) with
+the feedback-signal honesty; the plan as a property of the architecture, re-read each step;
+`sequential-thinking` as the scratchpad instance — its server is confirmed still active as of
+2026-07-21, but check its tool surface against its own README at write time.*
+
+*The example is a solver–critic Reflexion loop in LangGraph that **must not hardcode an oracle** the
+way `chapter_05/03_reflexion_agents.py` does. Its offline test must assert **three** things, and the
+third was only discovered in the ch. 7–11 triage: (1) the substring trap — `"126 days"` must not read
+as `26`; (2) the second substring trap — an answer containing `"incorrect"` must not satisfy a
+`"correct" in answer` check; (3) the success predicate is derived from the **current** task — the
+book's predicate is left over from a puzzle that was overwritten, so it fails a terse correct answer
+and passes an explicitly wrong one. Stopping condition, hint accumulation and attempt cap all test
+offline against stubs. Also make sure the module **imports without executing anything** — three
+files in the book's own repo fail that, and our `smoke_test.py` imports example modules.*
+
+*Small carry-overs, easy to lose: `prompt-techniques.md` §Tree of Thoughts gets one added line about
+orchestration; `reasoning-models.md` gets a cross-link from §Model-native vs structured. Sync
+`check_docs.py`'s smoke-count guard if the count changes (it will), and rebuild the zip — a new
+reference means check 5 fails until `& .\chatgpt\build_gpt_package.ps1` runs.*
+
+*Rounds 16, 17 and 18 follow as fixed in round 13 (with the amendments in the triage entry above),
+then rounds 19–22 from the ch. 7–11 batch. If the user brings something else instead, nothing is
+blocking — state what round 15 would have been and let them redirect.*
+
+***One piece of open work exists outside the round sequence, and it is not blocking round 15: the
+language migration.** The user ruled on 2026-07-21 that every artifact in this plugin is English.
+`CLAUDE.md`, `HANDOFF.md` and 29 of 31 references already are; **8 `SKILL.md` bodies and the plugin
+`README.md` are not**, plus `skill-router.md` and `plan-ai-solution/references/handoff.md`. Read the
+three constraints in the triage entry before starting — especially that `skill-router.md`'s
+Ukrainian trigger phrases are functional routing material, and that the `QUARANTINED_PLUGINS`
+exemption in `scripts/validate-marketplace.mjs` comes off last, not first. Ask the user whether they
+want it done as its own round or folded into the next content round."*
 
 ## What just happened (round 14 — MCP in depth + `mcp_example`, 2026-07-21, branch `docs/ai-gen-lanham-ch3-6-triage` off `main`, same branch as round 13 by the user's explicit instruction)
 
@@ -162,6 +1178,11 @@ failures, same pre-existing WARNs as every round). `build:catalog`'s only diff b
 was `catalog.json`'s `generatedAt` timestamp — reverted each time, out of this plugin's scope.
 
 ### Prompt for the next round
+
+> **AMENDED (ch. 7–11 triage, 2026-07-21):** still valid — round 15 remains the next unit of work
+> and this prompt is not superseded. But its example spec has grown: the anti-oracle test now
+> asserts **three** things, not one. See the triage entry at the top of this file; use the prompt
+> there, which carries the amendment.
 
 *"Read `plugins/ai-gen/HANDOFF.md` — round 14 is newest. The roadmap for rounds 15–18 was fixed
 in round 13 and does not need re-deriving. Default next unit of work is **round 15: reasoning
