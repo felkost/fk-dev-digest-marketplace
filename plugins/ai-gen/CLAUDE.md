@@ -13,8 +13,8 @@ asked to touch another plugin or the marketplace root.
   persona). Each `skills/<name>/agents/openai.yaml` is a custom-GPT/Codex packaging descriptor
   consumed by the `chatgpt/` pipeline (`build_gpt_package.ps1` → `dist/*.zip`) — unrelated to the
   plugin-level `agents/` convention, and not scanned as such.
-- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–13 have shipped on
-  top of it; it is no longer a bare scaffold (8 skills, 30 references), but version stays `0.0.1`
+- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–14 have shipped on
+  top of it; it is no longer a bare scaffold (8 skills, 31 references), but version stays `0.0.1`
   and untagged until the user says otherwise. Read `HANDOFF.md` first in every new session, and
   keep it updated at the end of a working session (the handoff protocol is part of the plugin's
   own methodology — see `skills/plan-ai-solution/SKILL.md` § «Handoff між сесіями»).
@@ -92,7 +92,17 @@ asked to touch another plugin or the marketplace root.
   pinned spec link in our own notes is exactly the artifact this rule warns about** — and date
   the check when you record it. (Every claim carried this round survived verbatim in the newer
   revision, and the `Origin` requirement got stronger, not weaker: an invalid `Origin` now
-  **MUST** be answered with HTTP 403.)
+  **MUST** be answered with HTTP 403.) **A fifth instance (round 14) needs no protocol history at
+  all — two current libraries in this plugin's own stack spell the same thing two different
+  ways.** The official MCP Python SDK's `FastMCP.run()` takes `transport="streamable-http"`
+  (hyphenated — verified against the pinned `v1.28.1` source); `langchain-mcp-adapters`'
+  client-side connection config takes `transport="streamable_http"` (underscored — verified
+  against its `sessions.py` source), though it also accepts `"streamable-http"`/`"http"` as
+  aliases. Both are current, both are correct for their own library, and copying either spelling
+  into the other library's code is a plausible-looking bug. Round 9's rule ("never copy a
+  parameter name from one library into a sentence about another") already covered this shape of
+  error across unrelated libraries; this instance is the same trap between two libraries meant to
+  be used *together*, which makes it easier to miss, not harder.
 - **Skill frontmatter descriptions must be in third person** (e.g. "Designs…", "Explains…"), per
   Anthropic's Skill authoring guidance — not the imperative ("Design…", "Explain…") this plugin
   used for its first eleven rounds without anyone checking against the published best-practices

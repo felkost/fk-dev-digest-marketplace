@@ -1,13 +1,202 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-21, end of **round 13** — a
-triage-only round over chapters 3–6 of the Lanham book and its companion repository, plus a second
-source on the inner agent loop, fixing the roadmap for **rounds 14–18**. Every one of those rounds
-ships a runnable, tested code example
-alongside its reference — a standing requirement the user added this session. Written for a fresh
-Claude session with no conversation history — read this whole file before touching anything.
+Newest round on top (eda-skills convention). Last updated 2026-07-21, end of **round 14** — the
+first content round off round 13's fixed roadmap: `mcp-tools.md` in depth plus a runnable,
+tested `mcp_example`. Rounds 15–18 remain, same cadence (one chapter's worth of gaps per round,
+each shipping a code example with tests — the user's standing requirement from round 13). Written
+for a fresh Claude session with no conversation history — read this whole file before touching
+anything.
 
-## What just happened (round 13 — triage of *AI Agents in Action* ch. 3–6 + roadmap, 2026-07-21, branch `docs/ai-gen-lanham-ch3-6-triage` off `main`)
+## What just happened (round 14 — MCP in depth + `mcp_example`, 2026-07-21, branch `docs/ai-gen-lanham-ch3-6-triage` off `main`, same branch as round 13 by the user's explicit instruction)
+
+**Branching decision, worth not re-litigating:** every prior content round opened a fresh
+`feat/...` branch off `main` once its triage round's branch had merged (round 7 → PR #12, round 8
+on a new branch → PR #13, and so on). This round, the user explicitly said to keep going on
+`docs/ai-gen-lanham-ch3-6-triage` instead — round 13's triage commit (`a6dbde1`) and round 14's
+content commit both land in one PR. Round 13's branch name (a `docs/` prefix) is now slightly
+stale for what it carries, left as-is rather than renamed mid-branch.
+
+### Verified fresh before writing, not carried from round 13's citations
+
+Round 13's own rule ("a source can be current by publication date and stale by protocol", and "our
+own record is not a source") applied to round 13's *own* quotes this time:
+
+- **Spec revision**: still `2025-11-25` (re-checked via the versioning page, 2026-07-21) — round
+  13's citations survive. The transports page and the server-overview control-hierarchy table were
+  re-fetched and re-quoted directly into `mcp-tools.md` rather than copied from HANDOFF.
+- **`langchain-mcp-adapters`** is at **0.3.0**. Its own README quickstart (fetched verbatim, not
+  paraphrased) shows `MultiServerMCPClient({...})` → `await client.get_tools()` — a simpler, more
+  current call than the `session()` + `load_mcp_tools()` two-step this plugin's own round-13 plan
+  expected. Its connection-config `transport` literal is `Literal["stdio", "sse",
+  "streamable_http"]` (underscored, confirmed from `sessions.py` source), though
+  `create_session()` also accepts `"streamable-http"` and `"http"` as aliases.
+- **The official SDK is mid major-version transition**: `mcp` 1.28.1 is the current *stable*
+  release; `2.0.0b2` is a beta with "each pre-release may contain breaking changes" in its own
+  docs, and the project's own guidance says v1.x remains the production recommendation.
+  `mcp_example/requirements.txt` pins `mcp[cli]>=1.27,<2` on purpose, with a comment naming why —
+  re-check that ceiling before lifting it.
+- **`FastMCP.run()`'s real signature, fetched from the pinned `v1.28.1` source** (not guessed):
+  `run(transport: Literal["stdio", "sse", "streamable-http"] = "stdio", mount_path=None)` — no
+  `host`/`port` kwargs. Those are constructor-only (`FastMCP(..., host=..., port=...)`). An early
+  draft of `server.py` passed `port=` into `run()`; the source check caught it before it shipped,
+  not a test run — the kind of mistake `mcp.run(transport="streamable-http", port=8000)` reads
+  as plausible enough to not question without checking.
+- **The companion repo files were re-fetched directly** (`chapter_03/01_complete_mcp_server.py`,
+  `chapter_03/06_mcp_time_travel_tracker.py`) rather than trusting round 13's paraphrase of them —
+  both matched what round 13 recorded, exactly.
+- **`langgraph-bigtool`** (`langchain-ai` org, `pip install langgraph-bigtool`) is a real,
+  current implementation of semantic tool discovery: `create_agent()`, a tool registry dict, a
+  LangGraph `Store` (in-memory or Postgres) indexing tool metadata by embedding, a
+  `retrieve_tools_function` hook. Cited by name in `mcp-tools.md`. **Not carried:** the specific
+  benchmark numbers (99.6% token reduction, 97.1% hit rate, MRR 0.91) from an arXiv paper
+  surfaced in the same search — precisely the kind of figure `CLAUDE.md` says not to carry, cited
+  or not.
+
+### A fifth instance of "tool documentation is a moving target" — this time within one stack
+
+Added to `CLAUDE.md`: the official SDK's own `FastMCP.run()` takes `transport="streamable-http"`
+(**hyphenated**); `langchain-mcp-adapters`' client-side connection config takes
+`"streamable_http"` (**underscored**). Two libraries this plugin's own reference stack pairs
+together, verified from each one's source this round, spelling the same transport two different
+ways. `mcp-tools.md` and `mcp-example.md` both name the mismatch explicitly rather than picking
+one spelling and letting a reader copy it into the wrong file.
+
+### What shipped
+
+- **`design-agent-architecture/references/mcp-tools.md` 105 → 226 lines**: the three primitives
+  and control hierarchy (spec table); transports as stdio + Streamable HTTP with the deprecation
+  note and the "SSE survives inside Streamable HTTP" correction on both sides of the error;
+  deployment shapes ("hybrid" is a property of an agent's server *set*); the protocol's price;
+  the state-semantics shift; Streamable HTTP's security requirements (`Origin` → 403, localhost
+  bind, auth); the tool-count tax and attention overload (sourced to ch. 4 §4.2.1, not ch. 3);
+  semantic tool discovery and output offloading in §Tool design rules; backoff+jitter and an
+  idempotency key in §Handling tool failure (the three items round 13's Oracle-article addendum
+  folded into this round); the MCP inspector; a cross-link to the worked example. Confirmed live,
+  not just asserted: a tool-side exception surfaces to the client as `isError: true` on an
+  ordinary result, never a raised exception — `mcp-tools.md`'s existing "handling tool failure as
+  normal control flow" section now cites that as a protocol-level fact, not only a design
+  recommendation.
+- **New `build-ai-examples/references/mcp-example.md`** (references 30 → **31**) + runnable code
+  in **`build-ai-examples/scripts/mcp_example/`**: `journal.py` (pure, stdlib-only note store),
+  `server.py` (FastMCP, all three primitives, `--transport {stdio,streamable-http}`), `agent.py`
+  (LangGraph via `langchain-mcp-adapters`, gated behind the user's OpenRouter key),
+  `test_live_stdio.py` (the free live check), `.env.example`, `requirements.txt`. The build
+  script already stages `scripts/`, so the zip picked it up once rebuilt.
+- **`tests/smoke_test.py` 14 → 23 checks**: 9 new, all pure-`journal.py` logic (sequential ids,
+  blank-text rejection, unknown-id lookup, empty-journal formatting, plus the file/import/
+  `.env.example` scaffolding checks rag_example already had a pattern for). `rag_example`'s own
+  14 are unchanged and still pass; `MCP_EXAMPLE` is a second directory constant alongside
+  `EXAMPLE`, both on `sys.path`.
+- **Wiring**: both `build-ai-examples/SKILL.md` and `design-agent-architecture/SKILL.md` §Довідки,
+  `skill-router.md` (+1 row), `README.md`'s API-keys section (+1 example, and the section header
+  went from singular to plural since it now covers two).
+
+### The two companion-repo corrections, now embodied in running code, not just described
+
+- `01_complete_mcp_server.py`'s `welcome()` prompt calls `get_greeting(name)` directly as a plain
+  function, bypassing the resource protocol. `server.py`'s `summarize_notes()` prompt does not:
+  it names `journal://notes` and lets the caller fetch it separately. `test_live_stdio.py` asserts
+  this directly — the prompt text contains the resource URI and does **not** contain a note's
+  actual text.
+- `06_mcp_time_travel_tracker.py` ends in `mcp.run(transport="sse")`. `server.py` defaults to
+  `stdio` and offers `streamable-http`; both transports were actually exercised this round (the
+  stdio path by the automated live test, the HTTP path by hand with `curl`, capturing a real
+  `{"protocolVersion":"2025-11-25", ..., "serverInfo":{"name":"Scratchpad","version":"1.28.1"}}`
+  response over HTTP 200) — not shipped on the strength of matching the SDK's documented shape
+  alone.
+
+### A live run that proved the test wrong, not the code — a different value than round 6's bug hunt
+
+Round 6's live RAG run found three real bugs in shipped code. This round's first live run of
+`test_live_stdio.py` failed one check — but the failure was in the **test's own assumption**: it
+expected a tool-side `ValueError` to raise through `call_tool()`, wrapped in `try`/`except`. MCP
+does not work that way by design — a tool execution error comes back as an ordinary
+`CallToolResult` with `isError=True`, precisely so the agent can observe and reason about the
+failure rather than have its turn interrupted by an exception. `server.py` was already correct;
+the test was rewritten to assert `isError` instead of catching an exception, and now documents the
+protocol behavior it initially got wrong. Worth carrying forward: "run it for real" surfaces two
+different kinds of finding — sometimes the code is wrong (round 6), sometimes your own test's
+mental model of the system is (this round) — and the second kind is just as easy to ship
+unnoticed if the test is never actually executed.
+
+### `create_react_agent` kept, not migrated — a consistency call, not an oversight
+
+`langchain-mcp-adapters`' own README quickstart uses `langchain.agents.create_agent` (the
+successor API) rather than `langgraph.prebuilt.create_react_agent`. `rag-example.md` already
+recorded that `create_react_agent` is deprecated as of LangGraph V1.0 and still live-tested as
+working. `agent.py` here uses `create_react_agent` again, for consistency with that already-shipped,
+already-verified example rather than introducing a second, untested agent-construction pattern in
+the same plugin — with a comment pointing at `rag-example.md`'s note rather than duplicating it.
+Revisit both together if a future round migrates one.
+
+### A real gap in `check_docs.py` itself, found and fixed
+
+Check 7 (the smoke-check-count guard) flagged five lines in `HANDOFF.md` as "wrong" the moment the
+smoke count changed from 14 — every one of them a **historical** statement, accurate when it was
+written (round 2's "New `tests/smoke_test.py` — 14 checks", round 6's summary line, a quoted past
+error message). The check had never been exercised against a real count change before — 14 had
+stood since round 2 — so this class of false positive was latent, not previously triggered.
+`HANDOFF.md` is now excluded from check 7's scan, with a comment explaining why: it is a
+chronological log, not a living doc, and the check exists to catch the eda-skills-README failure
+mode (a *current*, displayed claim silently going stale), which a dated round entry is not an
+instance of. `rag-example.md`'s own count line was reworded to state the true total (23) next to
+the word "smoke" within the check's matching window, rather than removed — the guard still has
+real coverage on both example references, not zero.
+
+### Verification actually run
+
+Live, this session, not assumed: the stdio round-trip (`test_live_stdio.py`, 10/10, including the
+fix above), the Streamable HTTP transport (manual `curl` against a real running server), and the
+MCP-to-LangChain bridge (`client.get_tools()` against the real subprocess, returning `add_note`'s
+real name/description/schema — no OpenRouter key needed for this part). **Not run, and it needs
+the user's OpenRouter key to change that:** `agent.py`'s actual model call.
+
+`python tests/check_docs.py` (7/7, 8 skills / **31** references) · `python tests/smoke_test.py`
+(**23/23**) · `scripts/mcp_example/test_live_stdio.py` (10/10) · `& .\chatgpt\build_gpt_package.ps1`
+(zip rebuilt, **166,438 bytes**; `gpt_instructions.md` unmoved at 6,928 bytes, headroom 1,072 —
+references ride free, confirmed again) · from repo root: `npm run lint` (8 plugins, 0 warnings),
+`lint:plugins` (9 targets, 4 accepted warnings, unchanged), `lint:markdown` (**402** files, 0
+errors), `lint:format` clean, `build:catalog` (**61 skills**, unchanged — no `description`
+touched), `site` `npm run build` (tsc + vite, clean) · `evals` `eval:quality` (61 skills, 0
+failures, same pre-existing WARNs as every round). `build:catalog`'s only diff both times it ran
+was `catalog.json`'s `generatedAt` timestamp — reverted each time, out of this plugin's scope.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 14 is newest. The roadmap for rounds 15–18 was fixed
+in round 13 and does not need re-deriving. Default next unit of work is **round 15: reasoning
+structures**, a new `design-agent-architecture/references/reasoning-patterns.md` (~180–220 lines;
+do not pre-compute its reference ordinal in prose — count it after writing). User's decision,
+2026-07-21, do not re-open: a separate file, not scattered across `architectures.md` +
+`prompt-techniques.md` + `reasoning-models.md`. Content: decomposition vs planning as two
+operations that fail independently; a CoT/ReAct/ToT/Reflexion selection table; what actually
+defines ReAct (the feedback loop, not the presence of a tool call); ToT needs orchestration code,
+not a single prompt; Reflexion from the primary source (Shinn et al., arXiv 2303.11366) with the
+feedback-signal honesty round 13 already worked out; the plan as a property of the architecture,
+re-read each step, not the model; `sequential-thinking` as the scratchpad instance (check its tool
+surface against the server's own README at write time, per the standing identifier-volatility
+rule). Example, per the standing per-round requirement: a solver–critic Reflexion loop in
+LangGraph that **must not hardcode an oracle** the way the book's `chapter_05/03_reflexion_agents.py`
+does (`TARGET_DAYS` handed straight to the critic) — the feedback signal must come from a
+checkable property (tests pass, schema validates), and an offline test must assert the substring
+trap the book's own demo has (`'26' in '126 days'` must not read as success). Follow round 14's
+discipline: verify every identifier fresh (the sequential-thinking server's tools, LangGraph's
+current stub/mock pattern for injecting scripted model responses) rather than trusting this
+prompt's phrasing, and actually run whatever the free tier of the test ladder allows before
+calling it done — round 14 caught a real bug in its own first test draft exactly that way, not by
+reviewing the code.*
+
+*Small carry-overs, easy to lose: `prompt-techniques.md` §Tree of Thoughts gets one added line
+about orchestration (per round 13's plan); `reasoning-models.md` gets a cross-link from
+§Model-native vs structured. Sync `check_docs.py`'s smoke-count guard if the count changes again
+(it will), and rebuild the zip — a new reference means check 5 fails until
+`& .\chatgpt\build_gpt_package.ps1` runs.*
+
+*If instead the user brings something else — chapters 7–11 of the book (not in hand; triage
+before writing), a fresh source batch, an audit — nothing is blocking; state what round 15 would
+have been and let the user redirect."*
+
+## What happened before (round 13 — triage of *AI Agents in Action* ch. 3–6 + roadmap, 2026-07-21, branch `docs/ai-gen-lanham-ch3-6-triage` off `main`)
 
 A round-0/round-7-shaped session: **no reference content was written.** The user supplied the
 continuation of round 12's source and asked for analysis, a plan for using it, and then the
@@ -456,6 +645,10 @@ read prose. Round 6 found exactly this class of drift and it recurs; budget a re
 file, not just the section you are adding.
 
 ### Prompt for the next round
+
+> **SUPERSEDED (round 14):** this prompt was used — round 14 shipped `mcp-tools.md` and
+> `mcp_example` as described. The live prompt is the one in round 14's section at the top of this
+> file. Kept as the record of what round 13 handed forward, not as an instruction to follow.
 
 *"Read `plugins/ai-gen/HANDOFF.md` — round 13 is newest and it is a triage round, so the roadmap
 for **rounds 14–18** is already fixed there and does not need re-deriving. Default next unit of
@@ -1399,8 +1592,8 @@ anything further is round 5+ and needs new material.
   the four still use. This plugin's own layout was already correct (skills always under
   `skills/`), so the fallback here is precautionary, not a fix for an observed failure.
 - Version is `0.0.1` and **no release tag exists** — deliberately unreleased (not because the
-  plugin is thin: it has 8 skills and **30** references as of round 13 — this line said 27 until
-  round 13 checked it; the user simply has not asked for a tag);
+  plugin is thin: it has 8 skills and **31** references as of round 14 — this line said 27 until
+  round 13 checked it, then 30 until round 14 added one; the user simply has not asked for a tag);
   `scripts/release.mjs` gates only its own plugin directory, so other plugins' releases are
   unaffected.
 

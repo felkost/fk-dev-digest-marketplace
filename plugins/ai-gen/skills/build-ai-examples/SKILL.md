@@ -19,6 +19,10 @@ Docker + React 19** (+ бібліотеки візуалізації Python), м
 - [references/rag-example.md](references/rag-example.md) — робочий RAG над власними
   документами: pgvector + LangGraph з retrieval-як-інструментом; код у
   `scripts/rag_example/`, офлайн-смоук у `tests/smoke_test.py`, розділ продакшн-дельт.
+- [references/mcp-example.md](references/mcp-example.md) — робочий MCP-сервер (усі три
+  примітиви, обидва чинні транспорти) + LangGraph-агент через `langchain-mcp-adapters`; код у
+  `scripts/mcp_example/`, офлайн-смоук + безкоштовна жива перевірка stdio (обидві реально
+  прогнані), розділ продакшн-дельт.
 - [references/document-loading.md](references/document-loading.md) — витягування тексту з
   реальних файлів: Word/PDF/Excel/SQL/аудіо/зображення/відео з режимами відмови, три рівні
   парсингу (текст → layout-aware → мультимодальний), збагачення на етапі індексації (метадані,
