@@ -14,7 +14,9 @@ description: Designs LLM/agent system architecture with explicit trade-offs and 
 - [references/architectures.md](references/architectures.md) — ReAct, RAG, multi-agent,
   human-in-the-loop: коли який, переваги, ризики, типові збої.
 - [references/mcp-tools.md](references/mcp-tools.md) — приєднання інструментів через MCP-сервери:
-  дизайн інструментів, безпека, версіонування.
+  три примітиви й ієрархія контролю, транспорти (stdio + Streamable HTTP) і форми розгортання,
+  ціна протоколу, дизайн інструментів (податок на кількість, семантичний добір, offloading),
+  обробка збоїв (backoff+jitter, ключ ідемпотентності), безпека Streamable HTTP, MCP inspector.
 - [references/memory-vector-db.md](references/memory-vector-db.md) — короткотривала і
   довготривала пам'ять, векторні бази даних: вибір сховища, ANN-індекси (Flat/IVF/HNSW/PQ/LSH)
   і трикутник recall-латентність-пам'ять, ручки побудови проти ручок запиту з назвами pgvector;

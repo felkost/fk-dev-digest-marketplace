@@ -1,0 +1,16 @@
+# Pin exact versions at build time -- look them up when generating the
+# example, do not trust remembered version numbers.
+#
+# journal.py imports none of this on purpose: the pure logic is testable
+# with a bare interpreter (see tests/smoke_test.py in the plugin root).
+#
+# mcp[cli] is pinned below 2 deliberately: the official SDK's v2 line was in
+# beta (each pre-release documented as carrying breaking changes) when this
+# example was written, and its own docs say v1.x remains the production
+# recommendation. Re-check that guidance before lifting the ceiling.
+
+mcp[cli]>=1.27,<2
+langchain-mcp-adapters
+langgraph
+langchain-openai
+python-dotenv     # loads .env into os.environ, used only by agent.py

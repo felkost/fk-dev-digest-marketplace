@@ -10,7 +10,7 @@ are in `design-agent-architecture/references/rag-pipeline.md`; this file covers 
 - Run it
 - Layout
 - Four decisions worth explaining
-- What the smoke test pins (14 checks, offline)
+- What the smoke test pins (this file's share, offline)
 - Production deltas
 
 ## Run it
@@ -104,9 +104,11 @@ the same model and version — mixing them degrades silently to noise rather tha
 Changing the embedding model is therefore a planned re-ingestion, and the schema makes that
 visible instead of leaving it as folklore.
 
-## What the smoke test pins (14 checks, offline)
+## What the smoke test pins (this file's share, offline)
 
-`python tests/smoke_test.py` from the plugin root. Grouped:
+`python tests/smoke_test.py` — 23 checks total (both examples this plugin ships); 14 of them
+are this file's own (mcp_example's share is in `mcp-example.md`). Run from the plugin root.
+Grouped:
 
 | Checks | What breaks if they go |
 |---|---|

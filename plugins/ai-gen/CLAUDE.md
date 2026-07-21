@@ -13,8 +13,8 @@ asked to touch another plugin or the marketplace root.
   persona). Each `skills/<name>/agents/openai.yaml` is a custom-GPT/Codex packaging descriptor
   consumed by the `chatgpt/` pipeline (`build_gpt_package.ps1` → `dist/*.zip`) — unrelated to the
   plugin-level `agents/` convention, and not scanned as such.
-- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–12 have shipped on
-  top of it; it is no longer a bare scaffold (8 skills, 30 references), but version stays `0.0.1`
+- The plugin's fixed enrichment roadmap (rounds 0–4) is complete and rounds 5–14 have shipped on
+  top of it; it is no longer a bare scaffold (8 skills, 31 references), but version stays `0.0.1`
   and untagged until the user says otherwise. Read `HANDOFF.md` first in every new session, and
   keep it updated at the end of a working session (the handoff protocol is part of the plugin's
   own methodology — see `skills/plan-ai-solution/SKILL.md` § «Handoff між сесіями»).
@@ -49,7 +49,23 @@ asked to touch another plugin or the marketplace root.
   appears once, in a sentence saying the *literature rarely covers* such attacks. Re-open the
   primary source and check the specific claim you are about to write, even when a trusted local
   note already says it was checked. When a record turns out wrong, correct it in place with a
-  marker rather than silently rewriting it.
+  marker rather than silently rewriting it. **Round 13 adds a cheaper-to-hit variant: a book's
+  own chapter summary is not a source for that chapter's body.** Lanham's summaries contradict
+  his prose twice — the body names the OpenAI *o-series* as the reasoning-native family while
+  the summary bullet writes "e.g., GPT-4o family", and the body says cognitive memory labels
+  "obscure the real distinction" while the summary says they "map cleanly to implementation
+  layers". Summaries are written to be quotable, which is exactly what makes them the tempting
+  thing to mine. Carry the body. **And a third species, found by reading the companion repo's
+  chapters 3–6: prose versus code.** The book explains Reciprocal Rank Fusion as the production
+  default for hybrid search; its own hybrid-RAG script implements an ad-hoc keyword scorer and
+  delegates fusion to the agent's judgement — no fusion function exists. When a source ships
+  runnable code, the code is a separate claim from the prose, and the two are checked
+  separately. Neither one ratifies the other. **Your own coverage grep is a brief too.** Round 13
+  produced two false "zero coverage" verdicts in one session from regex mistakes alone: `\b` in
+  `\bTree of Thought\b` refused to match the plural heading "Tree of Thoughts", and under `-E` the
+  alternation `a\|b` is a *literal pipe*, which silently turned six patterns into literal strings
+  and reported prompt caching as absent from a plugin that documents it in six files. Before
+  writing "this is a gap", open the file the grep searched.
 - **Tool documentation is a moving target: cite the technique, treat the identifier as volatile.**
   Class names, parameter names and doc URLs drift between releases — round 9 found LangChain's
   concept URLs 308-redirecting to a generic overview and LlamaIndex's docs on a new host, and the
@@ -61,7 +77,32 @@ asked to touch another plugin or the marketplace root.
   primary documented text-generation surface shifted from the Chat Completions guide toward the
   Responses API. `generation-parameters.md` cites OpenRouter (the plugin's actual provider) for
   concrete parameter ranges instead, precisely because it stayed reachable and current when the
-  upstream OpenAI guide didn't.
+  upstream OpenAI guide didn't. **A fourth instance (round 13) is a different and worse species:
+  a source can be current by publication date and stale by protocol.** Lanham's chapter 3,
+  supplied in 2026, teaches "MCP supports two transports, STDIO and SSE" throughout its tables,
+  listings and exercises — but the spec defines **stdio and Streamable HTTP**, and says
+  Streamable HTTP "replaces the HTTP+SSE transport from protocol version 2024-11-05", calling
+  that one deprecated. Note the trap on the correction side too: SSE did not disappear, it
+  became an optional streaming mechanism *inside* Streamable HTTP's single endpoint. Check the
+  specification, not the copyright year — and check your correction as hard as the claim. That
+  last clause is not rhetorical: round 13's own correction was verified against revision
+  `2025-06-18`, which the spec's versioning page already listed as superseded by `2025-11-25`
+  hours later. **Find the current revision through
+  <https://modelcontextprotocol.io/specification/versioning> rather than any pinned URL — a
+  pinned spec link in our own notes is exactly the artifact this rule warns about** — and date
+  the check when you record it. (Every claim carried this round survived verbatim in the newer
+  revision, and the `Origin` requirement got stronger, not weaker: an invalid `Origin` now
+  **MUST** be answered with HTTP 403.) **A fifth instance (round 14) needs no protocol history at
+  all — two current libraries in this plugin's own stack spell the same thing two different
+  ways.** The official MCP Python SDK's `FastMCP.run()` takes `transport="streamable-http"`
+  (hyphenated — verified against the pinned `v1.28.1` source); `langchain-mcp-adapters`'
+  client-side connection config takes `transport="streamable_http"` (underscored — verified
+  against its `sessions.py` source), though it also accepts `"streamable-http"`/`"http"` as
+  aliases. Both are current, both are correct for their own library, and copying either spelling
+  into the other library's code is a plausible-looking bug. Round 9's rule ("never copy a
+  parameter name from one library into a sentence about another") already covered this shape of
+  error across unrelated libraries; this instance is the same trap between two libraries meant to
+  be used *together*, which makes it easier to miss, not harder.
 - **Skill frontmatter descriptions must be in third person** (e.g. "Designs…", "Explains…"), per
   Anthropic's Skill authoring guidance — not the imperative ("Design…", "Explain…") this plugin
   used for its first eleven rounds without anyone checking against the published best-practices

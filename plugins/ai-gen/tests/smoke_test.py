@@ -1,12 +1,13 @@
-"""Offline smoke test for the RAG example's logic and its configuration.
+"""Offline smoke test for the build-ai-examples scripts' logic and config.
 
 Runs with a bare interpreter: no network, no API keys, no Postgres, no
-langchain/langgraph installed. That is possible because the example keeps its
-pure logic (chunking.py, retrieval.py, settings.py) free of third-party imports
-and puts the framework wiring in ingest.py/agent.py -- check 9 below is what
-keeps that property true.
+mcp/langchain/langgraph installed. That is possible because each example
+keeps its pure logic free of third-party imports and puts the framework
+wiring in separate files -- check 9 below is what keeps rag_example's half
+of that property true (mcp_example has no framework-importing pure module to
+guard, since journal.py is its only pure module and check 17 covers it).
 
-What it pins:
+What it pins, rag_example (pgvector + LangGraph RAG):
   1-3. the modules import, and import nothing that needs installing;
   4-6. the splitter's window count, overlap and short tail;
   7-9. ranking: a planted chunk is retrieved first, ties are deterministic,
@@ -14,6 +15,17 @@ What it pins:
  10-11. settings validation rejects contradictory chunk config;
  12-14. .env.example covers every variable the code reads, ships no filled-in
        secret, and the compose file parses.
+
+What it pins, mcp_example (MCP server + LangGraph agent -- the *offline* tier
+only; the live stdio round-trip is a separate check, see
+references/mcp-example.md, because it needs `mcp` installed and a real
+subprocess, which breaks the bare-interpreter promise above):
+ 15-17. the journal module imports, and imports nothing that needs installing;
+ 18-20. note logic: sequential ids, blank text rejected, an unknown id reads
+       as None rather than raising;
+ 21.   an empty journal reports itself as empty instead of "";
+ 22-23. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
 
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
@@ -31,7 +43,9 @@ import traceback
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "rag_example"
+MCP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "mcp_example"
 sys.path.insert(0, str(EXAMPLE))
+sys.path.insert(0, str(MCP_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -298,6 +312,123 @@ def _():
     assert any("pgvector" in i for i in images), f"no pgvector image in {images}"
     db = doc["services"]["db"]
     assert "healthcheck" in db, "db needs a healthcheck or ingest.py races the server"
+
+
+# --------------------------------------------------------------------------- #
+# 15-17. mcp_example: imports, and the offline-testability property
+# --------------------------------------------------------------------------- #
+
+@check("mcp_example directory exists with the expected files")
+def _():
+    for name in ("journal.py", "server.py", "agent.py", "test_live_stdio.py",
+                 ".env.example", "requirements.txt"):
+        assert (MCP_EXAMPLE / name).exists(), f"missing {name}"
+
+
+@check("journal module imports with no third-party packages installed")
+def _():
+    import journal  # noqa: F401
+
+
+@check("journal module imports ONLY stdlib (keeps this test runnable offline)")
+def _():
+    tree = ast.parse((MCP_EXAMPLE / "journal.py").read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names = [a.name.split(".")[0] for a in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            names = [(node.module or "").split(".")[0]]
+        else:
+            continue
+        for n in names:
+            assert n in STDLIB_OK, (
+                f"journal.py imports third-party '{n}'; move it to server.py/agent.py "
+                "or this smoke test stops running offline"
+            )
+
+
+# --------------------------------------------------------------------------- #
+# 18-21. mcp_example: note logic
+# --------------------------------------------------------------------------- #
+
+@check("add() assigns sequential ids and strips whitespace")
+def _():
+    from journal import Journal
+    j = Journal()
+    first = j.add("  first note  ")
+    second = j.add("second note")
+    assert (first.id, first.text) == (1, "first note")
+    assert second.id == 2, "ids must be sequential across instances of one journal"
+
+
+@check("add() rejects blank text")
+def _():
+    from journal import Journal
+    j = Journal()
+    try:
+        j.add("   ")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("blank text must raise ValueError, not silently store")
+
+
+@check("get() distinguishes a known id from an unknown one")
+def _():
+    from journal import Journal
+    j = Journal()
+    note = j.add("track me")
+    assert j.get(note.id) == note
+    assert j.get(note.id + 1) is None, "an unknown id must read as None, not raise"
+
+
+@check("format_all() names emptiness instead of returning an empty string")
+def _():
+    from journal import Journal
+    j = Journal()
+    assert j.format_all() == "(journal is empty)"
+    j.add("one")
+    assert "(journal is empty)" not in j.format_all()
+    assert j.list_all() == [j.get(1)]
+
+
+# --------------------------------------------------------------------------- #
+# 22-23. mcp_example: configuration file
+# --------------------------------------------------------------------------- #
+
+def _mcp_env_example_keys() -> set[str]:
+    keys = set()
+    for line in (MCP_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            keys.add(line.split("=", 1)[0].strip())
+    return keys
+
+
+@check(".env.example (mcp_example) covers every variable agent.py reads")
+def _():
+    read = set()
+    for py in sorted(MCP_EXAMPLE.glob("*.py")):
+        src = py.read_text(encoding="utf-8")
+        read |= set(re.findall(r"os\.environ\.get\(\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"os\.environ\[\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"os\.getenv\(\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"_require\(\s*[\"']([A-Z_]+)[\"']", src))
+    missing = read - _mcp_env_example_keys()
+    assert not missing, f".env.example (mcp_example) is missing: {sorted(missing)}"
+
+
+@check(".env.example (mcp_example) ships no filled-in secret")
+def _():
+    for line in (MCP_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value in ("", "not-needed-for-local"), (
+                f"{key} looks filled in ({value!r}) -- .env.example must ship blank"
+            )
 
 
 # --------------------------------------------------------------------------- #

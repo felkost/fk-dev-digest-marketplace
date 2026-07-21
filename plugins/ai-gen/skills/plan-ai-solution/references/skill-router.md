@@ -88,6 +88,7 @@ Ukrainian the user is likely to type.
 | «донавчити ембединги», fine-tune ретривера, спільне навчання retriever+LLM | `select-genai-models` | `references/build-vs-use.md` |
 | «пам'ять між сесіями», persistent knowledge base, «щоб агент пам'ятав» | `design-agent-architecture` | `references/memory-vector-db.md` |
 | «підключи інструменти», MCP server/tool design, tool permissions | `design-agent-architecture` | `references/mcp-tools.md` |
+| «покажи робочий MCP-сервер», код tool/resource/prompt, langchain-mcp-adapters | `build-ai-examples` | `references/mcp-example.md` |
 | «щоб працювало саме», автономний цикл, автоматизації, worktrees, субагенти | `design-agent-architecture` | `references/loop-engineering.md` |
 | «коли агенту можна не питати», stop conditions, autonomy boundaries | `design-agent-architecture` | `references/autonomy-contracts.md` |
 | «як виміряти якість», eval set, LLM-суддя, регресії якості | `evaluate-optimize-models` | `references/evaluation.md` |

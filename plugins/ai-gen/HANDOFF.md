@@ -1,11 +1,690 @@
 # Session handoff — ai-gen
 
-Newest round on top (eda-skills convention). Last updated 2026-07-20, end of **round 12** —
-alignment with a new book source plus an Anthropic Skill-authoring audit. Branch not yet merged.
-Written for a fresh Claude session with no conversation history — read this whole file before
-touching anything.
+Newest round on top (eda-skills convention). Last updated 2026-07-21, end of **round 14** — the
+first content round off round 13's fixed roadmap: `mcp-tools.md` in depth plus a runnable,
+tested `mcp_example`. Rounds 15–18 remain, same cadence (one chapter's worth of gaps per round,
+each shipping a code example with tests — the user's standing requirement from round 13). Written
+for a fresh Claude session with no conversation history — read this whole file before touching
+anything.
 
-## What just happened (round 12 — "AI Agents in Action" alignment + Anthropic best-practices audit, 2026-07-20, branch `feat/ai-gen-agents-in-action-alignment` off `main`)
+## What just happened (round 14 — MCP in depth + `mcp_example`, 2026-07-21, branch `docs/ai-gen-lanham-ch3-6-triage` off `main`, same branch as round 13 by the user's explicit instruction)
+
+**Branching decision, worth not re-litigating:** every prior content round opened a fresh
+`feat/...` branch off `main` once its triage round's branch had merged (round 7 → PR #12, round 8
+on a new branch → PR #13, and so on). This round, the user explicitly said to keep going on
+`docs/ai-gen-lanham-ch3-6-triage` instead — round 13's triage commit (`a6dbde1`) and round 14's
+content commit both land in one PR. Round 13's branch name (a `docs/` prefix) is now slightly
+stale for what it carries, left as-is rather than renamed mid-branch.
+
+### Verified fresh before writing, not carried from round 13's citations
+
+Round 13's own rule ("a source can be current by publication date and stale by protocol", and "our
+own record is not a source") applied to round 13's *own* quotes this time:
+
+- **Spec revision**: still `2025-11-25` (re-checked via the versioning page, 2026-07-21) — round
+  13's citations survive. The transports page and the server-overview control-hierarchy table were
+  re-fetched and re-quoted directly into `mcp-tools.md` rather than copied from HANDOFF.
+- **`langchain-mcp-adapters`** is at **0.3.0**. Its own README quickstart (fetched verbatim, not
+  paraphrased) shows `MultiServerMCPClient({...})` → `await client.get_tools()` — a simpler, more
+  current call than the `session()` + `load_mcp_tools()` two-step this plugin's own round-13 plan
+  expected. Its connection-config `transport` literal is `Literal["stdio", "sse",
+  "streamable_http"]` (underscored, confirmed from `sessions.py` source), though
+  `create_session()` also accepts `"streamable-http"` and `"http"` as aliases.
+- **The official SDK is mid major-version transition**: `mcp` 1.28.1 is the current *stable*
+  release; `2.0.0b2` is a beta with "each pre-release may contain breaking changes" in its own
+  docs, and the project's own guidance says v1.x remains the production recommendation.
+  `mcp_example/requirements.txt` pins `mcp[cli]>=1.27,<2` on purpose, with a comment naming why —
+  re-check that ceiling before lifting it.
+- **`FastMCP.run()`'s real signature, fetched from the pinned `v1.28.1` source** (not guessed):
+  `run(transport: Literal["stdio", "sse", "streamable-http"] = "stdio", mount_path=None)` — no
+  `host`/`port` kwargs. Those are constructor-only (`FastMCP(..., host=..., port=...)`). An early
+  draft of `server.py` passed `port=` into `run()`; the source check caught it before it shipped,
+  not a test run — the kind of mistake `mcp.run(transport="streamable-http", port=8000)` reads
+  as plausible enough to not question without checking.
+- **The companion repo files were re-fetched directly** (`chapter_03/01_complete_mcp_server.py`,
+  `chapter_03/06_mcp_time_travel_tracker.py`) rather than trusting round 13's paraphrase of them —
+  both matched what round 13 recorded, exactly.
+- **`langgraph-bigtool`** (`langchain-ai` org, `pip install langgraph-bigtool`) is a real,
+  current implementation of semantic tool discovery: `create_agent()`, a tool registry dict, a
+  LangGraph `Store` (in-memory or Postgres) indexing tool metadata by embedding, a
+  `retrieve_tools_function` hook. Cited by name in `mcp-tools.md`. **Not carried:** the specific
+  benchmark numbers (99.6% token reduction, 97.1% hit rate, MRR 0.91) from an arXiv paper
+  surfaced in the same search — precisely the kind of figure `CLAUDE.md` says not to carry, cited
+  or not.
+
+### A fifth instance of "tool documentation is a moving target" — this time within one stack
+
+Added to `CLAUDE.md`: the official SDK's own `FastMCP.run()` takes `transport="streamable-http"`
+(**hyphenated**); `langchain-mcp-adapters`' client-side connection config takes
+`"streamable_http"` (**underscored**). Two libraries this plugin's own reference stack pairs
+together, verified from each one's source this round, spelling the same transport two different
+ways. `mcp-tools.md` and `mcp-example.md` both name the mismatch explicitly rather than picking
+one spelling and letting a reader copy it into the wrong file.
+
+### What shipped
+
+- **`design-agent-architecture/references/mcp-tools.md` 105 → 226 lines**: the three primitives
+  and control hierarchy (spec table); transports as stdio + Streamable HTTP with the deprecation
+  note and the "SSE survives inside Streamable HTTP" correction on both sides of the error;
+  deployment shapes ("hybrid" is a property of an agent's server *set*); the protocol's price;
+  the state-semantics shift; Streamable HTTP's security requirements (`Origin` → 403, localhost
+  bind, auth); the tool-count tax and attention overload (sourced to ch. 4 §4.2.1, not ch. 3);
+  semantic tool discovery and output offloading in §Tool design rules; backoff+jitter and an
+  idempotency key in §Handling tool failure (the three items round 13's Oracle-article addendum
+  folded into this round); the MCP inspector; a cross-link to the worked example. Confirmed live,
+  not just asserted: a tool-side exception surfaces to the client as `isError: true` on an
+  ordinary result, never a raised exception — `mcp-tools.md`'s existing "handling tool failure as
+  normal control flow" section now cites that as a protocol-level fact, not only a design
+  recommendation.
+- **New `build-ai-examples/references/mcp-example.md`** (references 30 → **31**) + runnable code
+  in **`build-ai-examples/scripts/mcp_example/`**: `journal.py` (pure, stdlib-only note store),
+  `server.py` (FastMCP, all three primitives, `--transport {stdio,streamable-http}`), `agent.py`
+  (LangGraph via `langchain-mcp-adapters`, gated behind the user's OpenRouter key),
+  `test_live_stdio.py` (the free live check), `.env.example`, `requirements.txt`. The build
+  script already stages `scripts/`, so the zip picked it up once rebuilt.
+- **`tests/smoke_test.py` 14 → 23 checks**: 9 new, all pure-`journal.py` logic (sequential ids,
+  blank-text rejection, unknown-id lookup, empty-journal formatting, plus the file/import/
+  `.env.example` scaffolding checks rag_example already had a pattern for). `rag_example`'s own
+  14 are unchanged and still pass; `MCP_EXAMPLE` is a second directory constant alongside
+  `EXAMPLE`, both on `sys.path`.
+- **Wiring**: both `build-ai-examples/SKILL.md` and `design-agent-architecture/SKILL.md` §Довідки,
+  `skill-router.md` (+1 row), `README.md`'s API-keys section (+1 example, and the section header
+  went from singular to plural since it now covers two).
+
+### The two companion-repo corrections, now embodied in running code, not just described
+
+- `01_complete_mcp_server.py`'s `welcome()` prompt calls `get_greeting(name)` directly as a plain
+  function, bypassing the resource protocol. `server.py`'s `summarize_notes()` prompt does not:
+  it names `journal://notes` and lets the caller fetch it separately. `test_live_stdio.py` asserts
+  this directly — the prompt text contains the resource URI and does **not** contain a note's
+  actual text.
+- `06_mcp_time_travel_tracker.py` ends in `mcp.run(transport="sse")`. `server.py` defaults to
+  `stdio` and offers `streamable-http`; both transports were actually exercised this round (the
+  stdio path by the automated live test, the HTTP path by hand with `curl`, capturing a real
+  `{"protocolVersion":"2025-11-25", ..., "serverInfo":{"name":"Scratchpad","version":"1.28.1"}}`
+  response over HTTP 200) — not shipped on the strength of matching the SDK's documented shape
+  alone.
+
+### A live run that proved the test wrong, not the code — a different value than round 6's bug hunt
+
+Round 6's live RAG run found three real bugs in shipped code. This round's first live run of
+`test_live_stdio.py` failed one check — but the failure was in the **test's own assumption**: it
+expected a tool-side `ValueError` to raise through `call_tool()`, wrapped in `try`/`except`. MCP
+does not work that way by design — a tool execution error comes back as an ordinary
+`CallToolResult` with `isError=True`, precisely so the agent can observe and reason about the
+failure rather than have its turn interrupted by an exception. `server.py` was already correct;
+the test was rewritten to assert `isError` instead of catching an exception, and now documents the
+protocol behavior it initially got wrong. Worth carrying forward: "run it for real" surfaces two
+different kinds of finding — sometimes the code is wrong (round 6), sometimes your own test's
+mental model of the system is (this round) — and the second kind is just as easy to ship
+unnoticed if the test is never actually executed.
+
+### `create_react_agent` kept, not migrated — a consistency call, not an oversight
+
+`langchain-mcp-adapters`' own README quickstart uses `langchain.agents.create_agent` (the
+successor API) rather than `langgraph.prebuilt.create_react_agent`. `rag-example.md` already
+recorded that `create_react_agent` is deprecated as of LangGraph V1.0 and still live-tested as
+working. `agent.py` here uses `create_react_agent` again, for consistency with that already-shipped,
+already-verified example rather than introducing a second, untested agent-construction pattern in
+the same plugin — with a comment pointing at `rag-example.md`'s note rather than duplicating it.
+Revisit both together if a future round migrates one.
+
+### A real gap in `check_docs.py` itself, found and fixed
+
+Check 7 (the smoke-check-count guard) flagged five lines in `HANDOFF.md` as "wrong" the moment the
+smoke count changed from 14 — every one of them a **historical** statement, accurate when it was
+written (round 2's "New `tests/smoke_test.py` — 14 checks", round 6's summary line, a quoted past
+error message). The check had never been exercised against a real count change before — 14 had
+stood since round 2 — so this class of false positive was latent, not previously triggered.
+`HANDOFF.md` is now excluded from check 7's scan, with a comment explaining why: it is a
+chronological log, not a living doc, and the check exists to catch the eda-skills-README failure
+mode (a *current*, displayed claim silently going stale), which a dated round entry is not an
+instance of. `rag-example.md`'s own count line was reworded to state the true total (23) next to
+the word "smoke" within the check's matching window, rather than removed — the guard still has
+real coverage on both example references, not zero.
+
+### Verification actually run
+
+Live, this session, not assumed: the stdio round-trip (`test_live_stdio.py`, 10/10, including the
+fix above), the Streamable HTTP transport (manual `curl` against a real running server), and the
+MCP-to-LangChain bridge (`client.get_tools()` against the real subprocess, returning `add_note`'s
+real name/description/schema — no OpenRouter key needed for this part). **Not run, and it needs
+the user's OpenRouter key to change that:** `agent.py`'s actual model call.
+
+`python tests/check_docs.py` (7/7, 8 skills / **31** references) · `python tests/smoke_test.py`
+(**23/23**) · `scripts/mcp_example/test_live_stdio.py` (10/10) · `& .\chatgpt\build_gpt_package.ps1`
+(zip rebuilt, **166,438 bytes**; `gpt_instructions.md` unmoved at 6,928 bytes, headroom 1,072 —
+references ride free, confirmed again) · from repo root: `npm run lint` (8 plugins, 0 warnings),
+`lint:plugins` (9 targets, 4 accepted warnings, unchanged), `lint:markdown` (**402** files, 0
+errors), `lint:format` clean, `build:catalog` (**61 skills**, unchanged — no `description`
+touched), `site` `npm run build` (tsc + vite, clean) · `evals` `eval:quality` (61 skills, 0
+failures, same pre-existing WARNs as every round). `build:catalog`'s only diff both times it ran
+was `catalog.json`'s `generatedAt` timestamp — reverted each time, out of this plugin's scope.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 14 is newest. The roadmap for rounds 15–18 was fixed
+in round 13 and does not need re-deriving. Default next unit of work is **round 15: reasoning
+structures**, a new `design-agent-architecture/references/reasoning-patterns.md` (~180–220 lines;
+do not pre-compute its reference ordinal in prose — count it after writing). User's decision,
+2026-07-21, do not re-open: a separate file, not scattered across `architectures.md` +
+`prompt-techniques.md` + `reasoning-models.md`. Content: decomposition vs planning as two
+operations that fail independently; a CoT/ReAct/ToT/Reflexion selection table; what actually
+defines ReAct (the feedback loop, not the presence of a tool call); ToT needs orchestration code,
+not a single prompt; Reflexion from the primary source (Shinn et al., arXiv 2303.11366) with the
+feedback-signal honesty round 13 already worked out; the plan as a property of the architecture,
+re-read each step, not the model; `sequential-thinking` as the scratchpad instance (check its tool
+surface against the server's own README at write time, per the standing identifier-volatility
+rule). Example, per the standing per-round requirement: a solver–critic Reflexion loop in
+LangGraph that **must not hardcode an oracle** the way the book's `chapter_05/03_reflexion_agents.py`
+does (`TARGET_DAYS` handed straight to the critic) — the feedback signal must come from a
+checkable property (tests pass, schema validates), and an offline test must assert the substring
+trap the book's own demo has (`'26' in '126 days'` must not read as success). Follow round 14's
+discipline: verify every identifier fresh (the sequential-thinking server's tools, LangGraph's
+current stub/mock pattern for injecting scripted model responses) rather than trusting this
+prompt's phrasing, and actually run whatever the free tier of the test ladder allows before
+calling it done — round 14 caught a real bug in its own first test draft exactly that way, not by
+reviewing the code.*
+
+*Small carry-overs, easy to lose: `prompt-techniques.md` §Tree of Thoughts gets one added line
+about orchestration (per round 13's plan); `reasoning-models.md` gets a cross-link from
+§Model-native vs structured. Sync `check_docs.py`'s smoke-count guard if the count changes again
+(it will), and rebuild the zip — a new reference means check 5 fails until
+`& .\chatgpt\build_gpt_package.ps1` runs.*
+
+*If instead the user brings something else — chapters 7–11 of the book (not in hand; triage
+before writing), a fresh source batch, an audit — nothing is blocking; state what round 15 would
+have been and let the user redirect."*
+
+## What happened before (round 13 — triage of *AI Agents in Action* ch. 3–6 + roadmap, 2026-07-21, branch `docs/ai-gen-lanham-ch3-6-triage` off `main`)
+
+A round-0/round-7-shaped session: **no reference content was written.** The user supplied the
+continuation of round 12's source and asked for analysis, a plan for using it, and then the
+bookkeeping chain. Skills and references are unchanged at **8 / 30**.
+
+### The source, and how much of it there actually is
+
+`C:\Users\felko\Downloads\AI agents in the action 2.pdf` — Micheal Lanham, *AI Agents in Action*,
+2nd ed. (Manning), the user's own MEAP→Word export (created 2026-07-21). Round 12 handled
+chapters 1–2 and recorded that chapters 3+ were unread; this is them.
+
+**The harness attachment listing undercounted the PDF for the fourth time, and by the widest
+margin yet: it said 35 pages, `doc.page_count` says 143.** It is not one chapter but four —
+**3** (MCP), **4** (multi-agent systems), **5** (reasoning and planning), **6** (RAG and memory).
+Taking the harness at its word would have triaged a quarter of the source. Round 7's rule
+(check `page_count` via PyMuPDF *before* triage) has now paid for itself four times.
+
+### The finding that matters most: a source can be current by date and stale by protocol
+
+`CLAUDE.md`'s "tool documentation is a moving target" rule has so far caught *doc hosts* moving
+(LangChain, LlamaIndex, OpenAI). This is a worse species. Chapter 3 teaches, across its transport
+table, its listings (`mcp run -t sse`, `MCPServerSse`, `http://localhost:8000/sse`) and every
+exercise, that **MCP has two transports, STDIO and SSE**. Verified against the specification
+before accepting any of it:
+
+- The spec: "The protocol currently defines two standard transport mechanisms for client-server
+  communication: **stdio** … and **Streamable HTTP**." Streamable HTTP "**replaces** the HTTP+SSE
+  transport from protocol version 2024-11-05", and the backwards-compatibility section calls that
+  one "the **deprecated** HTTP+SSE transport".
+
+  > **CURRENCY NOTE (same session, and the rule bit its own author).** These quotes were first
+  > taken from revision `2025-06-18`. The spec's versioning page says the **current** revision is
+  > **`2025-11-25`** — so this round's own citation was stale within hours of being written.
+  > Re-verified against `2025-11-25`: every claim above survives **verbatim**, and the `Origin`
+  > requirement is now *stronger* (an invalid `Origin` **MUST** get HTTP 403). Do not pin a
+  > revision URL from this file; resolve the current one through
+  > <https://modelcontextprotocol.io/specification/versioning> and date your check.
+- **The trap is on the correction side too.** SSE did not disappear: Streamable HTTP may open SSE
+  streams, over a *single* MCP endpoint supporting POST and GET. So "the two transports are stdio
+  and SSE" is wrong, and "SSE is gone" is also wrong. Whoever writes round 13's transport section
+  must state both halves.
+
+Two more places the book cannot be copied verbatim:
+
+- **Its "standard MCP servers" table is partly stale.** Brave Search, GitHub, GitLab and others
+  are now in `servers-archived`; of the servers it names, `filesystem`, `memory`, `fetch` and
+  `sequentialthinking` are still active reference implementations (checked against the
+  `modelcontextprotocol/servers` README). Carry the *role* a server plays, never the roster.
+- **It blurs the control hierarchy**: "resources and prompts are typically user-controlled or
+  application-controlled". The spec's server overview is precise and tabular — **Prompts →
+  User-controlled, Resources → Application-controlled, Tools → Model-controlled**. Cite the spec.
+
+### Second new rule: a book's chapter summary is not a source for that chapter's body
+
+Lanham's end-of-chapter summaries contradict his own prose twice, and both would have been
+tempting to quote because summaries are written to be quotable:
+
+- **ch. 5** body: the reasoning-native family is "the OpenAI **'o' family**". Summary bullet:
+  "newer reasoning-native models (**e.g., GPT-4o family**)". Different things.
+- **ch. 6** body: cognitive memory labels "**obscure** the real distinction". Summary bullet:
+  "Cognitive analogues **map cleanly** to implementation layers".
+
+Recorded in `CLAUDE.md` alongside "a brief is not a source, and neither is our own triage record".
+This does not revisit round 12's Tier B verdict — it reinforces it. Carry the body.
+
+### Third: the book overstates Reflexion's limitation, and the paper says so
+
+Chapter 5 concludes that "a significant shortcoming of this pattern is that it requires
+understanding the correct solution" — a generalization from its own example, which simply
+hardcodes `correct_days = 26`. **Reflexion** (Shinn, Cassano, Berman, Gopinath, Narasimhan & Yao,
+<https://arxiv.org/abs/2303.11366>) says in its abstract: reinforce agents "**not by updating
+weights**, but instead through linguistic feedback"; agents "maintain their own reflective text in
+an **episodic memory buffer**"; and the framework takes feedback of various types ("scalar values
+or free-form language") from sources "**external or internally simulated**". An internally
+simulated signal is explicitly in scope, so the honest framing is that **the quality of the
+critique is bounded by the quality of the feedback signal** — which lands on rules this plugin
+already carries (`evaluation.md`: a machine-labelled set measures the labeller until a human
+bounds it; Karim §7.2 on confirmation bias between similar models). The book's "no actual
+learning happens, there is no weight update" correction, by contrast, is **right** and matches
+the abstract.
+
+### The trap I set for myself: `\b` ate a plural
+
+An early coverage screen ran `grep -E '\bTree of Thought\b'` over the skills, got **zero**, and
+nearly produced a "ToT is a gap" verdict. `prompt-techniques.md:119` has a full **Tree of
+Thoughts** section with Yao et al. — the word-boundary refused to match the plural. This is the
+same shape of error as trusting a brief: the screen was the brief. **A "zero coverage" verdict
+gets confirmed against the file, not against a grep.**
+
+**It then happened a second time in the same session, differently.** Screening the Oracle article
+ran `grep -E "stable prefix\|prompt cach"` — `-E` is extended regex, where `\|` is a *literal pipe*,
+not alternation. Six patterns silently became literal strings and reported **ZERO**. Prompt caching
+was "missing" from a plugin that documents it in six files. Two different regex mistakes, two
+false gap verdicts, one session. The rule stands and now has teeth: **treat your own grep as a
+brief, not as a source.**
+
+### Verdicts: what is already covered (do not rewrite)
+
+| Topic in the book | Where it already lives |
+|---|---|
+| JSON-RPC 2.0 substrate, language-agnosticism, `tools/list`/`tools/call`, transport-scoped auth | `mcp-tools.md` (round 12) |
+| Tool descriptions are prompts; registering a tool ≠ the model using it | `mcp-tools.md` (round 12 + follow-up) |
+| Pattern catalogue (sequential / parallel / orchestrator / collaboration / routing) | `architectures.md` §Workflow patterns, §Multi-agent, §Choosing |
+| State-sharing substrates (thread / blackboard / chained) | `architectures.md` (round 12) |
+| CoT, self-consistency, least-to-most, **Tree of Thoughts** | `prompt-techniques.md`, with primary sources and sharper caveats than the book's |
+| ReAct as think → act → observe | `architectures.md:104` |
+| RAG core: two phases, embeddings, ANN, chunking, hybrid, RRF, TF-IDF/BM25, top-k, freshness | rounds 2/9/10/11 |
+| Grounding, hallucination detection **and correction**, citations | `rag-pipeline.md` §5 and §Hallucination |
+| knowledge ≠ memory as an axis | `memory-vector-db.md` (round 12) |
+| Entity resolution as the hard part of graph construction | `graph-rag.md` (round 8) |
+| Generating the questions that should retrieve an item (index-time inverse of HyDE) | `document-loading.md` (round 11) — same technique the book calls semantic memory augmentation |
+| Memory consolidation: merge duplicates, delete what proved wrong, supersede | `memory-vector-db.md` §Write-back |
+
+### Verdicts: the real gaps (confirmed by reading the files, not by grep)
+
+**Chapter 3 → `mcp-tools.md` (105 lines).** The three primitives and the **control hierarchy**
+(the file names tools/resources/prompts once in its intro and then only ever discusses tools —
+who decides *when* each primitive is used appears nowhere); **transports and deployment shapes**
+(zero), including the correction that a given server is either local or remote and "hybrid" means
+a *set* of servers; the spec's **Streamable HTTP security requirements** (validate `Origin`
+against DNS rebinding, bind to `127.0.0.1` locally, authenticate) which the Security section
+lacks; **the protocol's price** (an extra process, connection and protocol hop per call — reach
+for MCP when the tool is genuinely external, prefer an in-process call for one agent's private
+logic); the **state-semantics shift** when an in-process tool becomes a server (a module-level
+journal that was private to one agent becomes shared across every agent connected over HTTP — an
+architectural change disguised as copy-paste); the **MCP inspector** as the debugging surface;
+and the **tool-count tax** plus the attention-overload failure where overlapping descriptions
+(`search_documents` vs `search_files`) break tool selection — **that last item is sourced from
+ch. 4 §4.2.1, not ch. 3**; it is filed here because its destination is tool design, and round 13
+originally mis-attributed it to chapter 3.
+
+**Chapter 5 → no reference covers this ground.** **Reflexion: zero mentions plugin-wide.**
+Decomposition vs planning as two operations that fail independently (the fix differs by which
+one broke). A single selection table (CoT / ReAct / ToT / Reflexion × what for × cost × when
+not to). **ToT cannot be invoked by one prompt** — pruning and backtracking live in orchestration
+code, which for this plugin means LangGraph. **The plan is a property of the architecture, not
+the model**: an LLM has no persistent state between calls and no world model, so a global plan
+has to live outside and be re-read each step. The **sequential-thinking server** (still an active
+reference server) as the concrete instance — "it does no thinking; it is external storage for the
+outputs of thinking".
+
+**Chapter 4 → `architectures.md` / `agent-ops.md`.** The three axes to settle *before* picking a
+pattern — decision-making (authority to decide) / control (authority to execute) / communication
+(what the next agent actually sees), with coordination as a fourth; `architectures.md` opens
+straight into patterns. The **parallel-flow vs hierarchical-coordination discriminator**: if the
+orchestrator could be replaced by a fan-out/fan-in primitive it is parallel flow. **Critique vs
+debate** (one-to-one and hierarchical vs many-to-many and peer; symmetric vs asymmetric; both
+need a stopping condition). **Voting/best-of-N: diversity is the design problem inside the
+pattern** — a naive majority fails when the majority is confidently wrong, and the strongest
+lever is *different models*, weaker is *different prompts*; this meets the Karim §7.2 citation
+the plugin already carries. The **guardrail cost ladder** (code/schema/regex → classifier model →
+LLM guardrail), with "a guardrail is a semantic circuit breaker that halts before a risky action,
+not a post-hoc filter", the warning that the guardrail layer can rival the agent's own cost, and
+that **the validator can be wrong in the same direction as the agent**. **Callbacks observe and
+log; guardrails block and correct.** **Handoff failure modes**: shape failure, context leakage,
+instruction injection — guardrail the high-stakes handoffs, not every one. **Agent naming and a
+registry**: names are the identifiers in traces, renaming breaks saved traces, `domain.role.version`
+is a common convention. **Retry with exponential backoff and jitter** (`mcp-tools.md` has the cap
+but not the backoff).
+
+**Chapter 6 → `rag-pipeline.md` / `memory-vector-db.md`.** **Read-side authorization is a genuine
+hole**: §"The retrieval surface is an attack surface" covers *write* paths and injection, and
+trust tiers are about ranking, not permissions — the book names a different failure class, where
+vector similarity hands a confidential document to a user who has no right to it. That is ACLs on
+the index and multi-tenancy, not injection. **Degrees of grounding** (weak = consistent with the
+context; strong = every claim traceable to a passage with a citation) chosen by stakes.
+**The memory vocabulary** (sensory / working / episodic / semantic / procedural) — zero mentions —
+to be taken the way the book's *body* takes it: "the vocabulary is a tool, not a model", with the
+architectural pieces (context window / external storage / state management / retrieval) doing the
+honest describing. **Compression as a mechanism** (cluster, e.g. k-means → summarize each cluster
+→ re-index; memory benefits from periodic passes, a knowledge store mostly from the first).
+**Forgetting as a compliance question**: in regulated industries retention requirements make
+aggressive pruning legally risky, and over-eager forgetting creates its own. And the honest line
+that **an MCP memory server is a thin wrapper** — the real work is the extraction logic deciding
+what to remember and the retrieval logic deciding what to surface.
+
+### Decision: still no 9th skill
+
+Round 7's verdict holds and was re-checked against this batch. MCP, multi-agent design, reasoning
+structure and memory all belong to `design-agent-architecture`; guardrails and tracing to
+`evaluate-optimize-models`. A new skill would split one decision across two discovery surfaces and
+spend `gpt_instructions.md` headroom (1,072 bytes) that nothing here needs.
+
+### The companion repository, chapters 03–06, was read this round
+
+<https://github.com/cxbxmxcx/AI-Agent-Workflows> — round 12 mined `chapter_02/`; this round read
+the source of `chapter_03/` … `chapter_06/`. Five findings, and they change what the examples in
+rounds 14–17 should look like.
+
+1. **The deprecated transport is in the executable code, not only the prose.**
+   `chapter_03/06_mcp_time_travel_tracker.py` ends in `mcp.run(transport="sse")`. The module-level
+   `_journal = []` in the same file confirms the shared-state point verbatim.
+2. **The best file in chapter 3 is absent from the book.**
+   `chapter_03/01_complete_mcp_server.py` is never referenced in the text, yet it is the only place
+   all **three primitives** appear together — `@mcp.resource("greeting://{name}")`, `@mcp.tool()`,
+   `@mcp.prompt()` — while the prose says "we generally focus on using tools". The repo closes the
+   exact gap the prose leaves. **Do not copy its shape, though:** its `welcome()` prompt calls
+   `get_greeting(name)` as an ordinary Python function, bypassing the resource protocol. That works
+   in-process and conflates a resource with a function.
+3. **Reflexion hardcodes the oracle, which settles the disagreement with the book.**
+   `chapter_05/03_reflexion_agents.py` sets `TARGET_DAYS = "26"` and hands it to the critic in the
+   prompt (`"Expected final days: {TARGET_DAYS}"`). The "critic" therefore compares against a known
+   answer rather than evaluating the work. The book's generalization — that Reflexion *requires*
+   knowing the correct solution — is an artifact of this demo, not a property of the pattern
+   (Shinn et al. explicitly allow an "internally simulated" signal). **It also carries a real
+   defect:** success is `TARGET_DAYS in answer`, a **substring** test, so "126 days" or "2026"
+   passes as the answer "26".
+4. **An inverted guardrail — the most serious defect in the batch.**
+   `chapter_04/09_agent_passoff_guardrails.py` passes
+   `tripwire_triggered=result.final_output.is_sufficiently_detailed`, so the tripwire fires when the
+   plan **is** sufficiently detailed: good plans are rejected, thin ones pass. The sibling
+   `08_agent_guardrails.py` writes `is_sufficiently_detailed is False` for the same field, and the
+   book's prose describes the second behaviour. The files contradict each other and 09 is the wrong
+   one. **Why it is worth teaching:** an inverted guardrail looks like it works in a demo — the flow
+   simply takes the fallback branch — so the failure is silent.
+5. **The chapter-6 hybrid RAG has no RRF, though the prose explains it.** §6.3.3 presents Reciprocal
+   Rank Fusion (k ≈ 60) as the production default; `chapter_06/02_RAG_agent_hybrid.py` implements an
+   ad-hoc keyword scorer (+10 exact phrase, +2 per word) and delegates fusion to the *agent's
+   judgement* — there is no fusion function. Its Chroma collection is also created with no explicit
+   embedding function, so it runs a default local model rather than the OpenAI embeddings §6.2.1
+   discusses. **This is a third species of self-contradiction** — after summary-vs-body and
+   date-vs-protocol, now **prose-vs-code**, recorded in `CLAUDE.md`.
+
+Two operational notes. **Filenames drift between the book and the repo**, so never cite a listing
+name without checking: `06_agent_to_agent_monitroing_handoffs.py`, `10_agent__guardrails_retry.py`,
+`02_RAG_agent_vecotr.py` beside the correct `02_RAG_agent_vector.py`, and the book's
+`03_relexion_agents.py` against the repo's `03_reflexion_agents.py`; `chapter_06/` also holds ~8
+`test_*`/`debug_*` files the book never mentions. And **`chapter_05/03_ToT_agents.py` is
+syntactically clean** — the stray `"""ee` seen while reading was an artifact of the PDF's Word
+export, not the repo — while confirming the plan's point: it evaluates only the first level of
+thoughts, with no pruning and no backtracking.
+
+### Roadmap for rounds 14–18 (fixed this round; renumbered — see the plan-review section)
+
+One chapter per round. Each closes gaps named above, rewrites nothing already covered, and — the
+user's standing requirement, added 2026-07-21 — **ships a runnable code example with tests.**
+Rules for the examples, so no round re-derives them:
+
+- **Where code lives:** `skills/build-ai-examples/scripts/<name>_example/` plus a compact reference
+  in `build-ai-examples/references/` (the `rag_example` precedent), cross-linked from the design
+  reference that teaches the concept.
+- **Stack is ours, not the book's:** MCP servers on the official Python SDK, agent side on
+  LangGraph with OpenRouter. The bridge was verified this session: **`langchain-mcp-adapters`**
+  (PyPI) with
+  `MultiServerMCPClient` / `load_mcp_tools()`, supporting stdio and Streamable HTTP. Verify every
+  identifier at write time. (Known trap: the official SDK's `mcp.server.fastmcp` versus the separate
+  `fastmcp` 2.x package — name which one you used.)
+- **The book's listings are not copied.** They are OpenAI Agents SDK; carry the mechanism, not the
+  text. That also disposes of the licensing question.
+- **Test ladder:** (1) pure logic, stdlib-only, offline in `tests/smoke_test.py` — the round-2
+  invariant; (2) a free live check wherever the substrate allows one — for MCP that is launching the
+  server as a subprocess and driving `tools/list` + `tools/call` over stdio with no model, key or
+  network, runnable inside the session (round-6 discipline); (3) a full agent run spends the user's
+  OpenRouter credit and needs their explicit say-so.
+- **Per-round bookkeeping:** a new reference means the zip must be rebuilt (check 5); changing the
+  smoke-check count means syncing the prose claims about it (check 7 guards this); wiring is
+  `SKILL.md` §Довідки, `skill-router.md`, README.
+
+- **Round 14 — MCP in depth + `mcp_example`.** `mcp-tools.md` 105 → ~200 lines: primitives and the
+  control hierarchy (spec table); transports as **stdio + Streamable HTTP**, marking HTTP+SSE
+  deprecated *and* explaining that SSE survives as a streaming mechanism inside the single
+  endpoint; the spec's security requirements (validate `Origin` / HTTP 403, bind localhost,
+  authenticate); deployment shapes ("hybrid" is a property of an agent's *set* of servers, never of
+  one server); MCP-vs-in-process with the protocol's price; the state-semantics shift; the
+  inspector; the tool-count tax and attention overload (ch. 4 §4.2.1); **backoff and jitter on
+  retries** (also ch. 4 — folded in here so the file is edited once, and removed from round 16).
+  Example: a journal/scratchpad MCP server plus a LangGraph agent through the adapter, with the
+  three-primitive shape taken from `01_complete_mcp_server.py` (minus its resource-as-function
+  shortcut) and the transport corrected against `06_mcp_time_travel_tracker.py`. Tests per the
+  ladder — the stdio round-trip is free and must actually be run. **Resolve the current spec
+  revision through the versioning page before writing** — do not trust this file's quotes, which is
+  precisely how round 13 got a stale one.
+- **Round 15 — reasoning structures.** New `design-agent-architecture/references/reasoning-patterns.md`
+  (~180–220 lines; its ordinal is deliberately not written down — pre-computed arithmetic rots, per
+  round 10). **User's decision, 2026-07-21, do not re-open:** a separate file rather than scattering
+  Reflexion and the selection table across `architectures.md` + `prompt-techniques.md` +
+  `reasoning-models.md` — "which reasoning structure should this agent use" must stay on one
+  surface. Content: decomposition vs planning; the selection table; what actually defines ReAct (the
+  feedback loop, not the presence of a tool call — a single CoT pass with a tool call in it is still
+  a single pass); ToT needs orchestration code; Reflexion from the primary source with the
+  feedback-signal honesty; the plan as an external artifact; sequential-thinking as the scratchpad
+  instance (check its tool surface against the server's own README at write time). Example: a
+  solver–critic Reflexion loop in LangGraph that **must not hardcode an oracle** — the feedback
+  signal comes from a checkable property (tests pass, schema validates), with the book's demo named
+  as the anti-pattern, and an offline test asserting the substring trap ("126" is not "26") is
+  avoided. Stopping condition, hint accumulation and attempt cap all test offline against stubs.
+- **Round 16 — multi-agent design axes + guardrails.** `architectures.md`: the three axes
+  (decision / control / communication, with coordination as a fourth), the fan-out/fan-in test,
+  critique vs debate with stopping conditions, diversity in voting (meeting Karim §7.2), handoff
+  failure modes, and an explicit disambiguation of the **two meanings of "handoff"** now colliding
+  in this plugin — agent→agent transfer (this material) vs the session protocol in
+  `plan-ai-solution/references/handoff.md`. `agent-ops.md`: the guardrail cost ladder, "callbacks
+  observe, guardrails block", agent naming and a registry. Example: a typed pass-off flow with one
+  deterministic decision point and one guardrail, whose validators are pure logic — and whose test
+  suite includes a **polarity test** (the guardrail must trip on bad input *and* pass good input),
+  which is exactly the test the repo's inverted `09_agent_passoff_guardrails.py` would have failed.
+- **Round 17 — retrieval authorization + memory architecture.** `rag-pipeline.md`: ACLs and
+  multi-tenancy as a failure class distinct from injection; degrees of grounding by stakes.
+  `memory-vector-db.md`: the memory vocabulary as tool-not-model; compression as a mechanism
+  (cluster → summarize → re-index); eviction as a compliance question; the thin-wrapper point.
+  Example: extend the existing `rag_example` with hybrid retrieval — Postgres full-text search
+  (name it honestly: FTS, not BM25; BM25 lives in extensions, verify the identifier at write time)
+  plus **a real RRF implementation** in pure Python, offline-testable, in deliberate contrast with
+  the book's ad-hoc scorer. Live verification against Docker Postgres only — zero API spend, per
+  round-6 discipline. The chapter's Chroma code is deliberately not ported; this plugin's store is
+  pgvector.
+
+Line counts are an orientation, not a target — round 9 overshot its estimate and was not trimmed
+to hit a number.
+
+### Addendum: a second source arrived mid-session — the inner agent loop
+
+Richmond Alake, **"The Agent Loop Decoded: Three Levels Every Agent Engineer Must Know"**, Oracle
+Developers blog, **11 June 2026**. Triaged the same way as the book.
+
+**Access gotcha, worth carrying:** `WebFetch` gets **403** from `blogs.oracle.com` — the same
+Cloudflare-style barrier MDPI raised in round 10. The **browser tool retrieved the full page**, so
+the article was genuinely read, not summarised from a search index. A future round needing it will
+have to repeat that route.
+
+**Source class: vendor blog → practitioner technique**, admissible under round 7's rule (techniques
+need no academic citation if they contradict neither tool docs nor theory). **Not a source of facts
+or figures** — the last third is a straight pitch for Oracle AI Database and OCI.
+
+**Most of it is already covered, and in two places the plugin is stronger than the article.**
+`autonomy-contracts.md` §Budget already separates iteration / wall-clock / cost caps *and* adds the
+point the article misses — an iteration cap alone does not bound spend if iterations grow; §Stop
+factors already carries "stop and ask, never widen scope silently" and "**stopping is a success
+mode**". Repetition detection is in `architectures.md:108`. Prompt-cache prefix stability is in
+**six** files.
+
+**The real gaps, verified by reading files rather than trusting a screen:**
+
+1. **Model versus harness as two separable layers** — "most agent engineering work happens in the
+   harness, not the model". The plugin has three incidental uses of the word and no frame. It is the
+   organising idea: it tells you *where a failure comes from*.
+2. **A terminal message is not goal completion.** No pending tool calls ends the model's *turn*, not
+   the *task* — it may have asked a clarifying question or returned a partial result. The harness
+   needs its own completion predicate. The plugin's only "goal completion" hit (`agent-ops.md:37`)
+   is an observability KPI, not a loop-exit condition.
+3. **The programmatic-versus-agent-triggered boundary**, with a two-sided failure: too much loaded
+   automatically bloats context, too much left to the model's discretion loses it.
+4. **Tool-output offloading** — zero. Persist the full result, put a compact reference in context,
+   let the agent fetch it. The plugin only has "paginate; truncate with a marker"; truncation loses
+   data, offloading does not.
+5. **Semantic tool discovery** — zero. A vector-indexed registry of tool definitions so only relevant
+   schemas reach the model. This is the *mechanism* against the tool-count tax round 14 already
+   describes as a problem.
+6. **Idempotency keys on retries** — the plugin's three "idempoten" hits are homonyms (re-ingest;
+   idempotent reads vs mutating writes). Making a *retry* of a side-effecting call safe, so a
+   payment is not sent twice, is uncovered and is a correctness issue.
+7. **Compaction that preserves originals** (mark with a summary id, never delete — audit and
+   on-demand expansion), and the **cache corollary for agent loops**: append instructions, never
+   rewrite earlier history mid-run, or the stable prefix breaks.
+8. **The loops around the loop** — training, feedback, human — including the line that directly
+   supports round 15's Reflexion correction: what looks like in-session learning is **not a weight
+   update, it is retrieval**. Human-in-the-loop reframed as a *pause at the boundary of autonomous
+   authority*, with the rule that a generic call for help is insufficient — the agent must name what
+   is blocking it.
+
+**Where it goes.** Three items fold into **round 14**, because they are all tool-surface concerns and
+round 14 already edits those exact sections (the plan's own "edit the file once" principle):
+§Tool design rules gains semantic tool discovery and output offloading; §Handling tool failure gains
+the idempotency key beside backoff and jitter. The rest becomes **round 18** below.
+
+**Do not carry:** Oracle product claims; "three to four thousand tokens" per web search; the
+continual-learning definition "across token space, weight space and latent space" (presented as
+settled, but it is the author's framing — find a primary source or drop it); "the Codex
+implementation established this explicitly" (a claim about a third-party system — verify or
+attribute); the DeepLearning.AI course mention. **And handle its six memory types carefully** —
+round 17 already carries a memory vocabulary from Lanham ch. 6 whose governing rule is "the
+vocabulary is a tool, not a model". Two competing lists of memory types is worse than none;
+reconcile at round 17 rather than duplicating.
+
+- **Round 18 — the agent loop.** New `design-agent-architecture/references/agent-loop.md`. **It must
+  open by disambiguating "loop"**: `loop-engineering.md` is Osmani's *outer development* loop
+  (automations, worktrees, sub-agents, maker-checker); this file is the *inner execution* loop of a
+  single agent turn. Without that, the plugin gets its third terminology collision after the two
+  meanings of "handoff". Content: model vs harness; the loop definition; the stop conditions
+  `autonomy-contracts.md` does **not** already have (goal predicate vs terminal message; exit on
+  absence of progress); the programmatic/agent-triggered boundary; context economics in the loop
+  (window monitoring, compaction preserving originals, offloading cross-referenced to
+  `mcp-tools.md`, the append-don't-rewrite cache rule); the three levels **as harness maturity**;
+  and the surrounding training/feedback/human loops. **Risk to defuse while writing:**
+  `architectures.md:172` already has Google's capability **Levels 0–4**, and the plugin explicitly
+  says those are capability, not operational maturity. The article's Levels 1–3 are harness
+  structure. Name the two axes as orthogonal in the text, or a reader will think "Level 3" means the
+  same thing in both files. Example: a minimal harness with three exit conditions (iteration cap,
+  wall-clock, repetition detector) plus tool-output offloading to a log returning an id — **all pure
+  logic, fully offline-testable**, no model, key or network. The cheapest example to verify of any
+  round planned.
+
+### Same-session review of this plan, and what it caught
+
+The user asked for a correctness pass over the roadmap immediately after approving it. It found
+three real defects, all fixed above, and worth recording because two are recurrences of failures
+this plugin already has rules for:
+
+1. **Numbering collision.** The triage session was called round 13 *and* so was the first content
+   round. Round 7's precedent is unambiguous — triage was 7, content was 8–10 — so content rounds
+   are now **14–17**. Left unfixed, the next session would have had to either duplicate a number or
+   renumber blind.
+2. **Our own spec citation was already stale** — see the CURRENCY NOTE above. The rule caught its
+   own author within hours, which is the strongest possible argument for resolving the current
+   revision at write time instead of pinning one.
+3. **Chapter mis-attribution.** The tool-count tax was filed under chapter 3; it is ch. 4 §4.2.1.
+   The destination file does not change, but the citation does.
+
+Also removed: a hardcoded "31st reference" ordinal, the same rot-in-advance arithmetic as round
+10's "12 of 27 references are stubs" — with example-bearing rounds adding references, any
+pre-computed ordinal will be wrong by the time it is executed.
+
+### The rest of the book is not in hand
+
+The user supplied the full table of contents — 11 chapters plus an appendix on setting up the
+sample repository, running through evaluation and feedback (7), deployment (8), the agentic loop
+(9), the cognitive agent that thinks/monitors/adapts (10), and tips (11). **The local PDF contains
+only chapters 3–6** (143 pages, verified). Do not infer the content of chapters 7–11 from their
+titles — that is the standing rule round 12 set and round 13 kept. When they arrive, triage first
+(rounds 18+), expecting heavy overlap: ch. 7 against `evaluation.md` / `agent-ops.md`, ch. 8
+against `deploy-ai-environments`, ch. 9 against `loop-engineering.md`.
+
+### Numbers from this batch that must NOT be carried
+
+Tool-overhead figures (`$0.02–0.04` per call, `6,000–12,000` tokens of schema, "30 tools versus
+8"), anything keyed to a named model's price, "200,000 to over a million tokens" of context,
+embedding dimensionalities (384–3,072; 1,536), and thresholds like "< 10 tools per agent" — the
+last is fine **named as a practitioner heuristic**, not as a measured fact. Standing rule.
+
+### Verification actually run
+
+`python tests/check_docs.py` · `python tests/smoke_test.py` · from repo root: `npm run lint`,
+`lint:markdown`, `lint:format`. **Not run, deliberately:** `build:catalog`, `evals`, the `site`
+build and `chatgpt/build_gpt_package.ps1` — no reference, no `description` and no skill roster
+changed this round (still 8 / 30), so neither the catalog nor the zip moved. The moment a round
+touches a reference, the zip rebuild is mandatory again.
+
+**The read-it-with-your-eyes pass earned its place again — no automated check covers any of
+this.** Beyond the round-12 "not yet merged" header fixed above, two more drifts surfaced in this
+same file: round 12's "Prompt for the next round" still opened with "round 12 is newest" (now
+marked SUPERSEDED rather than deleted — it *was* the prompt that produced this round), and the
+live "Current verified state" section still said **27** references when there have been 30 since
+round 12. That count had been wrong across at least one merged round while every gate stayed
+green, because nothing counts references outside `check_docs.py`, and `check_docs.py` does not
+read prose. Round 6 found exactly this class of drift and it recurs; budget a read of the whole
+file, not just the section you are adding.
+
+### Prompt for the next round
+
+> **SUPERSEDED (round 14):** this prompt was used — round 14 shipped `mcp-tools.md` and
+> `mcp_example` as described. The live prompt is the one in round 14's section at the top of this
+> file. Kept as the record of what round 13 handed forward, not as an instruction to follow.
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 13 is newest and it is a triage round, so the roadmap
+for **rounds 14–18** is already fixed there and does not need re-deriving. Default next unit of
+work is **round 14: MCP in depth in `mcp-tools.md`, plus a runnable `mcp_example` with tests** —
+every content round from here ships a code example, which is a standing user requirement, not an
+optional extra. Note that round 14 absorbed three items from the Oracle agent-loop article (see
+the addendum in round 13's entry): semantic tool discovery and tool-output offloading into §Tool
+design rules, and an idempotency key into §Handling tool failure. If that makes the round too
+large in practice, the honest split is to ship `mcp-tools.md` and its example first and carry the
+three addendum items into their own commit — but do not silently drop them.*
+
+*Three things to do before writing a line. (1) Resolve the **current** spec revision through
+<https://modelcontextprotocol.io/specification/versioning> and verify the transport and
+control-hierarchy claims against it yourself — round 13's entry quotes a revision that went stale
+within hours of being written, and this project's standing rule is that our own record is not a
+source. (2) Confirm `langchain-mcp-adapters` identifiers (`MultiServerMCPClient`,
+`load_mcp_tools()`) and which FastMCP you are importing — the official SDK's
+`mcp.server.fastmcp`, or the separate `fastmcp` package. (3) Read the companion repo findings in
+round 13's entry: the example's shape comes from `chapter_03/01_complete_mcp_server.py` (minus its
+resource-as-function shortcut) with the transport corrected — the repo ships
+`mcp.run(transport='sse')`, which is the deprecated transport.*
+
+*Run the free stdio round-trip test for real (subprocess + `tools/list` + `tools/call`, no model,
+no key, no network). **A full agent run spends the user's OpenRouter credit — ask first.** Rebuild
+the zip if the reference count changes, and sync the smoke-check count claims if you add checks.*
+
+*If instead the user brings something else — chapters 7–11 of the book (not in hand; triage before
+writing), a fresh source batch, a live-verification task like round 6, an audit — nothing is
+blocking; the fixed roadmap closed at round 10 and everything since has run on ad hoc requests."*
+
+## What happened before (round 12 — "AI Agents in Action" ch. 1–2 alignment + Anthropic best-practices audit, 2026-07-20, branch `feat/ai-gen-agents-in-action-alignment` off `main`, merged as `0ce2d4c` via PR #18)
+
+> **CORRECTION (round 13):** this section's original header said "Branch not yet merged", and the
+> file's own intro repeated it. The branch **was** merged as `0ce2d4c` (PR #18) before round 13
+> started — `main` is clean and carries it. Corrected in place rather than rewritten, per the
+> standing rule.
 
 Two requests in one session: use a new book source to close real gaps, and separately audit all
 eight skills against Anthropic's own published Skill-authoring guidance (format, description,
@@ -183,6 +862,11 @@ scan (> U+2E7F) over every `SKILL.md` and reference: **0**.
   line count).
 
 ### Prompt for the next round
+
+> **SUPERSEDED (round 13):** this prompt was used — the user did bring more chapters, and round 13
+> triaged them. It says "round 12 is newest", which stopped being true the moment round 13 was
+> written; the live prompt is the one in round 13's section at the top of this file. Kept as the
+> record of what round 12 handed forward, not as an instruction to follow.
 
 No new user request is queued. When one arrives, open with: *"Read `plugins/ai-gen/HANDOFF.md`
 (round 12 is newest). If I'm giving you more chapters of Lanham's* AI Agents in Action*, treat
@@ -908,7 +1592,8 @@ anything further is round 5+ and needs new material.
   the four still use. This plugin's own layout was already correct (skills always under
   `skills/`), so the fallback here is precautionary, not a fix for an observed failure.
 - Version is `0.0.1` and **no release tag exists** — deliberately unreleased (not because the
-  plugin is thin: it has 8 skills and 27 references; the user simply has not asked for a tag);
+  plugin is thin: it has 8 skills and **31** references as of round 14 — this line said 27 until
+  round 13 checked it, then 30 until round 14 added one; the user simply has not asked for a tag);
   `scripts/release.mjs` gates only its own plugin directory, so other plugins' releases are
   unaffected.
 

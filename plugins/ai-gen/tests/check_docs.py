@@ -198,6 +198,16 @@ if smoke_path.exists():
     for md in sorted(ROOT.glob("**/*.md")):
         if "dist" in md.parts:
             continue
+        # HANDOFF.md is a chronological log, newest round on top -- round 14
+        # found that its older sections legitimately say "14 checks" because
+        # that WAS the count when that round shipped, the same way a git log
+        # entry does not get rewritten when a later commit changes a number
+        # it once reported. This check exists to catch a LIVING doc going
+        # stale (the eda-skills README that stayed "30/30" for 14 rounds);
+        # HANDOFF.md's own history is not that doc, only its newest section
+        # is current, and there is no reliable way to regex just that part.
+        if md.name == "HANDOFF.md":
+            continue
         for line in md.read_text(encoding="utf-8").splitlines():
             for claimed in CLAIM.findall(line):
                 claims += 1
