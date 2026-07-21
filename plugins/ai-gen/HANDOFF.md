@@ -1,11 +1,182 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-07-21, round **15** (reasoning
-structures + `reflexion_example`) — the first content round after the ch. 7–11 triage below, and
-the one that triage's own prompt pointed at. Skills stay at **8**, references go **31 → 33**.
-Rounds 16–18 are unchanged and still the live roadmap; rounds 19–22 follow after them, exactly as
-the triage entry fixed. Written for a fresh Claude session with no conversation history — read
-this whole file before touching anything.
+Newest entry on top (eda-skills convention). Last updated 2026-07-21, round **16** (multi-agent
+design axes + guardrails). Skills stay at **8**, references go **33 → 34**
+(`build-ai-examples/references/guardrail-example.md`; no new file under
+`design-agent-architecture`, this round grew two *existing* references instead of adding one).
+Round 17 is next, unchanged from round 13's fix; round 18 follows it, then 19–22. Written for a
+fresh Claude session with no conversation history — read this whole file before touching anything.
+
+## What just happened (round 16 — multi-agent design axes + guardrails, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same session and branch as round 15, per the user's "use the current branch" instruction)
+
+**Same-session continuation, not a fresh read.** The user said "продовжити" (continue) right after
+round 15's summary; this round proceeded directly from round 15's own "prompt for the next round"
+rather than re-reading `CLAUDE.md`/memory/`HANDOFF.md` from scratch, since the conversation already
+had that context loaded. A fresh session picking this up later should still read the whole file
+first, per the standing rule at the top.
+
+### What shipped
+
+- **`architectures.md`** grew in three places, all inside the existing `## Multi-agent` section
+  plus two one-paragraph additions elsewhere — no line-count target was set for this round, since
+  it grows existing files rather than introducing a new one (round 14's `mcp-tools.md` precedent):
+  the three axes (decision-making / control / communication) plus coordination as a fourth,
+  presented as a table; a "check this is genuinely multi-agent" discriminator (if the orchestrator
+  could be replaced by a deterministic fan-out/fan-in join, it is parallelization, not
+  coordination); an orchestration-first default with collaboration reserved for tasks that cannot
+  be owned by one delegator; critique vs debate as two topologies sharing one requirement (an
+  explicit stop rule, or it is the multi-agent version of an unbounded Reflexion loop); handoff
+  failure modes (shape failure, context leakage, instruction injection) extending the existing
+  "Chained (handoff)" row of the state-substrate table; agent naming and a registry
+  (`domain.role.version`); a diversity point folded into the existing `Parallelization` → Voting
+  bullet (different models is the strong lever, different prompts the weak one); an overhead point
+  folded into the existing `Orchestrator-workers` bullet (deterministic dispatch when the split is
+  knowable in advance). **Disambiguated explicitly, inline**: this file's "handoff" (agent-to-agent
+  transfer) is a different word from `plan-ai-solution/references/handoff.md`'s session-continuity
+  protocol — one parenthetical states this where the term is first used this way.
+- **`agent-ops.md`** grew inside its existing "Security surface of a deployed agent" section: the
+  guardrail cost ladder (code/schema/regex → classifier model → LLM guardrail, with the caution
+  that an LLM guardrail can be wrong in the *same* direction as the agent it checks), and
+  "callbacks observe, guardrails block" — a guardrail is a semantic circuit breaker that halts
+  *before* a risky action, not a post-hoc filter, sharpening the whitepaper's existing two-tier
+  split rather than replacing it.
+- **New `build-ai-examples/references/guardrail-example.md`** + runnable code in
+  **`build-ai-examples/scripts/guardrail_example/`**: `guardrail_core.py` (pure —
+  `PlanReview`/`review_plan`/`attempt_passoff`, with `should_block` phrased as what it does to the
+  flow so there is no positive-sense field left to invert), `agent.py` (a real LangGraph
+  `StateGraph`: draft → guardrail → conditional edge → execute-or-blocked, two real model calls
+  around one deterministic gate), `.env.example`, `requirements.txt`.
+- **`tests/smoke_test.py` 34 → 43 checks**: 9 new, all pure `guardrail_core.py` logic — the
+  **polarity test** (blocks a thin plan AND approves a detailed one, in one check, the exact
+  direction `chapter_04/09_agent_passoff_guardrails.py` would have failed), a length-is-not-enough
+  check (a long plan missing one required section still blocks, named specifically), a
+  never-leaks-forward check on a blocked plan, an interleaved-calls-never-contaminate check
+  (mirroring `chapter_07/06`'s global-state bug), plus the two `.env.example` scaffolding checks
+  every example in this plugin now carries.
+- **Wiring**: `build-ai-examples/SKILL.md` §Довідки (+1 bullet); `skill-router.md` (+1 row for
+  `guardrail-example.md`); `README.md`'s API-keys section (+1 example paragraph, now covering four
+  examples). `design-agent-architecture/SKILL.md`'s own §Довідки bullet for `architectures.md` was
+  **not** touched — it already names "multi-agent" and stays accurate at its existing level of
+  generality, the same call round 14 made for `mcp-tools.md`'s bullet when that file grew inside an
+  unchanged topic list. No `SKILL.md` frontmatter `description` changed this round, so
+  `build:catalog` was not re-run (it was the description change specifically that required it in
+  round 15).
+- **Two stale prose counts fixed**, same class as every round: `mcp-example.md` and
+  `rag-example.md` both said "34 checks total"; both now say 43, and now name all four examples
+  instead of three.
+
+### Verified fresh before writing — and this time, nothing new turned up
+
+Three companion-repository files were re-fetched directly rather than trusted from HANDOFF's own
+(already twice-recorded) description of them, per the standing "verify every identifier fresh"
+rule: `chapter_04/09_agent_passoff_guardrails.py`
+(`tripwire_triggered=result.final_output.is_sufficiently_detailed`, no negation — confirmed),
+`chapter_04/08_agent_guardrails.py` (`tripwire_triggered=result.final_output.is_sufficiently_detailed
+is False` on the output guardrail, correct polarity — confirmed, and it also has an *input*
+guardrail, `tripwire_triggered=result.final_output.is_research_forbidden`, not previously recorded
+in this level of detail), and `chapter_07/06_RAG_grounding_with_guardrails.py`
+(`tripwire_triggered=result.is_answer_grounded is False`, correct polarity; `_last_context`
+written by `search_knowledge_by_keyword`, read via a tool the grounding agent calls optionally;
+`get_last_context()` returns the literal string `"No context available."` when empty — all
+confirmed verbatim). **Unlike round 15's `sequential-thinking` surprise, all three matched exactly
+what was already on record — worth stating plainly rather than treating a clean re-check as a
+no-op: it is the same discipline whether or not it finds something, and round 15 is the reason this
+round did not skip it.**
+
+### Design decisions worth carrying forward
+
+- **The guardrail's own return value is already phrased as block/pass.** `PlanReview.should_block`
+  exists specifically so there is no positive-sense field (`is_sufficiently_detailed`) for a caller
+  to forget to negate — the structural fix for `chapter_04/09`'s bug, the same shape of fix round
+  15 applied to the task-bound checker (bind the semantics to the name, not to a convention a
+  caller has to remember).
+- **No module-level state in the guardrail**, the structural non-answer to `chapter_07/06`'s
+  `_last_context` bug: `review_plan` takes the plan as its only argument, so there is nothing for a
+  second, concurrent call to contaminate. Pinned by an explicit interleaved-calls test rather than
+  left as an implicit property, the same way round 15 pinned task-predicate non-leakage even though
+  the design already made it structurally hard to get wrong.
+- **Two real model calls, not one**, unlike `reflexion_example`'s single solver call — because a
+  "pass-off" is specifically a transfer *between agents*, and collapsing the executor into a
+  deterministic stub would have taught gate mechanics without ever teaching the handoff they gate.
+  Both calls are cheap (a short draft, a short execute) and both are opt-in behind the user's own
+  key, so the added realism costs nothing until the user actually runs `agent.py`.
+
+### A live check that cost nothing, and a stronger assertion than round 15's version
+
+`agent.py`'s graph was compiled and `.invoke()`d against a scripted stub, same zero-cost discipline
+as round 15. The blocked-plan case is a strictly stronger check than "the output looks right": the
+stub is given exactly **one** scripted answer, for the draft call only. If `route_after_guardrail`
+were wired backwards — precisely the class of bug this round exists to prevent — `execute_node`
+would call `model.invoke()` a second time with no second answer queued, and the stub would raise
+`StopIteration` rather than silently returning a plausible-looking wrong result. The graph either
+proves it took the right branch or fails loudly; it cannot quietly do the wrong thing and still
+look fine. **Not run, and it needs the user's OpenRouter key to change that:** the real draft and
+execute calls in `agent.py`.
+
+### Verification actually run
+
+`python tests/smoke_test.py` (**43/43**, up from 34 — 9 new, all `guardrail_core.py`) ·
+`python tests/check_docs.py` (**7/7**, 8 skills / **34** references) · the live graph-wiring check
+above (2/2 cases, stub model, no key, no network) · `& .\chatgpt\build_gpt_package.ps1` (zip
+rebuilt, **193,859 bytes**; `gpt_instructions.md` unmoved at 6,928 bytes, headroom 1,072) · from
+the repo root: `npm run lint` (8 plugins, 0 warnings), `lint:plugins` (9 targets, 4 accepted
+warnings, unchanged), `lint:markdown` (**405** files — 404 + the 1 new reference, 0 errors),
+`lint:format` clean. **`build:catalog` deliberately not re-run**: no `SKILL.md` description
+changed this round, unlike round 15. **Not run, needs the user's OpenRouter key:** `agent.py`'s
+actual draft and execute model calls.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 16 is newest. Skills stay at 8, references at 34.
+Default next unit of work is **round 17: retrieval authorization + memory architecture**, fixed in
+round 13 and not touched by the ch. 7–11 triage — read the plan there, do not re-derive it. Update
+`rag-pipeline.md`: read-side authorization (ACLs, multi-tenancy) as a failure class distinct from
+injection — vector similarity can hand a confidential document to a user with no right to it, which
+is a permissions problem on the index, not a prompt-injection problem; degrees of grounding by
+stakes (weak = consistent with context; strong = every claim traceable to a passage with a
+citation). Update `memory-vector-db.md`: the memory vocabulary (sensory/working/episodic/semantic/
+procedural) taken the way this plugin already takes borrowed vocabulary elsewhere — a tool for
+communicating, not an architectural model, with the actual pieces (context window / external
+storage / state management / retrieval) doing the honest describing; compression as a mechanism
+(cluster → summarize → re-index — memory benefits from periodic passes, a knowledge store mostly
+from the first); eviction/forgetting as a compliance question (regulated retention requirements
+make aggressive pruning legally risky, and over-eager forgetting creates its own exposure); the
+honest line that an MCP memory server is a thin wrapper — the real work is the extraction logic
+deciding what to remember and the retrieval logic deciding what to surface.
+
+Example, per the standing per-round requirement (this would be the fifth in a row): **extend the
+existing `rag_example`**, do not start a new directory — add hybrid retrieval (Postgres full-text
+search fused with the existing vector search) plus a real Reciprocal Rank Fusion implementation in
+pure Python, offline-testable, in deliberate contrast with a triaged source's ad-hoc keyword
+scorer that never actually calls a fusion function despite its own prose teaching RRF as the
+production default. **Name the lexical side honestly**: Postgres full-text search is FTS, not
+BM25 — BM25-style ranking lives in the `pg_search`/similar extensions, not in core `ts_rank`/
+`ts_rank_cd`. Verify the exact function names and ranking behavior against current PostgreSQL docs
+at write time rather than assuming; this is exactly the kind of identifier this plugin's standing
+rule warns never to copy from one system's vocabulary (BM25's `k1`/`b`) into another's. Live
+verification against a real Docker Postgres container only, zero API spend — the same round-6
+discipline `rag_example`'s own docker-compose check already established, not a new live tier.
+
+Verify every identifier fresh. Round 16 re-checked three companion-repo files that were already on
+record and found no discrepancy — that is a real outcome, not a wasted check, and it is only
+knowable by actually doing the check rather than trusting the record. Actually run whatever the
+free tier allows, including a live-but-free wiring check if the shape supports one the way rounds
+15 and 16 did with a stubbed model — for a Postgres-only change with no LangGraph graph involved,
+the equivalent is exercising the real query against the real container, the way `rag_example`'s
+own live run already did once for the vector half.
+
+Small carry-over: `skill-router.md` rows continue to use the bilingual trigger-phrase convention
+(Ukrainian phrase + English gloss); this round's one new row followed it. Sync
+`check_docs.py`'s smoke-count guard when the count changes (it will), and rebuild the zip — a new
+reference means check 5 fails until `& .\chatgpt\build_gpt_package.ps1` runs.
+
+The language migration (8 `SKILL.md` bodies, the plugin `README.md`, two references) is still open,
+still not blocking, and round 16 did not touch it — no `SKILL.md` body or `README.md` prose needed
+editing this round the way round 15's wiring did, so no new judgment call arose. Ask the user
+whether it should be its own round before the backlog grows further.
+
+If the user brings something else instead, nothing is blocking; state what round 17 would have
+been and let them redirect."*
 
 ## What just happened (round 15 — reasoning structures + `reflexion_example`, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same branch as the ch. 7–11 triage by the user's explicit instruction)
 

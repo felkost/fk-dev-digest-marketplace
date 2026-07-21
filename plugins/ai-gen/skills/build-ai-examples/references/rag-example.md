@@ -106,9 +106,9 @@ visible instead of leaving it as folklore.
 
 ## What the smoke test pins (this file's share, offline)
 
-`python tests/smoke_test.py` — 34 checks total (all three examples this plugin ships); 14 of them
-are this file's own (mcp_example's and reflexion_example's shares are in `mcp-example.md` and
-`reflexion-example.md`). Run from the plugin root. Grouped:
+`python tests/smoke_test.py` — 43 checks total (all four examples this plugin ships); 14 of them
+are this file's own (the other three examples' shares are in `mcp-example.md`,
+`reflexion-example.md` and `guardrail-example.md`). Run from the plugin root. Grouped:
 
 | Checks | What breaks if they go |
 |---|---|

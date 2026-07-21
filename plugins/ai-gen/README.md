@@ -128,6 +128,10 @@ The example in [skills/build-ai-examples/scripts/reflexion_example/](skills/buil
 needs **OpenRouter** only for `agent.py`'s solver call (the loop's control flow and its checker
 need no key at all) — details in
 [reflexion-example.md](skills/build-ai-examples/references/reflexion-example.md#run-it).
+The example in [skills/build-ai-examples/scripts/guardrail_example/](skills/build-ai-examples/scripts/guardrail_example/)
+needs **OpenRouter** only for `agent.py`'s two model calls (the guardrail itself needs no key at
+all) — details in
+[guardrail-example.md](skills/build-ai-examples/references/guardrail-example.md#run-it).
 Коротко: створити ключ на [openrouter.ai](https://openrouter.ai) → API Keys, вписати самому у
 `.env` (копія `.env.example`, у git не потрапляє). Агент ключа не бачить і не питає його в чаті.
 

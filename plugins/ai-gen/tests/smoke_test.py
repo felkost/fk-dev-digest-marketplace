@@ -44,6 +44,21 @@ pure is an actual model call; see references/reflexion-example.md):
  33-34. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
+What it pins, guardrail_example (deterministic pass-off guardrail gating a
+two-agent handoff in LangGraph; see references/guardrail-example.md):
+ 35.   the directory exists with the expected files;
+ 36-37. guardrail_core imports, and imports nothing that needs installing;
+ 38.   the polarity test -- the guardrail blocks a thin plan AND approves a
+       detailed one, the one direction chapter_04/09_agent_passoff_guardrails.py
+       would have failed;
+ 39.   a long-enough plan missing one required section still blocks, named
+       specifically -- length alone is not sufficient;
+ 40.   attempt_passoff never leaks next_stage_input on a blocked plan;
+ 41.   interleaved reviews of different plans never contaminate each other --
+       no module-level state to race, unlike chapter_07/06's `_last_context`;
+ 42-43. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
 Console note: this box's console is cp1251, so output is ASCII-safe.
@@ -62,9 +77,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "rag_example"
 MCP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "mcp_example"
 REFLEXION_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reflexion_example"
+GUARDRAIL_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "guardrail_example"
 sys.path.insert(0, str(EXAMPLE))
 sys.path.insert(0, str(MCP_EXAMPLE))
 sys.path.insert(0, str(REFLEXION_EXAMPLE))
+sys.path.insert(0, str(GUARDRAIL_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -587,6 +604,149 @@ def _():
 @check(".env.example (reflexion_example) ships no filled-in secret")
 def _():
     for line in (REFLEXION_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value in ("", "not-needed-for-local"), (
+                f"{key} looks filled in ({value!r}) -- .env.example must ship blank"
+            )
+
+
+# --------------------------------------------------------------------------- #
+# 35-37. guardrail_example: files exist, and the offline-testability property
+# --------------------------------------------------------------------------- #
+
+@check("guardrail_example directory exists with the expected files")
+def _():
+    for name in ("guardrail_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (GUARDRAIL_EXAMPLE / name).exists(), f"missing {name}"
+
+
+@check("guardrail_core module imports with no third-party packages installed")
+def _():
+    import guardrail_core  # noqa: F401
+
+
+@check("guardrail_core module imports ONLY stdlib (keeps this test runnable offline)")
+def _():
+    tree = ast.parse((GUARDRAIL_EXAMPLE / "guardrail_core.py").read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names = [a.name.split(".")[0] for a in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            names = [(node.module or "").split(".")[0]]
+        else:
+            continue
+        for n in names:
+            assert n in STDLIB_OK, (
+                f"guardrail_core.py imports third-party '{n}'; move it to agent.py "
+                "or this smoke test stops running offline"
+            )
+
+
+# --------------------------------------------------------------------------- #
+# 38-41. The guardrail itself: polarity, section detection, no leakage
+# --------------------------------------------------------------------------- #
+
+_GOOD_PLAN = (
+    "Objective: Determine the current adoption rate of renewable energy sources "
+    "among commercial shipping fleets operating in the North Atlantic corridor, "
+    "and identify the top three barriers preventing wider adoption.\n\n"
+    "Steps: (1) Survey fifteen shipping operators about their current fuel mix "
+    "and any renewable pilot programs. (2) Review publicly available regulatory "
+    "filings from the past two years. (3) Interview two industry analysts about "
+    "cost trends for retrofitting versus new-build vessels.\n\n"
+    "Success criteria: A ranked list of adoption barriers backed by at least ten "
+    "operator responses, and a cost-comparison table covering at least three "
+    "vessel classes."
+)
+_THIN_PLAN = "Look into renewable energy in shipping and report back."
+
+
+@check("polarity test: the guardrail blocks a thin plan AND approves a detailed one")
+def _():
+    from guardrail_core import review_plan
+    # The exact bug class chapter_04/09_agent_passoff_guardrails.py has: a
+    # guardrail wired to the wrong polarity looks like it works in a demo,
+    # because the flow just always takes one branch. Testing only one
+    # direction would not catch that -- both must be asserted together.
+    assert review_plan(_THIN_PLAN).should_block is True, "a thin plan must block"
+    assert review_plan(_GOOD_PLAN).should_block is False, "a detailed plan must NOT block"
+
+
+@check("a long-enough plan missing one required section still blocks, named specifically")
+def _():
+    from guardrail_core import review_plan
+    long_but_incomplete = (
+        "Objective: figure out adoption barriers. " + ("Detail. " * 60) +
+        "Steps: survey operators, review filings, interview analysts. " + ("More detail. " * 20)
+    )
+    review = review_plan(long_but_incomplete)
+    assert review.detail_chars >= 400, "fixture must actually exceed the length threshold"
+    assert review.should_block is True, "length alone must not be enough to pass"
+    assert "success criteria" in review.reason.lower()
+    assert "success criteria" in review.missing_sections
+    assert "objective" not in review.missing_sections and "steps" not in review.missing_sections
+
+
+@check("attempt_passoff never leaks next_stage_input on a blocked plan")
+def _():
+    from guardrail_core import attempt_passoff
+    blocked = attempt_passoff(_THIN_PLAN)
+    assert blocked.approved is False
+    assert blocked.next_stage_input is None, "a blocked plan must never reach the next stage"
+
+    approved = attempt_passoff(_GOOD_PLAN)
+    assert approved.approved is True
+    assert approved.next_stage_input == _GOOD_PLAN
+
+
+@check("interleaved reviews of different plans never contaminate each other (no shared state)")
+def _():
+    from guardrail_core import review_plan
+    # Mirrors the failure chapter_07/06_RAG_grounding_with_guardrails.py has:
+    # a module-level `_last_context` overwritten by every search, so a
+    # multi-search answer grounds against only the last one. review_plan
+    # takes the plan as its only argument and keeps no module-level state,
+    # so interleaving calls cannot leak between them -- pinned here so a
+    # future refactor cannot reintroduce that failure shape.
+    results = [review_plan(p) for p in (_GOOD_PLAN, _THIN_PLAN, _GOOD_PLAN, _THIN_PLAN)]
+    assert [r.should_block for r in results] == [False, True, False, True]
+    assert results[0] == results[2], "identical input must give identical output regardless of call order"
+    assert results[1] == results[3]
+
+
+# --------------------------------------------------------------------------- #
+# 42-43. guardrail_example: configuration file
+# --------------------------------------------------------------------------- #
+
+def _guardrail_env_example_keys() -> set[str]:
+    keys = set()
+    for line in (GUARDRAIL_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            keys.add(line.split("=", 1)[0].strip())
+    return keys
+
+
+@check(".env.example (guardrail_example) covers every variable agent.py reads")
+def _():
+    read = set()
+    for py in sorted(GUARDRAIL_EXAMPLE.glob("*.py")):
+        src = py.read_text(encoding="utf-8")
+        read |= set(re.findall(r"os\.environ\.get\(\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"os\.environ\[\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"os\.getenv\(\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"_require\(\s*[\"']([A-Z_]+)[\"']", src))
+    missing = read - _guardrail_env_example_keys()
+    assert not missing, f".env.example (guardrail_example) is missing: {sorted(missing)}"
+
+
+@check(".env.example (guardrail_example) ships no filled-in secret")
+def _():
+    for line in (GUARDRAIL_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

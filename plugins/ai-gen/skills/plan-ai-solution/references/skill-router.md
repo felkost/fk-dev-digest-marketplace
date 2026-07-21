@@ -91,6 +91,7 @@ Ukrainian the user is likely to type.
 | «підключи інструменти», MCP server/tool design, tool permissions | `design-agent-architecture` | `references/mcp-tools.md` |
 | «покажи робочий MCP-сервер», код tool/resource/prompt, langchain-mcp-adapters | `build-ai-examples` | `references/mcp-example.md` |
 | «покажи робочий Reflexion-цикл», solver-critic loop, код LangGraph StateGraph | `build-ai-examples` | `references/reflexion-example.md` |
+| «покажи робочий guardrail», типізований pass-off, polarity test | `build-ai-examples` | `references/guardrail-example.md` |
 | «щоб працювало саме», автономний цикл, автоматизації, worktrees, субагенти | `design-agent-architecture` | `references/loop-engineering.md` |
 | «коли агенту можна не питати», stop conditions, autonomy boundaries | `design-agent-architecture` | `references/autonomy-contracts.md` |
 | «як виміряти якість», eval set, LLM-суддя, регресії якості | `evaluate-optimize-models` | `references/evaluation.md` |
