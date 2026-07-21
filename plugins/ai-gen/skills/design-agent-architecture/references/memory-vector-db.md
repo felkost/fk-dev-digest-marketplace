@@ -7,6 +7,7 @@ across sessions* (long-term). Design them separately.
 
 - Short-term memory (within a session)
 - Long-term memory (across sessions)
+- The memory taxonomy (vocabulary, not architecture)
 - Vector databases
 - What the "approximate" in ANN is actually trading
 - Chunking strategies
@@ -59,6 +60,59 @@ and needs none of that machinery.
 Write policy matters more than the store: record *decisions with reasons* and *stable facts*;
 do not archive raw transcripts as "memory" — retrieval will surface stale contradictions.
 Add timestamps and let entries be superseded, not silently overwritten.
+
+## The memory taxonomy — vocabulary, not architecture
+
+Cognitive-science memory research is often flattened into five named kinds: **sensory** (a raw,
+sub-second input buffer, gone unless attended to), **working** (what is held and manipulated
+right now), **episodic** (memory of specific past events), **semantic** (general facts,
+decoupled from when they were learned), and **procedural** (skills and routines, expressed as
+behaviour rather than as a fact you could state). Agent-memory blog posts and a number of
+frameworks borrow this wholesale to describe what an agent's memory system "should have" — folk-
+standard vocabulary borrowed across several distinct research traditions, not one paper's
+taxonomy applied to agents.
+
+Treat it the way this plugin treats every borrowed taxonomy — `architectures.md`'s capability
+levels are the precedent, useful "for scoping a build and for telling a customer what they are
+actually asking for," and nothing more load-bearing than that. The tell that this one is
+vocabulary rather than a design blueprint: ask three sources what "semantic memory" means for an
+agent and you can get the vector index, the knowledge corpus, or the model's own parametric
+weights back — three different design decisions that cannot all be the same answer. A taxonomy
+that changes referent depending on who is explaining it is not specifying an architecture; it is
+gesturing at one.
+
+| Cognitive label | Rough analogy | What you actually build |
+|---|---|---|
+| Sensory | A raw, sub-second input buffer | No clean agent analogue — closest is a tool result before anything decides to persist it. The absence of a good mapping here is itself a signal, not a gap to force-fit |
+| Working | What is held and reasoned over right now | The context window — "Short-term memory" above |
+| Episodic | Memory of specific past events | Session/interaction history with timestamps — the write policy in "Write-back and consolidation" below |
+| Semantic | General facts, independent of when they were learned | The knowledge corpus — but this file already splits "knowledge" from "memory" by *write policy*, two paragraphs up, and that split is the one worth keeping; this label is not |
+| Procedural | Skills and routines, not statable facts | A cached plan, a reusable prompt/skill file, a fine-tuned adapter — whichever of these your system actually has |
+
+**What actually does the honest describing** is not the five labels but four operational
+pieces this file and its neighbours already name: the **context window** (the budget problem in
+"Short-term memory" above), **external storage** (the store table above), **state management**
+(the LangGraph state-reduction node, above, and the graph-state-vs-chat-turn split), and
+**retrieval** (vector search below; `rag-pipeline.md`). Design against these four — each is
+buildable, testable, and measurable on its own — and reach for the cognitive vocabulary only
+when a stakeholder's question is better answered in their words than in yours.
+
+**A concrete instance of exactly this instability, not a hypothetical one.** Richmond Alake,
+"The Agent Loop Decoded: Three Levels Every Agent Engineer Must Know" (Oracle Developers blog,
+11 June 2026) names **six** memory types for its own reference implementation — conversational,
+knowledge base, workflow, toolbox, entity, summary — and its own text labels three of them with
+three of the cognitive terms above: conversational is "**episodic** chat history retrieved by
+thread ID"; knowledge base is "**semantic** memory backed by a vector-enabled … table"; workflow
+is "**procedural** memory storing learned action patterns." The other three — toolbox, entity,
+summary — have no cognitive-science counterpart at all, and this taxonomy's own "sensory" and
+"working" have no counterpart in Oracle's six. Two practitioner sources, writing about the same
+problem within weeks of each other, do not agree on the count, because neither is measuring a
+discovered structure — both are naming implementation choices for one specific system. The
+useful engineering idea behind "toolbox memory" (a vector-indexed tool registry for semantic
+tool discovery, so only relevant schemas reach the model) is real and worth having; it is
+covered on its own terms in `mcp-tools.md`'s tool-count-tax section, filed under tool design, not
+under any memory label. That is what "vocabulary, not architecture" means in practice: keep the
+engineering idea, drop the taxonomy slot it happened to arrive in.
 
 ## Vector databases
 
@@ -171,9 +225,16 @@ structural fix, and why the failure mode "our RAG cannot find ticket `INC-4471`"
 
 Merge the two rankings with **reciprocal rank fusion** — Cormack, Clarke & Büttcher, "Reciprocal
 Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods" (SIGIR 2009): each
-document scores the sum of the reciprocals of its ranks across the systems, damped by a
-constant. It needs no score normalization between retrievers, which is exactly what makes it
-usable when one system returns cosine similarities and the other returns BM25 scores.
+document scores the sum of the reciprocals of its ranks across the systems, `1 / (k + rank)`
+summed per system, with `k = 60` found near-optimal in the paper's own pilot experiments — and,
+by the same experiments, not a critical choice (MAP moved from .2138 to .2147 across `k` = 40 to
+90 in their table). It needs no score normalization between retrievers, which is exactly what
+makes it usable when one system returns cosine similarities and the other returns a lexical
+score on a completely different scale — BM25 in a search engine or an extension such as
+`pg_search`, or `ts_rank`/`ts_rank_cd` in core PostgreSQL, which is **not** BM25: PostgreSQL's
+own documentation calls its built-in ranking functions "only examples," not a definitive
+relevance measure the way BM25 is. `build-ai-examples/references/rag-example.md` has a real
+fusion of the two, offline-testable.
 
 ## Chunking strategies
 
@@ -267,9 +328,24 @@ as the read path:
 - **What gets written:** decisions with their reasons, stable facts, and corrections. Not raw
   transcripts, and not the model's restatement of what it just did.
 - **When:** at task boundaries, not per turn. Per-turn writes produce a log, not knowledge.
-- **Consolidation:** periodically merge duplicates, promote repeated observations into a single
-  claim, and delete what proved wrong. This is the "lint" operation above, and it needs a
-  scheduled trigger — nothing else will cause it to happen.
+- **Consolidation, concretely: cluster → summarize → re-index.** Group entries that cover the
+  same fact or decision (by embedding similarity, or by shared entity/tag), replace the cluster
+  with one summary written by a model or a human, and re-index the summary in place of its
+  sources — *superseding* them per the next bullet, not deleting them outright. This is the
+  "lint" operation above, and it needs a scheduled trigger — nothing else will cause it to
+  happen. **Memory benefits from running this pass repeatedly, for the life of the store; a
+  knowledge corpus mostly benefits from it once, at ingestion.** The reason sits upstream of
+  consolidation itself: knowledge is re-ingested wholesale when its source changes
+  (`build-ai-examples/references/document-loading.md`'s idempotent re-ingest), so it rarely
+  accumulates the redundant near-duplicates this pass exists to fix; memory is appended to
+  continuously by the agent's own experience, so it does, on an ongoing basis.
+- **Eviction and forgetting are a compliance question before they are a storage one.** Regulated
+  retention requirements — financial records, healthcare, audit trails — can make aggressive
+  pruning legally risky: deleting an entry you were required to keep is its own exposure, not a
+  cleanup win. The reverse risk is just as real: data-minimization and right-to-erasure
+  obligations can require deleting exactly what an uncritical "keep everything" policy
+  accumulated. Treat the retention window as a requirement gathered from whoever owns compliance
+  for the data in question, not an engineering default picked for storage cost.
 - **Supersede, don't silently overwrite:** timestamp entries and mark the replaced claim, so a
   reader can tell a correction from a contradiction.
 - **Verify before trusting age.** A stored fact naming a file, flag, or endpoint reflects the
@@ -287,3 +363,18 @@ durable artifact outside the window, and pay attention only to what the current 
 The per-session, human-readable form of this discipline is the handoff protocol in
 `plan-ai-solution/references/handoff.md`; the per-task form is the contract in
 `autonomy-contracts.md`; the project-scale form is the wiki above.
+
+**An MCP memory server is a thin wrapper, worth naming as one — for the same structural reason
+`reasoning-patterns.md`'s `sequential-thinking` server is:** "it does no thinking; it is
+external storage for the outputs of thinking" there, and a memory server does no remembering,
+here, for the same reason. The reference implementation, `@modelcontextprotocol/server-memory`,
+is nine CRUD/search tools — `create_entities`, `create_relations`, `add_observations`, three
+matching `delete_*` tools, `read_graph`, `search_nodes`, `open_nodes` — over a knowledge graph of
+entities/relations/observations, persisted by default to a local JSONL file. Its own README
+carries the one genuinely interesting design decision — *which categories of information are
+worth remembering* (identity, behaviours, preferences, goals, relationships) — as a **suggested
+system prompt for the calling assistant**, not as server code, and its search tool does lookup,
+not ranked semantic retrieval. The real work is not inside any MCP memory server: it is the
+extraction logic deciding what is worth writing, and the retrieval logic deciding what is worth
+surfacing — exactly the write policy and consolidation mechanism this section already describes
+— and it has to be built by whoever calls the server, every time.

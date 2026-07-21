@@ -1,11 +1,283 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-07-21, round **16** (multi-agent
-design axes + guardrails). Skills stay at **8**, references go **33 → 34**
-(`build-ai-examples/references/guardrail-example.md`; no new file under
-`design-agent-architecture`, this round grew two *existing* references instead of adding one).
-Round 17 is next, unchanged from round 13's fix; round 18 follows it, then 19–22. Written for a
-fresh Claude session with no conversation history — read this whole file before touching anything.
+Newest entry on top (eda-skills convention). Last updated 2026-07-21, round **17** (retrieval
+authorization + memory architecture). Skills stay at **8**, references stay at **34** — no new
+reference file this round; `rag-pipeline.md` and `memory-vector-db.md` both grew instead, matching
+round 16's precedent of growing existing files. Round 18 is next (the agent loop, ch. 9's layer
+taxonomy), then 19–22. Written for a fresh Claude session with no conversation history — read this
+whole file before touching anything.
+
+## What just happened (round 17 — retrieval authorization + memory architecture, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same session and branch as rounds 15–16, per the user's "use the current branch" instruction)
+
+**Same-session continuation, not a fresh read.** The user said "продовжити" (continue) right
+after being pointed at this file's own "prompt for the next round" from round 16; this round
+proceeded from that prompt rather than re-deriving the plan. A fresh session picking this up
+later should still read the whole file first, per the standing rule above.
+
+### What shipped
+
+- **`rag-pipeline.md`** grew two new `###` subsections inside "Production concerns the stage list
+  does not cover": **"Grounding has degrees; the stakes pick which one you need"** (weak = answer
+  consistent with context, cheap; strong = every claim traceable to a citation, the bar the
+  existing hallucination-detection techniques already enforce — placed first in that section so
+  the existing techniques read as tools *for* strong grounding rather than free-floating), and
+  **"Read-side authorization is a different failure class from injection"** (a benign query over
+  an index mixing confidentiality levels can leak a document with no adversary involved at all; a
+  trust tier stops a document from *outranking*, an ACL stops it from being *returned* at all;
+  authorization is a retrieval-time filter enforced in the index, never a prompt-time instruction
+  to withhold; cross-linked to `document-loading.md`'s existing tenant/owner metadata field and
+  forward to "Index freshness at scale" for the revocation-is-like-deletion parallel).
+- **`memory-vector-db.md`** grew a new `##` section, **"The memory taxonomy — vocabulary, not
+  architecture"** (sensory/working/episodic/semantic/procedural, framed exactly the way
+  `architectures.md`'s capability-levels section already frames a borrowed taxonomy: useful for
+  talking to someone who already knows the terms, not a blueprint — with a table mapping each
+  label to what you actually build, and a closing pivot to the four real operational pieces
+  this file's neighbours already name: context window / external storage / state management /
+  retrieval), plus three additions inside "Write-back and consolidation": **consolidation named
+  as a concrete mechanism** (cluster → summarize → re-index, with the point that memory benefits
+  from running this repeatedly while a knowledge corpus mostly benefits from it once, at
+  ingestion, and *why* — knowledge is re-ingested wholesale on source change, memory is appended
+  to continuously), a new **eviction/forgetting bullet** framed as a compliance question before a
+  storage one (retention mandates make aggressive pruning risky; erasure/minimization mandates cut
+  the other way), and a closing paragraph naming **an MCP memory server as a thin wrapper** — the
+  same shape `reasoning-patterns.md` already established for `sequential-thinking` ("it does no
+  thinking; it is external storage for the outputs of thinking"), applied here to
+  `@modelcontextprotocol/server-memory`'s nine CRUD/search tools over an entities/relations/
+  observations graph. One small precision fix in the pre-existing "Sparse, dense, and why BM25
+  refuses to die" section: the RRF paragraph now gives the actual formula and `k=60`'s
+  near-flat sensitivity from the primary source, and corrects "the other returns BM25 scores" to
+  name what PostgreSQL's own `ts_rank`/`ts_rank_cd` actually are — not BM25 — cross-linked to the
+  new runnable proof in `rag-example.md`.
+- **A second reconciliation, required by a standing instruction this round's own planning text
+  carried and almost missed**: round 13's addendum on a second triaged source (Richmond Alake,
+  "The Agent Loop Decoded", Oracle Developers blog, 11 June 2026) explicitly flagged that its
+  **six** memory types must be reconciled with Lanham's five *at round 17*, "rather than
+  duplicating." That source is not quoted anywhere in this file in enough detail to reconcile
+  from the record alone, so it was re-fetched fresh (via the browser tool — `WebFetch` still 403s
+  `blogs.oracle.com`, the same gotcha round 13 recorded). Its six — conversational, knowledge
+  base, workflow, toolbox, entity, summary — turned out to make the reconciliation easy: the
+  article's own text labels three of them with three of Lanham's cognitive terms verbatim
+  ("conversational" is "**episodic** chat history"; "knowledge base" is "**semantic** memory";
+  "workflow" is "**procedural** memory"), the other three (toolbox, entity, summary) have no
+  cognitive-science counterpart at all, and Lanham's own sensory/working have no counterpart in
+  Oracle's six. Two practitioner sources naming implementation choices for two different systems,
+  not measuring one discovered structure — which is the concrete, citable proof of the abstract
+  claim the taxonomy section already made, not a competing list to merge. `memory-vector-db.md`
+  now cites this directly. The one real engineering idea inside Oracle's six (`toolbox` = a
+  vector-indexed tool registry for semantic tool discovery) was independently confirmed to
+  already be covered, correctly, in `mcp-tools.md` (round 14's `langgraph-bigtool` material) —
+  filed under tool design, not under any memory label, which is stated as the worked example of
+  what "keep the idea, drop the taxonomy slot" means in practice.
+- **Example: extended the existing `rag_example`**, no new directory, per the standing per-round
+  requirement — **hybrid retrieval**. `retrieval.py` gained `reciprocal_rank_fusion` (pure,
+  stdlib-only): fuses ranked id lists by `1/(k+rank)` summed per system, no score normalization
+  needed between a cosine distance and a lexical rank, ties break by ascending id. `ingest.py`
+  gained `FTS_COLUMN` (`ALTER TABLE chunks ADD COLUMN IF NOT EXISTS content_tsv tsvector
+  GENERATED ALWAYS AS (to_tsvector('english', content)) STORED`) and `FTS_INDEX` (a GIN index),
+  run unconditionally after `build_schema()` — idempotent on both a brand-new table and one that
+  predates this round, verified both ways (see below). `agent.py`'s `search_docs` now runs the
+  existing vector query *and* a new lexical query (`websearch_to_tsquery` + `ts_rank_cd`) and
+  fuses them with `reciprocal_rank_fusion`; its docstring now tells the calling model to prefer
+  short, specific phrases, a change earned by a live finding (see below), not a guess.
+- **`tests/smoke_test.py` 43 → 47 checks**, all four new ones pure `retrieval.py` logic, all
+  renumbered end to end (every later check's number shifts by 4; the module docstring and every
+  section-comment banner were updated to match, verified by grep afterward). The four: agreement
+  across two systems outranks a solo top hit (Cormack et al.'s own stated reason RRF exists); a
+  lexical-only hit missing from the vector ranking still surfaces (the "cannot find ticket
+  `INC-4471`" property, made concrete); ties break by ascending id, not insertion order; `k<=0`
+  rejected.
+- **Wiring**: `rag-example.md` grew a fifth "decision worth explaining" (hybrid retrieval, FTS-
+  not-BM25, RRF's no-normalization property, the schema-time-baked search config, why
+  `websearch_to_tsquery`), its own smoke-check share note (14 → 18), a new live-verification
+  paragraph, and its "Production deltas" list lost the now-stale "Hybrid search" bullet and
+  gained "Cross-encoder reranking on the fused result" and "Read-side authorization" (the latter
+  cross-linking straight back to this round's new `rag-pipeline.md` section). `mcp-example.md`,
+  `reflexion-example.md`, `guardrail-example.md`: stale "43 checks" / check-number-range prose
+  fixed to 47 / their shifted ranges (three files, four call sites total). `skill-router.md`
+  gained two new bilingual rows (read-side authorization → `rag-pipeline.md`; "RAG can't find a
+  ticket number" → `rag-example.md`), following the router's own established convention. No
+  `SKILL.md` touched this round, so `build:catalog` was not re-run (same call as round 16).
+
+### Verified fresh before writing
+
+- **PostgreSQL's full-text-search identifiers**, against the current docs (`textsearch-controls.html`,
+  `textsearch-tables.html`): `ts_rank`/`ts_rank_cd` signatures and the docs' own "only examples"
+  caveat about relevance; `GENERATED ALWAYS AS (...) STORED` plus `CREATE INDEX ... USING GIN` as
+  the documented modern pattern (superseding a trigger-based approach); `websearch_to_tsquery` as
+  the function the docs themselves recommend for raw, unsanitized user input, specifically because
+  it "will never raise syntax errors."
+- **BM25 vs core PostgreSQL FTS**, against ParadeDB's docs: `pg_search` is the extension that adds
+  actual BM25 ranking on top of a separate Tantivy-backed index; core `tsvector`/GIN/`ts_rank*` is
+  not BM25 and PostgreSQL's own docs do not claim it is.
+- **The RRF formula itself**, from the primary source (Cormack, Clarke & Büttcher, SIGIR 2009,
+  fetched as a PDF and read directly, not summarized): `RRFscore(d) = Σ 1/(k + r(d))`, `k=60`
+  "fixed during a pilot investigation and not altered during subsequent validation," and the
+  paper's own table showing MAP essentially flat from `k=10` to `k=500` — the source for this
+  round's "not a tuned value to chase" phrasing, not an inference from the abstract.
+  - `mcp-tools.md` re-checked to confirm "semantic tool discovery" is filed there correctly before
+  citing it as the resolution to Oracle's `toolbox memory` (see above) — not trusted from memory.
+- **The MCP memory server's actual README** (`modelcontextprotocol/servers`, `src/memory/`),
+  fetched directly rather than trusted from the ch. 7–11 triage's own same-day note that the
+  server "is current": the exact tool list (nine tools), the entities/relations/observations
+  definitions, and — the part worth writing down explicitly — that the README's only "what to
+  remember" guidance is a *suggested system prompt for the calling client*, not server code, and
+  that `search_nodes` has no documented ranking behavior beyond "search for nodes based on query."
+- **Richmond Alake's Oracle Developers article**, re-fetched in full via the browser tool (see the
+  reconciliation note above) rather than trusted from the round-13 addendum's own summary of it —
+  the six memory types and their cognitive-label self-descriptions were read from the article's
+  own paragraph, not inferred from the addendum's passing "six memory types" mention.
+
+### Design decisions worth carrying forward
+
+- **The FTS search config is baked into the generated column at schema time, deliberately not an
+  env var.** A `GENERATED ALWAYS AS (...) STORED` column's expression is fixed when the column is
+  created; an env var that looked like it controlled the language per query would silently do
+  nothing for existing rows, which is a worse lie than not offering the knob at all. This mirrors
+  the embedding-model-ID versioning discipline already in this file, applied to text search.
+  Consequently `.env.example`/`settings.py` needed **zero** new variables this round — the same is
+  true of `top_k`, deliberately reused as both retrievers' candidate depth rather than adding a
+  separate widening knob with an unverified default.
+- **`FTS_COLUMN` is a standalone, idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, not baked
+  into `build_schema()`'s `CREATE TABLE`.** Two copies of the same column definition that must be
+  kept in sync is its own failure mode; one statement, run unconditionally after `build_schema()`,
+  handles both a brand-new table and a table that predates this round identically. Verified live,
+  both paths (see below) — this was not left to the DDL's syntax being plausible.
+- **RRF fuses ranked id lists, not vectors or scores**, matching `rank()`'s own existing shape in
+  the same file. The function does not know or care whether a ranking came from pgvector, from
+  PostgreSQL FTS, or from a third system added later — it is the generic seam the "no score
+  normalization needed" property depends on structurally, not by convention.
+
+### A live check that found a real gap, not just confirmed correctness
+
+Docker Desktop was not running at session start; started it, waited for the daemon, then ran a
+genuinely fresh `docker compose up` against the actual shipped `ingest.py` constants (imported,
+not re-typed) and the actual `agent.py` SQL. Four things were verified, not assumed: the
+fresh-database DDL path; **the migration path** (dropped `content_tsv` and its index to simulate a
+table that predates this round, confirmed `FTS_COLUMN` backfills all existing rows with no data
+loss — this is the one path a smoke test cannot reach, since it never touches a database); a
+second idempotent re-run of the FTS DDL; and the fusion property itself (a synthetic chunk crafted
+to be vector-close but keyword-unrelated to the query, another crafted to be keyword-exact but
+vector-far, both surfaced near the top of the fused result, the keyword-irrelevant third chunk
+ranked last).
+
+That run also found a real, previously-unknown limitation, the way round 14's first test draft
+found a genuine bug: a first attempt queried with a full natural-language question and got **zero**
+rows from the lexical side. `websearch_to_tsquery` ANDs every significant term by default —
+confirmed directly (`SELECT websearch_to_tsquery(...)` printed the literal query plan) — and the
+target document did not contain every word of the question, only the identifier it was actually
+about. A short, keyword-style query found it immediately. Fixed by changing `search_docs`'s
+docstring to tell the calling model to prefer short, specific phrases — a one-line, low-risk change
+directly earned by the live run, not a guess about what might help. The container was `docker
+compose down -v`'d afterward, leaving the environment exactly as found (no pre-existing containers
+or volumes before this session started).
+
+### Verification actually run
+
+`python tests/smoke_test.py` (**47/47**, up from 43 — 4 new, all `retrieval.py`) ·
+`python tests/check_docs.py` (**7/7**, 8 skills / **34** references, unchanged) · the live Docker
+Postgres check above (fresh DDL, idempotent re-run, migration-with-existing-rows, and the fusion
+property — 4/4, real container, zero API spend) · a mutation-testing pass on the two new
+correctness-sensitive tests (deliberately broke the tie-break and the `k` damping constant in
+`retrieval.py`, confirmed each mutation was caught, confirmed the *first* version of the
+tie-break test was **not** strong enough — it passed even with the tie-break removed, because
+Python's stable sort plus the test's own id ordering coincidentally reproduced the correct
+output; both tests were redesigned with ids chosen so a broken implementation cannot coast on
+insertion order — reverted every mutation and re-confirmed 47/47 clean before moving on) ·
+`& .\chatgpt\build_gpt_package.ps1` (run twice, once after the main content and once after the
+Oracle-reconciliation addition; zip **202,889 bytes**, `gpt_instructions.md` unmoved at 6,928
+bytes, headroom 1,072 — rebuilt even though no reference file was added or removed this round,
+because the zip's packaged *content* for three heavily-edited files would otherwise be stale in a
+way `check_docs.py`'s count-based check 5 cannot detect) · from the repo root: `npm run lint`
+(8 plugins, 0 warnings), `lint:plugins` (9 targets, 4 accepted warnings, unchanged),
+`lint:markdown` (**405** files, 0 errors — unchanged, no `.md` file added or removed),
+`lint:format` clean. **`build:catalog` deliberately not re-run**: no `SKILL.md` touched this
+round.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 17 is newest. Skills stay at 8, references at 34.
+Default next unit of work is **round 18: the agent loop**, fixed in round 13 and re-based on ch.
+9's layer taxonomy by the ch. 7–11 triage — both already written, do not re-derive the plan. New
+`design-agent-architecture/references/agent-loop.md`. It must open by disambiguating 'loop':
+`loop-engineering.md` is Osmani's *outer development* loop (automations, worktrees, sub-agents,
+maker-checker); this new file is the *inner execution* loop of a single agent turn — without that
+sentence the plugin gets its third terminology collision after the two meanings of 'handoff'.
+
+Content, from ch. 9's layer taxonomy as the spine (layer 1 keeps goal/plan/state/decision inside
+the agent; layer 2 externalizes them into deterministic code wrapping the agent; layer 3 hands
+them to another agent — orchestration when one delegator owns them, collaboration when peers
+share them) plus the Oracle article's model-vs-harness framing (model = the inference engine
+reasoning; harness = the code assembling context, executing tools, enforcing constraints,
+persisting state — 'most agent engineering work happens in the harness, not the model'): the loop
+definition itself; stop conditions `autonomy-contracts.md` does not already have (a terminal
+message with no pending tool calls ends the model's *turn*, not the *task* — the harness needs its
+own goal-completion predicate, and that predicate is a biased self-assessment when the agent
+grades its own work); the programmatic-vs-agent-triggered boundary (which memory reads are always
+loaded vs always left to the agent's own decision, with the two-sided failure — context bloat one
+way, missed context the other); stagnation as *harder to detect than failure* (the plugin's
+existing stop factor is 'the same error signature repeats,' which a stagnating-but-not-failing
+agent never trips — tool-call repetition and oscillation are the concrete detectable instances);
+context economics in the loop (window monitoring, compaction preserving originals rather than
+deleting, tool-output offloading cross-referenced to `mcp-tools.md`, the append-don't-rewrite
+cache-prefix rule); separation of concerns (the explorer must not write the report); breadth vs
+depth as which end of a queue gets popped; and the surrounding training/feedback/human loops,
+including the line that already grounds round 15's Reflexion correction: apparent in-session
+learning is not a weight update, it is retrieval.
+
+**Three numbered scales collide in this file and must be named as orthogonal, explicitly, not
+left for a reader to guess**: Google's capability **Levels 0–4** (`architectures.md`, capability,
+not operational maturity), the Oracle article's harness **Levels 1–3** (harness structure — Level
+1 is a bare tool-calling loop with no persistent memory; Level 2 adds memory operations
+read-before/write-after the loop; Level 3 moves operations to both sides of the loop boundary and
+adds context-window monitoring, compaction, tool-output offloading, semantic tool discovery, and
+idempotency keys — most of which already landed in round 14's `mcp-tools.md`, cross-link rather
+than re-teach), and ch. 9's own **Layers 1–3** (this file's spine, a different axis again). Plus
+the `loop-engineering.md` homonym: 'cognitive surrender' there is about the *human developer*
+outsourcing judgment to automation, not about anything in this new file.
+
+**Do not carry from the Oracle article**: Oracle/OCI product claims (the piece is a vendor blog
+whose last third is a pitch — admissible for technique, not fact, per round 7's rule, already
+applied once this round for its memory-type list); the unsourced 'three to four thousand tokens
+per web search' figure; the continual-learning definition spanning 'token space, weight space and
+latent space' presented as settled fact (it is the author's own framing — find a primary source or
+state it as the author's claim); 'the Codex implementation established this explicitly' about
+prefix caching (a claim about a third-party system, unverified this round — check or attribute
+before repeating it); the DeepLearning.AI course mention. The six-memory-types material itself is
+already spent — round 17 used it for the taxonomy reconciliation in `memory-vector-db.md` and it
+does not need re-litigating here.
+
+Example, per the standing per-round requirement (this would be the sixth in a row, and the
+cheapest to verify of any round planned, per the roadmap's own note): a minimal harness as pure,
+offline-testable logic — three exit conditions (iteration cap, wall-clock timeout, a repetition
+detector comparing the last N tool calls) plus tool-output offloading to a log keyed by an id, with
+the context receiving only the compact reference. Tests: the iteration cap halts before the
+wall-clock timeout would, and vice versa depending on which is tighter; the repetition detector
+trips on N identical consecutive tool calls and does not trip on N-1; offloading returns a stable
+id and the full payload is retrievable by it; and — the same discipline this round's own mutation
+testing caught a weak test with — deliberately break each exit condition and confirm the *specific*
+test written for it fails, not just that some test somewhere goes red.
+
+Verify every identifier fresh. This round re-fetched a source (the Oracle article) that a prior
+round had already summarized in HANDOFF, found the summary was accurate as far as it went but
+incomplete for what this round specifically needed (the six memory types themselves, not just
+their existence), and only the fresh fetch made the reconciliation possible — the same lesson
+round 15 drew from `sequential-thinking`, applied to a whole article rather than one tool name.
+
+Small carry-overs, easy to lose: `skill-router.md` rows continue the bilingual trigger-phrase
+convention; this round's two new rows followed it. Sync `check_docs.py`'s smoke-count guard when
+the count changes (it will), and rebuild the zip — a new reference means check 5 fails until
+`& .\chatgpt\build_gpt_package.ps1` runs, and even without a new reference, rebuild anyway if
+existing reference content changed materially (this round's own judgment call, see Verification
+above — check 5 cannot detect a content-stale zip on its own).
+
+The language migration (8 `SKILL.md` bodies, the plugin `README.md`, two references) is still
+open, still not blocking, and round 17 did not touch it for the same reason round 16 didn't — no
+`SKILL.md` body or `README.md` prose needed editing this round. Ask the user whether it should be
+its own round before the backlog grows further; it has now been deferred across three consecutive
+content rounds.
+
+If the user brings something else instead, nothing is blocking; state what round 18 would have
+been and let them redirect."*
 
 ## What just happened (round 16 — multi-agent design axes + guardrails, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same session and branch as round 15, per the user's "use the current branch" instruction)
 

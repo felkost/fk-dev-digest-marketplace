@@ -90,7 +90,7 @@ between calls on its own, so growing context has to be assembled and handed back
 
 ## What the tests pin
 
-`python tests/smoke_test.py` — this file's share is checks 24-34 (rag_example's and mcp_example's
+`python tests/smoke_test.py` — this file's share is checks 28-38 (rag_example's and mcp_example's
 shares are in their own reference files). All offline, bare interpreter, no key/network/langgraph
 installed:
 

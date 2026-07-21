@@ -9,7 +9,7 @@ are in `design-agent-architecture/references/rag-pipeline.md`; this file covers 
 
 - Run it
 - Layout
-- Four decisions worth explaining
+- Five decisions worth explaining
 - What the smoke test pins (this file's share, offline)
 - Production deltas
 
@@ -48,12 +48,33 @@ example still works today; if you hit a removal, that migration is the fix — v
 function's signature against LangChain's current docs before swapping it in, don't assume it's a
 drop-in replacement.
 
+**Hybrid retrieval's database layer has also been run against a real, genuinely fresh
+`docker compose up` container** — not just reviewed. The fresh-database DDL path (`build_schema`
+→ `FTS_COLUMN` → `FTS_INDEX`), an idempotent re-run of the FTS DDL on an already-migrated table,
+and the migration path itself (dropping `content_tsv` to simulate a pre-hybrid table with rows
+already in it, then re-running `FTS_COLUMN` and confirming all three existing rows backfill
+correctly with no data loss) all passed. So did the property that matters: a query vector crafted
+to match one synthetic chunk and a keyword query crafted to match a different one produced two
+*disagreeing* rankings, and `reciprocal_rank_fusion` correctly surfaced both near the top while
+ranking the chunk relevant to neither system last.
+
+That same run found a real, non-obvious limitation, worth stating plainly. A first attempt queried
+`search_docs`-style with a full natural-language question and got **zero** rows back from the
+lexical side. `websearch_to_tsquery` ANDs every significant word in the query together by default
+— confirmed directly against the container: `SELECT websearch_to_tsquery('english', 'What does
+the ticket INC-4471 say about the return timeline?')` printed `'ticket' & 'inc' <-> '-4471' &
+'say' & 'return' & 'timelin'` — and the target document contained none of "say", "return", or
+"timeline", so the AND failed even though the document was an exact match for what the question
+was actually asking about. A short, keyword-style query (`"INC-4471"`) found it immediately. This
+is why `search_docs`'s docstring now tells the calling model to prefer short, specific phrases: it
+is not a style preference, it is what makes the lexical half of the hybrid actually work.
+
 ## Layout
 
 ```
 scripts/rag_example/
 ├── chunking.py        # pure: windowing with overlap + citation metadata
-├── retrieval.py       # pure: cosine, top-k ranking, recall@k
+├── retrieval.py       # pure: cosine, top-k ranking, recall@k, reciprocal rank fusion
 ├── settings.py        # pure: env validation, fails at startup not first query
 ├── ingest.py          # framework: OpenAI-compatible embeddings + psycopg/pgvector
 ├── agent.py           # framework: LangGraph ReAct agent, retrieval as a tool
@@ -62,7 +83,7 @@ scripts/rag_example/
 └── requirements.txt
 ```
 
-## Four decisions worth explaining
+## Five decisions worth explaining
 
 ### 1. Chat and embeddings come from different providers
 
@@ -104,9 +125,48 @@ the same model and version — mixing them degrades silently to noise rather tha
 Changing the embedding model is therefore a planned re-ingestion, and the schema makes that
 visible instead of leaving it as folklore.
 
+### 5. Hybrid retrieval fuses two real rankings, not a keyword bolt-on
+
+`search_docs` now runs **two** independent queries per call — the existing dense vector search,
+plus a lexical one over a `content_tsv` column PostgreSQL maintains automatically — and merges
+them with a real `reciprocal_rank_fusion` function in `retrieval.py` (Cormack, Clarke &
+Büttcher, SIGIR 2009). This is a deliberate contrast with
+`chapter_06/02_RAG_agent_hybrid.py` in a companion repository this plugin triaged: its book
+explains reciprocal rank fusion in prose as the production default, but the script itself
+implements an ad-hoc keyword scorer (`+10` exact phrase, `+2` per word) and delegates the merge
+to "the agent's judgement" — no fusion function exists. Here, fusion is a tested, pure function,
+not a hope, and the Chroma vector store that same script uses is deliberately not ported; this
+plugin's store is pgvector throughout.
+
+Four points worth being precise about:
+
+- **This is FTS, not BM25, and the example says so.** `content_tsv tsvector GENERATED ALWAYS AS
+  (to_tsvector('english', content)) STORED` plus a GIN index is core PostgreSQL — no extension
+  required — ranked by `ts_rank_cd`. PostgreSQL's own documentation calls `ts_rank`/`ts_rank_cd`
+  "only examples" of a ranking function, not BM25; BM25-style scoring is a separate extension
+  (e.g. `pg_search`), not something core PostgreSQL claims to implement. Never copy one system's
+  ranking-parameter vocabulary into the other's — see
+  `design-agent-architecture/references/memory-vector-db.md`.
+- **RRF needs no score normalization between the two rankings**, which is the entire reason it is
+  usable here: a cosine distance and a `ts_rank_cd` score are not on comparable scales, and RRF
+  never looks at either value — only the rank position each system assigned. `retrieval.py`'s
+  `reciprocal_rank_fusion` is deliberately generic (it fuses ranked id lists, not vectors or
+  scores) so the same function fuses two systems today and would fuse a third tomorrow.
+- **The search config is baked in at schema time, like the vector dimension is.** `'english'` is
+  part of the `GENERATED ALWAYS AS` expression, fixed when the column is created — not something
+  an env var can change per query. Changing it is a schema migration (`ALTER TABLE ... ADD COLUMN
+  IF NOT EXISTS`, verified against PostgreSQL's current docs to rewrite the table and backfill
+  existing rows), the same discipline the embedding-model-ID versioning above already teaches,
+  applied to text search instead of vectors.
+- **`websearch_to_tsquery` was chosen over `to_tsquery`/`plainto_tsquery` because it takes raw,
+  unsanitized text without raising a syntax error** — PostgreSQL's own documentation states this
+  explicitly, and `query` here is whatever the calling model decided to search for, not a string
+  an operator hand-wrote. The cost of that safety is documented in "Run it" above: it ANDs every
+  significant term together, so it rewards a short query and can return nothing for a wordy one.
+
 ## What the smoke test pins (this file's share, offline)
 
-`python tests/smoke_test.py` — 43 checks total (all four examples this plugin ships); 14 of them
+`python tests/smoke_test.py` — 47 checks total (all four examples this plugin ships); 18 of them
 are this file's own (the other three examples' shares are in `mcp-example.md`,
 `reflexion-example.md` and `guardrail-example.md`). Run from the plugin root. Grouped:
 
@@ -115,6 +175,7 @@ are this file's own (the other three examples' shares are in `mcp-example.md`,
 | Files exist; pure modules import; **imports are stdlib-only** | The example stops being testable without a full install |
 | Window count; overlap is exactly `overlap` words; short tail; `overlap=0` tiles losslessly | Chunking drifts and every retrieval number moves with it |
 | Planted chunk ranks first; ties deterministic; cosine handles zero vectors and dimension mismatch | Ranking regressions, and unreproducible eval runs |
+| Fusion ranks agreement-across-systems above a solo top hit; a lexical-only hit missing from the vector side still surfaces; ties break by id, not by insertion order; `k<=0` rejected | A hybrid retriever that quietly degrades to whichever system happened to run last, or an unreproducible eval |
 | Settings reject `overlap >= chunk_size`; name the missing variable | Config errors surface at first query instead of at boot |
 | `.env.example` covers every variable read; ships no filled-in secret; compose parses with a healthcheck | Silent misconfiguration, a leaked key, or `ingest.py` racing Postgres |
 
@@ -148,6 +209,11 @@ common enough pgvector/psycopg trap to recognize elsewhere:
 spending against it is not this session's call to make). Both are still manual verification, not
 CI — document them in the user's README rather than faking them in a test.
 
+The hybrid retrieval layer added on top of this (the FTS column, its GIN index, the migration
+path, and the fusion itself) was verified the same live way, against the same kind of genuinely
+fresh container — see "Run it" above for what that run found, including a real limitation in how
+`websearch_to_tsquery` handles a wordy query.
+
 ## Production deltas (state these with the example)
 
 This is a teaching scaffold. Before it carries real traffic:
@@ -161,8 +227,16 @@ This is a teaching scaffold. Before it carries real traffic:
   trade must be observed, not assumed. Which family, which build-time versus query-time knobs,
   and pgvector's exact parameter names are in
   `design-agent-architecture/references/memory-vector-db.md`.
-- **Hybrid search.** Dense vectors miss exact identifiers and rare terms; add keyword/BM25 and
-  fuse (see `design-agent-architecture/references/memory-vector-db.md`).
+- **Cross-encoder reranking on the fused result.** Hybrid retrieval (decision 5 above) fixes
+  recall on rare identifiers; it does not rerank. RRF's naive score is still a proxy — for a
+  precision-sensitive deployment, rerank the fused top-N with a cross-encoder before generation
+  (`design-agent-architecture/references/rag-pipeline.md`'s "Advanced retrieval" section).
+- **Read-side authorization.** This demo has one tenant, one trust level, and no ACLs. A corpus
+  mixing confidentiality levels needs tenant/role filtering enforced in the SQL itself — a
+  permissions problem on the index, not a prompt-injection problem, and this example does not
+  implement it. See `design-agent-architecture/references/rag-pipeline.md`'s read-side
+  authorization section: it is a different failure class from the retrieval-surface point below,
+  and neither defends against the other.
 - **A labelled retrieval set** of question→passage pairs, and recall@k measured *before* anyone
   touches the prompt. Without it, every later change is a guess
   (`evaluate-optimize-models/references/evaluation.md`).

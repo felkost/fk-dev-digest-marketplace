@@ -7,56 +7,59 @@ wiring in separate files -- check 9 below is what keeps rag_example's half
 of that property true (mcp_example has no framework-importing pure module to
 guard, since journal.py is its only pure module and check 17 covers it).
 
-What it pins, rag_example (pgvector + LangGraph RAG):
+What it pins, rag_example (pgvector + LangGraph RAG, hybrid vector + full-text):
   1-3. the modules import, and import nothing that needs installing;
   4-6. the splitter's window count, overlap and short tail;
   7-9. ranking: a planted chunk is retrieved first, ties are deterministic,
        cosine handles zero vectors and dimension mismatch;
- 10-11. settings validation rejects contradictory chunk config;
- 12-14. .env.example covers every variable the code reads, ships no filled-in
+ 10-13. reciprocal_rank_fusion: agreement across systems beats being #1 in
+       just one, a lexical-only hit missing from the vector side still
+       surfaces, ties break deterministically by ascending id, k<=0 rejected;
+ 14-15. settings validation rejects contradictory chunk config;
+ 16-18. .env.example covers every variable the code reads, ships no filled-in
        secret, and the compose file parses.
 
 What it pins, mcp_example (MCP server + LangGraph agent -- the *offline* tier
 only; the live stdio round-trip is a separate check, see
 references/mcp-example.md, because it needs `mcp` installed and a real
 subprocess, which breaks the bare-interpreter promise above):
- 15-17. the journal module imports, and imports nothing that needs installing;
- 18-20. note logic: sequential ids, blank text rejected, an unknown id reads
+ 19-21. the journal module imports, and imports nothing that needs installing;
+ 22-24. note logic: sequential ids, blank text rejected, an unknown id reads
        as None rather than raising;
- 21.   an empty journal reports itself as empty instead of "";
- 22-23. .env.example covers every variable agent.py reads and ships no
+ 25.   an empty journal reports itself as empty instead of "";
+ 26-27. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
 What it pins, reflexion_example (solver-critic Reflexion loop in LangGraph --
 this example has no free live tier the way mcp_example's subprocess
 round-trip does, since the only thing left once the loop's control flow is
 pure is an actual model call; see references/reflexion-example.md):
- 24.   the directory exists with the expected files;
- 25-26. reflexion_core imports, and imports nothing that needs installing;
- 27.   numeric extraction avoids the book's "126 contains 26" substring trap;
- 28.   the checker does not fall for "incorrect" containing "correct";
- 29.   the success predicate is derived from the current task, never a
+ 28.   the directory exists with the expected files;
+ 29-30. reflexion_core imports, and imports nothing that needs installing;
+ 31.   numeric extraction avoids the book's "126 contains 26" substring trap;
+ 32.   the checker does not fall for "incorrect" containing "correct";
+ 33.   the success predicate is derived from the current task, never a
        leftover global -- two tasks built from the same factory never accept
        each other's answers;
- 30.   run_reflexion stops the instant a check passes, not before and not after;
- 31.   hints accumulate by exactly one per failed attempt and reach solve();
- 32.   run_reflexion halts at max_attempts when the task is never solved;
- 33-34. .env.example covers every variable agent.py reads and ships no
+ 34.   run_reflexion stops the instant a check passes, not before and not after;
+ 35.   hints accumulate by exactly one per failed attempt and reach solve();
+ 36.   run_reflexion halts at max_attempts when the task is never solved;
+ 37-38. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
 What it pins, guardrail_example (deterministic pass-off guardrail gating a
 two-agent handoff in LangGraph; see references/guardrail-example.md):
- 35.   the directory exists with the expected files;
- 36-37. guardrail_core imports, and imports nothing that needs installing;
- 38.   the polarity test -- the guardrail blocks a thin plan AND approves a
+ 39.   the directory exists with the expected files;
+ 40-41. guardrail_core imports, and imports nothing that needs installing;
+ 42.   the polarity test -- the guardrail blocks a thin plan AND approves a
        detailed one, the one direction chapter_04/09_agent_passoff_guardrails.py
        would have failed;
- 39.   a long-enough plan missing one required section still blocks, named
+ 43.   a long-enough plan missing one required section still blocks, named
        specifically -- length alone is not sufficient;
- 40.   attempt_passoff never leaks next_stage_input on a blocked plan;
- 41.   interleaved reviews of different plans never contaminate each other --
+ 44.   attempt_passoff never leaks next_stage_input on a blocked plan;
+ 45.   interleaved reviews of different plans never contaminate each other --
        no module-level state to race, unlike chapter_07/06's `_last_context`;
- 42-43. .env.example covers every variable agent.py reads and ships no
+ 46-47. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
@@ -252,7 +255,71 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 10-11. Settings validation
+# 10-13. Reciprocal rank fusion (hybrid vector + full-text retrieval)
+# --------------------------------------------------------------------------- #
+
+@check("fusion ranks a document both systems agree on above one only the vector side likes")
+def _():
+    from retrieval import reciprocal_rank_fusion
+    # doc 9 is #2 in BOTH rankings; doc 7 is #1 in vector only, doc 8 is #1 in
+    # FTS only. Agreement across systems must outrank either solo top hit --
+    # the property Cormack, Clarke & Buttcher's paper names as RRF's reason to
+    # exist ("one or two systems that rank a document highly can substantially
+    # improve its rank relative to the more popular documents"). doc 9
+    # deliberately has the LARGEST id of the three: a broken fusion that
+    # dropped the `k` damping constant makes rank-1-once and rank-2-twice
+    # score IDENTICALLY (1/1 == 1/2 + 1/2), which this check would silently
+    # pass if the ascending-id tie-break happened to favor 9 anyway -- caught
+    # by mutation testing, fixed by picking ids where it cannot.
+    vector_ranking = [7, 9, 4]
+    fts_ranking = [8, 9, 5]
+    fused = reciprocal_rank_fusion([vector_ranking, fts_ranking])
+    assert fused[0][0] == 9, f"the doc both systems agree on must win, got {fused}"
+
+
+@check("fusion surfaces a lexical-only hit the vector ranking never returned")
+def _():
+    from retrieval import reciprocal_rank_fusion
+    # The "our RAG cannot find ticket INC-4471" failure mode hybrid retrieval
+    # exists to fix: a rare identifier the dense side never retrieves at all
+    # must still reach the fused result through the FTS side alone -- unlike
+    # the book's ad-hoc keyword scorer, this is an actual fusion function, not
+    # a merge left to the agent's judgement.
+    vector_ranking = [100, 200, 300]  # ticket id never retrieved by embedding
+    fts_ranking = [777]               # exact keyword match, nothing else
+    fused = reciprocal_rank_fusion([vector_ranking, fts_ranking])
+    ids = [doc_id for doc_id, _score in fused]
+    assert 777 in ids, "a lexical-only hit must still appear in the fused list"
+
+
+@check("fusion breaks ties by ascending id, not by insertion order")
+def _():
+    from retrieval import reciprocal_rank_fusion
+    # Two disjoint rankings where every position ties in score -- an unstable
+    # fusion makes a retrieval eval unreproducible, the same concern rank()'s
+    # own tie-break test guards above. The higher ids are listed FIRST on
+    # purpose: Python's sorted() is stable, so a fusion that merely forgot the
+    # id tie-break (sorting by score alone) would pass a naive version of this
+    # check by silently falling back to dict-insertion order -- this ordering
+    # was verified by deliberately reverting to a score-only sort and
+    # confirming it flips the result to [30, 10, 40, 20] before being fixed.
+    fused = reciprocal_rank_fusion([[30, 40], [10, 20]])
+    assert [doc_id for doc_id, _ in fused] == [10, 30, 20, 40], fused
+
+
+@check("fusion rejects a non-positive k")
+def _():
+    from retrieval import reciprocal_rank_fusion
+    try:
+        reciprocal_rank_fusion([[1, 2]], k=0)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("k <= 0 must be rejected")
+
+
+# --------------------------------------------------------------------------- #
+# 14-15. Settings validation
 # --------------------------------------------------------------------------- #
 
 @check("settings reject overlap >= chunk_size")
@@ -294,7 +361,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 12-14. Configuration files
+# 16-18. Configuration files
 # --------------------------------------------------------------------------- #
 
 def _env_example_keys() -> set[str]:
@@ -351,7 +418,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 15-17. mcp_example: imports, and the offline-testability property
+# 19-21. mcp_example: imports, and the offline-testability property
 # --------------------------------------------------------------------------- #
 
 @check("mcp_example directory exists with the expected files")
@@ -384,7 +451,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 18-21. mcp_example: note logic
+# 22-25. mcp_example: note logic
 # --------------------------------------------------------------------------- #
 
 @check("add() assigns sequential ids and strips whitespace")
@@ -429,7 +496,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 22-23. mcp_example: configuration file
+# 26-27. mcp_example: configuration file
 # --------------------------------------------------------------------------- #
 
 def _mcp_env_example_keys() -> set[str]:
@@ -468,7 +535,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 24-26. reflexion_example: files exist, and the offline-testability property
+# 28-30. reflexion_example: files exist, and the offline-testability property
 # --------------------------------------------------------------------------- #
 
 @check("reflexion_example directory exists with the expected files")
@@ -500,7 +567,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 27-29. The anti-oracle checker: the two substring traps, and non-leakage
+# 31-33. The anti-oracle checker: the two substring traps, and non-leakage
 # --------------------------------------------------------------------------- #
 
 @check("numeric extraction avoids the book's '126 contains 26' substring trap")
@@ -535,7 +602,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 30-32. The loop: stopping condition, hint accumulation, attempt cap
+# 34-36. The loop: stopping condition, hint accumulation, attempt cap
 # --------------------------------------------------------------------------- #
 
 @check("run_reflexion stops as soon as a check passes")
@@ -576,7 +643,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 33-34. reflexion_example: configuration file
+# 37-38. reflexion_example: configuration file
 # --------------------------------------------------------------------------- #
 
 def _reflexion_env_example_keys() -> set[str]:
@@ -615,7 +682,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 35-37. guardrail_example: files exist, and the offline-testability property
+# 39-41. guardrail_example: files exist, and the offline-testability property
 # --------------------------------------------------------------------------- #
 
 @check("guardrail_example directory exists with the expected files")
@@ -647,7 +714,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 38-41. The guardrail itself: polarity, section detection, no leakage
+# 42-45. The guardrail itself: polarity, section detection, no leakage
 # --------------------------------------------------------------------------- #
 
 _GOOD_PLAN = (
@@ -719,7 +786,7 @@ def _():
 
 
 # --------------------------------------------------------------------------- #
-# 42-43. guardrail_example: configuration file
+# 46-47. guardrail_example: configuration file
 # --------------------------------------------------------------------------- #
 
 def _guardrail_env_example_keys() -> set[str]:

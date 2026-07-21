@@ -81,7 +81,7 @@ places money gets spent.
 
 ## What the tests pin
 
-`python tests/smoke_test.py` — this file's share is checks 35-43. All offline, bare interpreter,
+`python tests/smoke_test.py` — this file's share is checks 39-47. All offline, bare interpreter,
 no key/network/langgraph installed:
 
 | Checks | What breaks if they go |

@@ -81,9 +81,11 @@ Ukrainian the user is likely to type.
 | «який reasoning pattern для агента», CoT vs ReAct vs ToT vs Reflexion, which structure and why | `design-agent-architecture` | `references/reasoning-patterns.md` |
 | «зроби RAG», «пошук по документах», citations over a private corpus | `design-agent-architecture` | `references/rag-pipeline.md` |
 | «RAG поганий», retrieval misses, реранкінг, HyDE, multi-query | `design-agent-architecture` | `references/rag-pipeline.md` |
+| «агент показав чужі документи», multi-tenant RAG, розмежування доступу, ACL в індексі | `design-agent-architecture` | `references/rag-pipeline.md` |
 | «які основні теми в корпусі», питання про весь корпус, багатокрокові зв'язки | `design-agent-architecture` | `references/graph-rag.md` |
 | GraphRAG, граф знань, Neo4j/Cypher, text2cypher, спільноти й entity resolution | `design-agent-architecture` | `references/graph-rag.md` |
 | «покажи робочий RAG», код ingest+retrieve, pgvector | `build-ai-examples` | `references/rag-example.md` |
+| «RAG не знаходить номер тікета/ID», гібридний пошук, keyword + vector, RRF | `build-ai-examples` | `references/rag-example.md` |
 | «як завантажити PDF/Word/Excel», OCR, скани, аудіо, таблиці, мультимодальний парсинг | `build-ai-examples` | `references/document-loading.md` |
 | structured outputs, JSON schema, Pydantic-схема відповіді | `build-ai-examples` | `references/document-loading.md` |
 | «донавчити ембединги», fine-tune ретривера, спільне навчання retriever+LLM | `select-genai-models` | `references/build-vs-use.md` |

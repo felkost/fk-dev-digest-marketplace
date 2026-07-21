@@ -22,6 +22,7 @@ from openai import OpenAI
 from pgvector import Vector
 from pgvector.psycopg import register_vector
 
+from retrieval import reciprocal_rank_fusion
 from settings import load_settings
 
 # settings.py stays stdlib-only (a smoke_test.py check enforces this) and just
@@ -49,7 +50,13 @@ Rules:
 
 @tool
 def search_docs(query: str) -> str:
-    """Search the ingested corpus. Use for any question about its content."""
+    """Search the ingested corpus. Use for any question about its content.
+
+    Prefer a short, specific phrase (names, ids, key terms) over a full
+    question: the lexical side of this search ANDs every significant word
+    together, so a wordy query can fail to match a document that a short one
+    would find.
+    """
     vector = embed_client.embeddings.create(
         model=settings.embedding_model, input=[query]
     ).data[0].embedding
@@ -60,9 +67,15 @@ def search_docs(query: str) -> str:
         # here too so agent.py does not depend on ingest.py having run first.
         conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         register_vector(conn)
-        rows = conn.execute(
+
+        # Two independent rankings over the same rows. reciprocal_rank_fusion
+        # (retrieval.py) needs no normalization between them despite the wholly
+        # different scales of a cosine distance and a ts_rank_cd score -- that
+        # is RRF's whole point, and why it is safe to fuse dense and lexical
+        # results without inventing a way to compare the two scores directly.
+        vector_rows = conn.execute(
             """
-            SELECT source, chunk_index, content
+            SELECT id, source, chunk_index, content
             FROM chunks
             WHERE model_id = %s
             ORDER BY embedding <=> %s          -- pgvector cosine distance
@@ -76,11 +89,41 @@ def search_docs(query: str) -> str:
             (settings.embedding_model, Vector(vector), settings.top_k),
         ).fetchall()
 
-    if not rows:
+        # websearch_to_tsquery is PostgreSQL's own recommended constructor for
+        # raw, unsanitized user text: unlike to_tsquery/plainto_tsquery it never
+        # raises a syntax error, which matters because `query` here is whatever
+        # the model decided to search for. ts_rank_cd additionally weighs how
+        # close the matching lexemes sit together ("cover density"); PostgreSQL's
+        # docs call both ts_rank and ts_rank_cd "only examples" of a ranking
+        # function -- this is NOT BM25, and does not need to be, since fusion
+        # below only consumes the resulting ORDER, never the score itself.
+        fts_rows = conn.execute(
+            """
+            SELECT id, source, chunk_index, content
+            FROM chunks
+            WHERE model_id = %s
+              AND content_tsv @@ websearch_to_tsquery('english', %s)
+            ORDER BY ts_rank_cd(content_tsv, websearch_to_tsquery('english', %s)) DESC
+            LIMIT %s
+            """,
+            (settings.embedding_model, query, query, settings.top_k),
+        ).fetchall()
+
+    by_id: dict[int, tuple[str, int, str]] = {}
+    for doc_id, source, chunk_index, content in (*vector_rows, *fts_rows):
+        by_id[doc_id] = (source, chunk_index, content)
+
+    fused = reciprocal_rank_fusion(
+        [[row[0] for row in vector_rows], [row[0] for row in fts_rows]]
+    )
+    if not fused:
         # An explicit empty result, not an empty string: the model must be able
         # to tell "nothing matched" from "the tool broke".
         return "NO_RESULTS: the corpus returned nothing for this query."
-    return "\n\n".join(f"[{src}#{idx}]\n{content}" for src, idx, content in rows)
+    return "\n\n".join(
+        f"[{by_id[doc_id][0]}#{by_id[doc_id][1]}]\n{by_id[doc_id][2]}"
+        for doc_id, _score in fused[: settings.top_k]
+    )
 
 
 def build_agent():
