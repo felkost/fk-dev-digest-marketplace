@@ -27,6 +27,23 @@ subprocess, which breaks the bare-interpreter promise above):
  22-23. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
+What it pins, reflexion_example (solver-critic Reflexion loop in LangGraph --
+this example has no free live tier the way mcp_example's subprocess
+round-trip does, since the only thing left once the loop's control flow is
+pure is an actual model call; see references/reflexion-example.md):
+ 24.   the directory exists with the expected files;
+ 25-26. reflexion_core imports, and imports nothing that needs installing;
+ 27.   numeric extraction avoids the book's "126 contains 26" substring trap;
+ 28.   the checker does not fall for "incorrect" containing "correct";
+ 29.   the success predicate is derived from the current task, never a
+       leftover global -- two tasks built from the same factory never accept
+       each other's answers;
+ 30.   run_reflexion stops the instant a check passes, not before and not after;
+ 31.   hints accumulate by exactly one per failed attempt and reach solve();
+ 32.   run_reflexion halts at max_attempts when the task is never solved;
+ 33-34. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
 Console note: this box's console is cp1251, so output is ASCII-safe.
@@ -44,8 +61,10 @@ import traceback
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "rag_example"
 MCP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "mcp_example"
+REFLEXION_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reflexion_example"
 sys.path.insert(0, str(EXAMPLE))
 sys.path.insert(0, str(MCP_EXAMPLE))
+sys.path.insert(0, str(REFLEXION_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -421,6 +440,153 @@ def _():
 @check(".env.example (mcp_example) ships no filled-in secret")
 def _():
     for line in (MCP_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value in ("", "not-needed-for-local"), (
+                f"{key} looks filled in ({value!r}) -- .env.example must ship blank"
+            )
+
+
+# --------------------------------------------------------------------------- #
+# 24-26. reflexion_example: files exist, and the offline-testability property
+# --------------------------------------------------------------------------- #
+
+@check("reflexion_example directory exists with the expected files")
+def _():
+    for name in ("reflexion_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (REFLEXION_EXAMPLE / name).exists(), f"missing {name}"
+
+
+@check("reflexion_core module imports with no third-party packages installed")
+def _():
+    import reflexion_core  # noqa: F401
+
+
+@check("reflexion_core module imports ONLY stdlib (keeps this test runnable offline)")
+def _():
+    tree = ast.parse((REFLEXION_EXAMPLE / "reflexion_core.py").read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names = [a.name.split(".")[0] for a in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            names = [(node.module or "").split(".")[0]]
+        else:
+            continue
+        for n in names:
+            assert n in STDLIB_OK, (
+                f"reflexion_core.py imports third-party '{n}'; move it to agent.py "
+                "or this smoke test stops running offline"
+            )
+
+
+# --------------------------------------------------------------------------- #
+# 27-29. The anti-oracle checker: the two substring traps, and non-leakage
+# --------------------------------------------------------------------------- #
+
+@check("numeric extraction avoids the book's '126 contains 26' substring trap")
+def _():
+    from reflexion_core import make_arithmetic_task
+    task = make_arithmetic_task("how many days", expected=26)
+    result = task.check("The trip takes 126 days total.")
+    assert result.passed is False, "126 must not read as containing 26"
+    assert task.check("The trip takes 26 days total.").passed is True
+
+
+@check("checker does not fall for the book's 'incorrect contains correct' substring trap")
+def _():
+    from reflexion_core import make_arithmetic_task
+    task = make_arithmetic_task("how many widgets", expected=45)
+    # A naive `"correct" in answer.lower()` check -- the book's second,
+    # leftover condition -- would wrongly pass this: "incorrect" contains
+    # "correct" as a substring, and there is no valid number here at all.
+    result = task.check("That is incorrect.")
+    assert result.passed is False, "'incorrect' must not satisfy a 'correct' in answer check"
+    assert "No number found" in result.feedback
+
+
+@check("success predicate is derived from the current task, never a leftover global")
+def _():
+    from reflexion_core import make_arithmetic_task
+    task_a = make_arithmetic_task("task A", expected=26)
+    task_b = make_arithmetic_task("task B", expected=45)
+    assert task_a.check("26").passed is True
+    assert task_b.check("26").passed is False, "task B must not accept task A's leftover answer"
+    assert task_b.check("45").passed is True
+
+
+# --------------------------------------------------------------------------- #
+# 30-32. The loop: stopping condition, hint accumulation, attempt cap
+# --------------------------------------------------------------------------- #
+
+@check("run_reflexion stops as soon as a check passes")
+def _():
+    from reflexion_core import make_arithmetic_task, run_reflexion
+    task = make_arithmetic_task("t", expected=10)
+    answers = iter(["9", "10", "999"])  # a third call must never happen
+    outcome = run_reflexion(task, solve=lambda prompt, hints: next(answers), max_attempts=5)
+    assert outcome.succeeded is True
+    assert outcome.stop_reason == "solved"
+    assert len(outcome.attempts) == 2, "must stop at the passing attempt, not run to the cap"
+
+
+@check("hints accumulate by exactly one per failed attempt and reach solve()")
+def _():
+    from reflexion_core import make_arithmetic_task, run_reflexion
+    task = make_arithmetic_task("t", expected=999)  # unreachable by the stub below
+    seen_hint_counts: list[int] = []
+
+    def solve(prompt: str, hints: tuple[str, ...]) -> str:
+        seen_hint_counts.append(len(hints))
+        return "0"  # always wrong
+
+    outcome = run_reflexion(task, solve=solve, max_attempts=3)
+    assert seen_hint_counts == [0, 1, 2], f"hint count must grow by one each attempt, got {seen_hint_counts}"
+    assert len(outcome.attempts) == 3
+    assert all(not a.passed for a in outcome.attempts)
+
+
+@check("run_reflexion halts at max_attempts when the task is never solved")
+def _():
+    from reflexion_core import make_arithmetic_task, run_reflexion
+    task = make_arithmetic_task("t", expected=999)
+    outcome = run_reflexion(task, solve=lambda prompt, hints: "0", max_attempts=3)
+    assert outcome.succeeded is False
+    assert outcome.stop_reason == "attempt_cap"
+    assert len(outcome.attempts) == 3
+
+
+# --------------------------------------------------------------------------- #
+# 33-34. reflexion_example: configuration file
+# --------------------------------------------------------------------------- #
+
+def _reflexion_env_example_keys() -> set[str]:
+    keys = set()
+    for line in (REFLEXION_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            keys.add(line.split("=", 1)[0].strip())
+    return keys
+
+
+@check(".env.example (reflexion_example) covers every variable agent.py reads")
+def _():
+    read = set()
+    for py in sorted(REFLEXION_EXAMPLE.glob("*.py")):
+        src = py.read_text(encoding="utf-8")
+        read |= set(re.findall(r"os\.environ\.get\(\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"os\.environ\[\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"os\.getenv\(\s*[\"']([A-Z_]+)[\"']", src))
+        read |= set(re.findall(r"_require\(\s*[\"']([A-Z_]+)[\"']", src))
+    missing = read - _reflexion_env_example_keys()
+    assert not missing, f".env.example (reflexion_example) is missing: {sorted(missing)}"
+
+
+@check(".env.example (reflexion_example) ships no filled-in secret")
+def _():
+    for line in (REFLEXION_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

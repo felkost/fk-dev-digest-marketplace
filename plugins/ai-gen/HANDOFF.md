@@ -1,11 +1,219 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-07-21, end of the **chapters 7–11
-triage** — a no-content session (round 0/7/13 shape) that read the rest of the Lanham book and the
-companion repo's `chapter_05`–`chapter_09`. **Rounds 15–18 are unchanged and still the live
-roadmap**; this triage adds rounds **19–22** after them and amends round 15's example spec. Written
-for a fresh Claude session with no conversation history — read this whole file before touching
-anything.
+Newest entry on top (eda-skills convention). Last updated 2026-07-21, round **15** (reasoning
+structures + `reflexion_example`) — the first content round after the ch. 7–11 triage below, and
+the one that triage's own prompt pointed at. Skills stay at **8**, references go **31 → 33**.
+Rounds 16–18 are unchanged and still the live roadmap; rounds 19–22 follow after them, exactly as
+the triage entry fixed. Written for a fresh Claude session with no conversation history — read
+this whole file before touching anything.
+
+## What just happened (round 15 — reasoning structures + `reflexion_example`, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same branch as the ch. 7–11 triage by the user's explicit instruction)
+
+**Branching decision, not a default:** the user's session-opening instruction was to work on the
+current branch, so this round lands as a second commit on `docs/ai-gen-lanham-ch7-11-triage`,
+after the triage's own bookkeeping commit — the same shape round 14 used on top of round 13's
+triage branch (both land in one PR). References: **31 → 33**
+(`design-agent-architecture/references/reasoning-patterns.md`,
+`build-ai-examples/references/reflexion-example.md`).
+
+### What shipped
+
+- **New `design-agent-architecture/references/reasoning-patterns.md`** (155 lines — the
+  "~180-220" estimate in the prompt was an orientation written before anyone had drafted the file,
+  not a target; coverage was checked against the round-15 content list item by item, not against a
+  line count, per round 9's precedent of not trimming to hit a number). Covers, in this order:
+  decomposition vs planning as independently-failing operations; a CoT/ReAct/ToT/Reflexion
+  selection table; what actually defines ReAct (verified against the primary source — Yao et al.'s
+  abstract defines it as reasoning traces and actions "in an interleaved manner", not the presence
+  of a tool call); why Tree of Thoughts needs orchestration code, illustrated with the book's own
+  `chapter_05/03_ToT_agents.py` (evaluates only the first level, no pruning, no backtracking —
+  carried from round 13's triage record, not re-fetched, since it is a description of code
+  behaviour rather than a quote); Reflexion from the primary source (Shinn et al., arXiv
+  2303.11366) with the feedback-signal-honesty correction the ch. 7–11 triage already worked out;
+  the plan as external, re-read state; `sequential-thinking` as the scratchpad instance.
+- **New `build-ai-examples/references/reflexion-example.md`** + runnable code in
+  **`build-ai-examples/scripts/reflexion_example/`**: `reflexion_core.py` (pure —
+  `Task`/`CheckResult`/`Attempt`/`ReflexionOutcome`, `make_arithmetic_task`, `should_stop`,
+  `run_reflexion`), `agent.py` (a real LangGraph `StateGraph`: a solver node backed by a model, a
+  deterministic critic node, a conditional edge sharing `should_stop` with the pure loop),
+  `.env.example`, `requirements.txt`.
+- **`tests/smoke_test.py` 23 → 34 checks**: 11 new, all pure `reflexion_core.py` logic — both of
+  the book's substring traps pinned by name (`"126"` must not read as containing `"26"`;
+  `"incorrect"` must not satisfy a `"correct" in answer` check), the task-bound-predicate
+  non-leakage property (two tasks from the same factory never accept each other's answers), the
+  loop's stopping condition, hint accumulation, and attempt cap, plus the two `.env.example`
+  scaffolding checks the other two examples already established the pattern for.
+- **Wiring**: `design-agent-architecture/SKILL.md` §Довідки (+1 bullet) and its frontmatter
+  `description` (added "Tree of Thoughts, Reflexion" and "choosing a reasoning structure" — small
+  enough to be worth the `build:catalog` re-run, see Verification); `build-ai-examples/SKILL.md`
+  §Довідки (+1 bullet); `skill-router.md` (+1 routing-table row for `reasoning-patterns.md`, +1 for
+  `reflexion-example.md`, +1 entry in the "Reasoning and planning" layer-coverage table);
+  `README.md`'s API-keys section (+1 example paragraph); `prompt-techniques.md` §Tree of Thoughts
+  (+1 bullet on needing orchestration code, cross-linked); `reasoning-models.md` §Model-native vs
+  structured (its one cross-link split into "which structure" → `reasoning-patterns.md` vs
+  "per-technique cost" → `prompt-techniques.md`).
+- **Two stale prose counts fixed** — the exact class `check_docs.py`'s check 7 exists to catch:
+  `mcp-example.md` and `rag-example.md` both said "23 checks total" in prose; both now say 34,
+  following round 14's own precedent of rewording the claim to the true count rather than deleting
+  it.
+
+### Verified fresh before writing, not carried from any prior round's citations
+
+- **ReAct's definition.** Yao et al., "ReAct: Synergizing Reasoning and Acting in Language Models"
+  (2022, <https://arxiv.org/abs/2210.03629>), fetched directly: "generate both reasoning traces and
+  task-specific actions in an **interleaved manner**" is the abstract's own phrase. This plugin had
+  already cited ReAct's *mechanics* (`architectures.md`, via the Google whitepaper) but never its
+  primary source's definition of what makes something ReAct rather than a CoT pass that happens to
+  end in a tool call.
+- **Reflexion's abstract.** Shinn et al. (arXiv 2303.11366) re-fetched rather than trusted from the
+  ch. 7–11 triage's own record — matched verbatim: "not by updating weights, but instead through
+  linguistic feedback"; "episodic memory buffer"; "external or internally simulated" feedback
+  sources.
+- **`chapter_05/03_reflexion_agents.py`** re-fetched directly from `cxbxmxcx/AI-Agent-Workflows`
+  rather than trusted from HANDOFF's own, already twice-verified record of it — `TARGET_DAYS =
+  "26"`, `has_correct_days = TARGET_DAYS in answer`, `says_claim_correct = "yes" in
+  answer.lower() or "correct" in answer.lower()`, and `problem` assigned twice, all matched
+  exactly.
+- **`sequential-thinking` MCP server** — and this is where the round found something new rather
+  than only re-confirming. The server's README, fetched and summarized by `WebFetch` (which runs
+  the page through a small, fast model), reported the tool's name as `sequential_thinking`.
+  Fetching `index.ts` directly showed the real registered name is `sequentialthinking` — one word
+  — while the **npm package** is `@modelcontextprotocol/server-sequential-thinking` (hyphenated),
+  version `0.6.2`, depending only on the MCP SDK, `chalk` and `yargs` — no model client, confirming
+  "it does no thinking; it is external storage for the outputs of thinking" from the source itself,
+  not only from the round-13 phrase. Recorded in `CLAUDE.md` as a **seventh instance** of the
+  tool-documentation rule — a distinct species from the other six: not staleness, but a
+  summarizing tool being wrong about a page that was not stale at all.
+
+### Design decisions worth carrying forward
+
+- **The critic is deterministic, not a second LLM call.** The book's flaw was an LLM critic handed
+  the answer directly; the fix here is not a cleverer critic prompt, it is removing the LLM from
+  the critic role entirely. `Task.check` extracts the last integer in the answer and compares it
+  numerically. Shinn et al.'s abstract explicitly allows an "external" signal — a deterministic
+  checker is the strongest form that can take, not a compromise, and it is also the only way this
+  example gets an offline-testable stopping condition at all.
+- **The task binds its own checker at construction.** `make_arithmetic_task(prompt, expected)`
+  builds both in one call — the structural fix for the book's bug (a module-level `TARGET_DAYS`
+  checked against whichever `problem` happens to be live), not a discipline to remember but a
+  shape that makes the bug harder to write. `tests/smoke_test.py`'s "predicate is derived from the
+  current task" check builds two tasks and proves neither accepts the other's answer.
+- **One stopping-rule function, shared by the pure loop and the LangGraph conditional edge.**
+  `should_stop(passed, attempt_number, max_attempts)` is called by both `run_reflexion`'s own loop
+  and `agent.py`'s `route_after_check`. Reimplementing the same decision twice is exactly the kind
+  of drift risk this plugin's examples exist to avoid; sharing the function makes the graph a real
+  orchestration of tested logic instead of a second, untested copy of it.
+
+### A live check that cost nothing, run before calling any of this done
+
+`agent.py`'s graph was **compiled and `.invoke()`d for real** against a scripted stub standing in
+for `ChatOpenAI` (`.invoke(message) -> object with .content`, no key, no network) — not only
+reviewed. Four cases: solved on the first attempt; failed once with the hint verified reaching the
+second `solve()` call; never solved, halting at `max_attempts` rather than hitting
+`recursion_limit` (proving `should_stop`'s cap actually stops the *graph*, not only the pure
+function); and the substring-trap answer resolving correctly inside the compiled graph. This is the
+same "run it for real" discipline that caught a genuine bug in round 14's first test draft — this
+round's version of the same check found no bug, which is itself informative: sharing `should_stop`
+meant there was only one place a stopping-condition bug could hide, and the eleven offline checks
+already covered it. **Not run, and it needs the user's OpenRouter key to change that:** `agent.py`'s
+actual model call.
+
+### A judgment call this round had to make on its own: new prose in not-yet-migrated files
+
+`CLAUDE.md`'s language ruling (2026-07-21, the same day) states every artifact including
+`SKILL.md` bodies and `README.md` is English, while also recording that 8 `SKILL.md` bodies and
+the plugin `README.md` are **known, deferred** backlog, not yet migrated. This round had to add new
+bullets to two of those `SKILL.md` files and a new paragraph to `README.md` as ordinary
+reference-wiring, not as migration work. Read literally, the ruling applies to all new writing from
+2026-07-21 onward regardless of which file it lands in — so every new sentence this round added to
+`design-agent-architecture/SKILL.md`, `build-ai-examples/SKILL.md` and `README.md` is in English,
+while the Ukrainian prose already in those files was left untouched (translating it is still
+separate, deferred work, per the three constraints the ch. 7–11 triage entry recorded below). This
+is a judgment call, not a re-litigation of the ruling — flagged here so it is visible rather than a
+silent inconsistency the eventual migration session has to rediscover. `skill-router.md`'s two new
+rows instead follow its own already-established bilingual convention (Ukrainian trigger phrase +
+English gloss), since that file was already mostly English before this round.
+
+### Verification actually run
+
+`python tests/smoke_test.py` (**34/34**, up from 23 — 11 new, all `reflexion_core.py`) ·
+`python tests/check_docs.py` (**7/7**, 8 skills / **33** references) · the live graph-wiring check
+above (4/4 cases, stub model, no key, no network) · `& .\chatgpt\build_gpt_package.ps1` (zip
+rebuilt, **182,176 bytes**; `gpt_instructions.md` unmoved at 6,928 bytes, headroom 1,072 —
+references keep riding free) · from the repo root: `npm run lint` (8 plugins, 0 warnings),
+`lint:plugins` (9 targets, 4 accepted warnings, unchanged), `lint:markdown` (**404** files — 402 +
+the 2 new references, 0 errors), `lint:format` clean, `build:catalog` (**61 skills**, unchanged —
+only `design-agent-architecture`'s description text actually changed, confirmed via `git diff` on
+`site/public/catalog.json` before reverting it). **Deliberately reverted, not committed:**
+`site/public/catalog.json`'s regenerated diff — root-level generated output, out of this plugin's
+scope per round 14's own precedent (that round's diff was only a timestamp; this round's was the
+real description-text change, reverted for the same scope reason, not because it was noise). **Not
+run, needs the user's OpenRouter key:** `agent.py`'s actual model call.
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 15 is newest. Skills stay at 8, references at 33.
+Default next unit of work is **round 16: multi-agent design axes + guardrails**, fixed in round 13
+and amended in the ch. 7–11 triage — both already written, do not re-derive the plan. Update
+`architectures.md`: the three axes to settle before picking a multi-agent pattern (decision /
+control / communication, with coordination as a fourth); the parallel-flow-vs-hierarchical
+discriminator (could the orchestrator be replaced by fan-out/fan-in? then it's parallel flow, not
+orchestration); critique vs debate with stopping conditions; diversity in voting as the actual
+design problem inside that pattern (different models is the strong lever, different prompts the
+weak one — meets the Karim et al. §7.2 citation already in `loop-engineering.md` and
+`evaluation.md`, cross-link rather than re-cite); handoff failure modes (shape failure, context
+leakage, instruction injection); agent naming and a registry (`domain.role.version`); orchestrator
+overhead as an argument for deterministic dispatch where the split is knowable in advance, and
+orchestration-first / collaboration-when-adversarial as the default axis (both added by the ch.
+7–11 triage, filed here). **Disambiguate explicitly**: this file's 'handoff' (agent-to-agent
+transfer) is a different word from `plan-ai-solution/references/handoff.md`'s session protocol —
+the two now collide in this plugin and a reader needs one sentence telling them apart. Update
+`agent-ops.md`: the guardrail cost ladder (code/schema/regex → classifier → LLM guardrail);
+'callbacks observe, guardrails block, and the validator can be wrong in the same direction as the
+agent it checks.'
+
+Example, per the standing per-round requirement (`reflexion_example` is the fourth in a row, after
+`rag_example`, `mcp_example`): a typed pass-off flow — one deterministic decision point plus one
+guardrail, validators as pure logic, offline-testable. The test suite MUST include a **polarity
+test**: the guardrail has to trip on bad input AND pass good input, not just one direction. This is
+not a hypothetical requirement — the companion repo has two real specimens to check the example
+against without copying either: `chapter_04/09_agent_passoff_guardrails.py` is an inverted
+guardrail (`tripwire_triggered=result.final_output.is_sufficiently_detailed`, so good plans get
+rejected and thin ones pass — the sibling `08_agent_guardrails.py` has the correct polarity for the
+same field, and the book's own prose matches `08`, not `09`); `chapter_07/06_RAG_grounding_with_guardrails.py`
+has correct polarity but broken plumbing (a module-level `_last_context` global gets overwritten by
+every search, so a multi-search answer grounds against only the last search — the same
+shared-mutable-state failure shape as `chapter_03/06`'s `_journal`, this time inside a correctness
+control). A polarity test would have failed `09` outright; catching `chapter_07/06`'s bug needs a
+concurrency/accumulation test — consider whether the example's own test suite should include one
+for exactly that reason, the same way round 15's checker had to prove two tasks never leak into
+each other's predicate.
+
+Verify every identifier fresh rather than trusting this prompt's phrasing or HANDOFF's past records
+of the companion repo — round 15 re-fetched three primary sources that earlier rounds had already
+verified, and found one genuinely new discrepancy (the sequential-thinking tool name; see
+`CLAUDE.md`'s seventh tool-documentation instance) purely by not skipping the re-check. Actually run
+whatever the free tier of the test ladder allows — for a guardrail example that is the offline
+pure-logic tier plus, if the shape allows it, a live-but-free wiring check the way round 15
+exercised the real LangGraph graph against a stubbed model at zero cost.
+
+Small carry-over, easy to lose: `skill-router.md`'s two new rows this round used the router's own
+bilingual trigger-phrase convention; round 16 touching `skill-router.md` again should do the same
+rather than reverting to English-only rows. Sync `check_docs.py`'s smoke-count guard when the count
+changes (it will), and rebuild the zip — a new reference means check 5 fails until
+`& .\chatgpt\build_gpt_package.ps1` runs.
+
+One piece of open work still sits outside the round sequence, still not blocking: the language
+migration (8 `SKILL.md` bodies, the plugin `README.md`, plus the two partially-clean references).
+Round 15 made this slightly more visible, not more urgent — it added new English sentences into two
+of the not-yet-migrated `SKILL.md` files and into `README.md` as ordinary content wiring (see the
+'judgment call' note in round 15's entry above), so those three files are now genuinely mixed
+rather than uniformly Ukrainian. That is a reasonable, flagged default, not a decision to leave
+unreviewed — ask the user whether the migration should be its own round, folded into round 16, or
+left to accumulate a little longer.
+
+If the user brings something else instead — a fresh source, an audit, the language migration itself
+— nothing is blocking; state what round 16 would have been and let them redirect."*
 
 ## What just happened (ch. 7–11 triage, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`; round 14 merged as `0ae0898`, PR #19)
 

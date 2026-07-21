@@ -155,7 +155,14 @@ asked to touch another plugin or the marketplace root.
   404** from the registry (checked 2026-07-21) — a 404 does not distinguish "never existed" from
   "private", but for a reader running `npx -y` both are equally unusable. Check the registry, not
   the spelling: a plausible-looking scope (`@anthropic/…`) reads as authoritative and costs one
-  request to falsify.
+  request to falsify. **A seventh instance (round 15) is not staleness at all — it is trusting a
+  summary instead of the artifact it summarizes.** Fetching the `sequential-thinking` MCP server's
+  own README (through a small, fast summarizing model) reported the tool's registered name as
+  `sequential_thinking`; fetching the server's actual `index.ts` directly showed the real name is
+  `sequentialthinking`, one word, with the hyphenated form belonging only to the npm package
+  (`@modelcontextprotocol/server-sequential-thinking`). This is "your own coverage grep is a brief
+  too" (above) extended to any tool that summarizes before you see raw content: when the exact
+  string is what matters, read the source file, not a paraphrase of it — even a fresh one.
 - **Skill frontmatter descriptions must be in third person** (e.g. "Designs…", "Explains…"), per
   Anthropic's Skill authoring guidance — not the imperative ("Design…", "Explain…") this plugin
   used for its first eleven rounds without anyone checking against the published best-practices

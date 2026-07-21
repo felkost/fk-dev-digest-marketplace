@@ -54,7 +54,7 @@ this is a coverage map, not a new stage order; use the stage sequence above for 
 |---|---|---|
 | Persona (system prompt / role) | `engineer-prompt-context` | `references/prompt-techniques.md` |
 | Tools and actions | `design-agent-architecture` | `references/mcp-tools.md` |
-| Reasoning and planning | `design-agent-architecture`, `explain-llm-internals` | `references/architectures.md`, `references/reasoning-models.md` |
+| Reasoning and planning | `design-agent-architecture`, `explain-llm-internals` | `references/architectures.md`, `references/reasoning-patterns.md`, `references/reasoning-models.md` |
 | Knowledge and memory | `design-agent-architecture` | `references/memory-vector-db.md`, `references/rag-pipeline.md` |
 | Evaluation and feedback | `evaluate-optimize-models` | `references/evaluation.md` |
 
@@ -78,6 +78,7 @@ Ukrainian the user is likely to type.
 | «chain-of-thought», few-shot, чи варта техніка своєї ціни | `engineer-prompt-context` | `references/prompt-techniques.md` |
 | «переповнюється контекст», агент губить нитку, компакція, нотатки | `engineer-prompt-context` | `references/context-engineering.md` |
 | «спроєктуй агента», ReAct, multi-agent, human-in-the-loop, workflow vs agent | `design-agent-architecture` | `references/architectures.md` |
+| «який reasoning pattern для агента», CoT vs ReAct vs ToT vs Reflexion, which structure and why | `design-agent-architecture` | `references/reasoning-patterns.md` |
 | «зроби RAG», «пошук по документах», citations over a private corpus | `design-agent-architecture` | `references/rag-pipeline.md` |
 | «RAG поганий», retrieval misses, реранкінг, HyDE, multi-query | `design-agent-architecture` | `references/rag-pipeline.md` |
 | «які основні теми в корпусі», питання про весь корпус, багатокрокові зв'язки | `design-agent-architecture` | `references/graph-rag.md` |
@@ -89,6 +90,7 @@ Ukrainian the user is likely to type.
 | «пам'ять між сесіями», persistent knowledge base, «щоб агент пам'ятав» | `design-agent-architecture` | `references/memory-vector-db.md` |
 | «підключи інструменти», MCP server/tool design, tool permissions | `design-agent-architecture` | `references/mcp-tools.md` |
 | «покажи робочий MCP-сервер», код tool/resource/prompt, langchain-mcp-adapters | `build-ai-examples` | `references/mcp-example.md` |
+| «покажи робочий Reflexion-цикл», solver-critic loop, код LangGraph StateGraph | `build-ai-examples` | `references/reflexion-example.md` |
 | «щоб працювало саме», автономний цикл, автоматизації, worktrees, субагенти | `design-agent-architecture` | `references/loop-engineering.md` |
 | «коли агенту можна не питати», stop conditions, autonomy boundaries | `design-agent-architecture` | `references/autonomy-contracts.md` |
 | «як виміряти якість», eval set, LLM-суддя, регресії якості | `evaluate-optimize-models` | `references/evaluation.md` |
