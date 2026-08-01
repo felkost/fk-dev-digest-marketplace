@@ -1,6 +1,6 @@
 ---
 name: ml-forecasting-model
-description: Chooses the time-series forecasting model and its core settings — whether the task is genuine forecasting (extrapolating a series' own past) versus cross-sectional regression on time features, the stationarity check with ADF and KPSS reading them together because they test opposite nulls, the model ladder from naive and seasonal-naive baselines through ETS/Holt-Winters and ARIMA/SARIMAX to global gradient-boosted models on lag features, local versus global fitting, ACF/PACF versus AIC order selection, the Tweedie loss for intermittent (many-zero) demand where squared error biases the zero-day forecast upward, the direct per-horizon versus recursive multi-step strategy, zero-shot pretrained foundation models (TimesFM class) as a second baseline that still must beat seasonal-naive on your own backtest and whose quantile-head intervals need measured coverage, automated feature extraction for the global rung (tsfel, feature-engine lag/window transformers), and the scale-free MASE/RMSSE/WRMSSE metrics (the M5 family) because MAPE explodes on zeros and volume-weighting changes what you optimise. Use when forecasting a series forward, when choosing between ARIMA, ETS, Prophet, ML and a pretrained foundation model, when asked whether TimesFM or zero-shot forecasting is worth trying, when asked how many differences or which seasonal order, which loss for sparse/intermittent sales, how to forecast many horizons ahead, how to get forecast intervals, which forecasting error metric, or deciding local per-series versus one global model. Does NOT design the backtest splitter itself (use ml-validation-design for rolling-origin/purged CV) and does NOT tune the gradient-boosting hyperparameters (use ml-tree-ensemble-params).
+description: Chooses the time-series forecasting model and its core settings — whether the task is genuine forecasting (extrapolating a series' own past) versus cross-sectional regression on time features, the stationarity check with ADF and KPSS reading them together because they test opposite nulls, the model ladder from naive and seasonal-naive baselines through ETS/Holt-Winters and ARIMA/SARIMAX to global gradient-boosted models on lag features, local versus global fitting, ACF/PACF versus AIC order selection, the Tweedie loss for intermittent (many-zero) demand where squared error biases the zero-day forecast upward, the direct per-horizon versus recursive multi-step strategy, zero-shot pretrained foundation models (TimesFM, Chronos-2) as a second baseline that still must beat seasonal-naive on your own backtest, choosing between them by covariate support, interval calibration and LoRA fine-tuning, why tree ensembles cannot extrapolate a trend beyond the training range and modelling differences fixes it, automated feature extraction for the global rung (tsfel, feature-engine lag/window transformers), and the scale-free MASE/RMSSE/WRMSSE metrics (the M5 family) because MAPE explodes on zeros and volume-weighting changes what you optimise. Use when forecasting a series forward, when choosing between ARIMA, ETS, Prophet, ML and a pretrained foundation model, when asked whether TimesFM or Chronos-2 or zero-shot forecasting is worth trying, when a foundation model needs exogenous covariates or fine-tuning, when asked how many differences or which seasonal order, which loss for sparse/intermittent sales, how to forecast many horizons ahead, how to get forecast intervals, which forecasting error metric, or deciding local per-series versus one global model. Does NOT design the backtest splitter itself (use ml-validation-design for rolling-origin/purged CV) and does NOT tune the gradient-boosting hyperparameters (use ml-tree-ensemble-params).
 ---
 
 # Forecasting часових рядів: яку модель і які налаштування
@@ -87,6 +87,11 @@ stationary проти difference-stationary, і лік різний (детре�
   `ml-clustering-k`). Не потребує per-series ACF-аналізу й масштабування ознак.
   Ознаки понад лаги — автоматичною екстракцією (tsfel, feature-engine
   Lag/WindowFeatures зі зсувом без витоку; пастки й версії — api-2026 §7).
+  **Дерева не екстраполюють рівні:** прогноз бустингу обмежений діапазоном
+  train-цілі — на трендовому ряді рекурсивний прогноз уперся в стелю
+  (MAE **10.44** проти 0.41 в ETS), а те саме дерево на **різницях** з
+  інтеграцією назад дало 0.72 (derivations §8). Трендовий ряд → різниці або
+  явна трендова ознака, не сирі рівні.
 
 ## Крок 2a — переміжний попит: яку ВТРАТУ, а не лише модель
 
@@ -105,31 +110,36 @@ Tweedie p=1.9 **0.744**, −6.7%). Книга (M5) повідомляє біль
 гостріше переміжних даних. Правило: **переміжний попит → Tweedie для GBM**, не L2;
 `p` (1.1–1.9) на валідації.
 
-## Крок 2b — zero-shot foundation model: друга база, не заміна драбини
+## Крок 2b — zero-shot foundation models: друга база, не заміна драбини
 
-**TimesFM 2.5** (Google) — претренований на ~100 млрд точок decoder-only
-трансформер: прогноз **без навчання**, на вхід — сирий ряд. Живий прогін
-(2026-08-01, CPU; повні числа в derivations §7):
+**TimesFM 2.5** (Google, decoder-only, ~100 млрд точок претрену) і
+**Chronos-2** (Amazon, 120M, патч-енкодер із квантильною головою) — прогноз
+**без навчання**, на вхід — сирий ряд. Живий прогін обох на тих самих рядах
+(2026-08-01/08, CPU; повні числа в derivations §7):
 
-| Ряд | сезонний наївний | ETS | TimesFM 2.5 |
-|---|---|---|---|
-| A: чистий сезон+тренд | MAE 1.049 | **0.396** | 0.477 |
-| B: переміжний (65% нулів) | 1.417 | 1.411 | **1.343** |
+| Ряд | сезонний наївний | ETS | TimesFM 2.5 | Chronos-2 |
+|---|---|---|---|---|
+| A: чистий сезон+тренд | MAE 1.049 | **0.396** | 0.477 | 0.434 |
+| B: переміжний (65% нулів) | 1.417 | 1.411 | 1.343 | **1.341** |
 
-Три правила читання цієї таблиці:
+Правила читання:
 
-- **На чистому одному ряді правильно специфікований ETS досі виграє** (+20%
-  MAE у TimesFM). Сила zero-shot — багато різнорідних/брудних рядів, холодний
-  старт, нуль тюнінгу — не заміна щаблів 0-3, а швидка друга база після
-  сезонного наївного.
-- **Лідерборд ≠ твої дані.** Перше місце на GIFT-Eval (заявка Google) не
-  звільняє від власного rolling-origin проти наївної бази — на ряді A модель
-  з лідерборда програла ETS зі statsmodels.
-- **Квантильна голова дає інтервали одним прогоном** (децилі q10..q90), але
-  покриття треба МІРЯТИ: номінальна 80%-смуга покрила 87.5% на ряді A і лише
-  **37.5% на переміжному B** — на нулях інтервали вдвічі завузькі. Ціна входу:
-  torch + чекпоінт 882 MB в окремому venv; сам інференс дешевий (1.1 с CPU на
-  2 ряди, H=24). API і тихі пастки — api-2026 §6.
+- **На чистому одному ряді правильно специфікований ETS б'є ОБИДВІ
+  foundation-моделі.** Сила zero-shot — багато різнорідних/брудних рядів,
+  холодний старт, нуль тюнінгу — швидка друга база після сезонного наївного.
+- **Лідерборд ≠ твої дані** (GIFT-Eval у TimesFM, «SOTA zero-shot» у
+  Chronos-2): власний rolling-origin проти наївної бази обов'язковий.
+- **Покриття інтервалів МІРЯТИ:** номінальна 80%-смуга на переміжному B —
+  TimesFM **37.5%**, Chronos-2 **62.5%** (обидві завузькі, друга помітно
+  чесніша); на гладкому A — 87.5% проти 79.2%.
+- **Вибір між двома:** коваріати/мультиваріативність/файнтюн потрібні →
+  Chronos-2 (dict-вхід із known-future коваріатами, LoRA через peft; на
+  Windows у TimesFM коваріати недоступні — `[xreg]` тягне `jax[cuda]`).
+  Чистий univariate і швидкість → TimesFM (інференс 1.1 с проти 5.1 с CPU).
+  Виміряно чесно: коваріати платять лише інформацією, якої НЕМАЄ в історії
+  цілі — детермінований сезон як known-future коваріата дав нуль
+  (MAE 0.349 → 0.355); виграш статей (8.4% → 2.8% WAPE) — від погоди/
+  зайнятості, яких в історії справді немає. API і тихі пастки — api-2026 §6.
 
 ## Крок 3 — порядок (p,d,q)(P,D,Q)ₛ
 
@@ -200,7 +210,9 @@ MASE (один викид: RMSSE 0.5→1.0, MASE лишається 0.655).
 - **Рівномірні зусилля під зваженою метрикою** — WRMSSE рухають кілька дорогих
   рядів (Крок 5).
 - **Foundation model за лідербордом без локального backtest** — GIFT-Eval не
-  знає твоїх даних; на чистому ряді ETS побив TimesFM (Крок 2b).
+  знає твоїх даних; на чистому ряді ETS побив обидві foundation-моделі (Крок 2b).
+- **Бустинг на сирих рівнях трендового ряду** — прогноз упирається в максимум
+  train і систематично недотягує (MAE 10.44 → 0.72 після переходу на різниці).
 - **Номінальне покриття інтервалів без перевірки** — «80%» смуга квантильної
   голови покрила 37.5% на переміжному ряді; покриття міряється на backtest.
 
@@ -221,7 +233,7 @@ MASE (один викид: RMSSE 0.5→1.0, MASE лишається 0.655).
 | Файл | Коли читати |
 |---|---|
 | `references/api-2026.md` | statsmodels (ARIMA/ETS/adfuller/kpss), lightgbm tweedie/quantile, TimesFM 2.5 (§6), tsfel/feature-engine (§7), чого немає |
-| `references/derivations.md` | ADF vs KPSS, MASE/RMSSE/WRMSSE формально, рекурсивний vs прямий, Tweedie на переміжному, ACF/PACF, zero-shot проти ETS (§7) |
+| `references/derivations.md` | ADF vs KPSS, MASE/RMSSE/WRMSSE формально, рекурсивний vs прямий, Tweedie, ACF/PACF, zero-shot проти ETS (§7), стеля дерев (§8) |
 
 ## Джерела
 
@@ -232,6 +244,9 @@ ETS-таксономія. Nguyen, *Building Statistical Models in Python* — AD
 SARIMAX. Banachewicz & Massaron, *The Kaggle Workbook*, розд. M5 — WRMSSE,
 Tweedie-втрата для переміжного попиту, прямий per-horizon підхід Monsaraida.
 TimesFM 2.5 (github.com/google-research/timesfm, HF
-`google/timesfm-2.5-200m-pytorch`) — Крок 2b, перевірено живцем 2026-08-01.
+`google/timesfm-2.5-200m-pytorch`) і Chronos-2 (HF `amazon/chronos-2`,
+`chronos-forecasting`) — Крок 2b, перевірено живцем 2026-08-01/08; файнтюн-числа
+Chronos-2 (WAPE 8.4→2.8%) — заявка статті TDS, не власний прогін.
 **Усі числа вище — власні живі прогони на statsmodels 0.14.6 / lightgbm 4.6.0 /
-sklearn 1.9.0 / timesfm 2.0.2 (torch 2.13.0)**, не переказ книг чи README.
+sklearn 1.9.0 / timesfm 2.0.2 / chronos-forecasting 2.3.1 (torch 2.13.0)**,
+не переказ книг чи README.

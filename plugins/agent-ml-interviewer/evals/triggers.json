@@ -1,5 +1,5 @@
 {
-  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані). Дев'ята звірка: +t104-t109 (4 позитивні на ml-measurement-model, 2 стрес-тести на межі з ml-label-quality/ml-distribution-choice), n14 негативний. v9 (2026-07-20): розведено межу t18 tree-ensemble ↔ dimensionality-features (аудит важливостей → dimensionality). Раунд 12 (2026-08-01): t121-t127 — zero-shot/TimesFM, AutoML-sweep, інтервали, екстракція ознак; t128 — борг межі Tweedie з раунду 10.",
+  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані). Дев'ята звірка: +t104-t109 (4 позитивні на ml-measurement-model, 2 стрес-тести на межі з ml-label-quality/ml-distribution-choice), n14 негативний. v9 (2026-07-20): розведено межу t18 tree-ensemble ↔ dimensionality-features (аудит важливостей → dimensionality). Раунд 12 (2026-08-01): t121-t127 — zero-shot/TimesFM, AutoML-sweep, інтервали, екстракція ознак; t128 — борг межі Tweedie з раунду 10. Раунд 13 (2026-08-08): t129-t131 — вибір між foundation-моделями, файнтюн, стеля дерев.",
   "items": [
     {
       "id": "t01",
@@ -804,6 +804,24 @@
       "expected": "ml-forecasting-model",
       "acceptable_alt": "ml-distribution-choice",
       "fixture_note": "БОРГ РАУНДУ 10: межа Tweedie-як-втрата (forecasting) проти Tweedie-як-розподіл (distribution-choice); alt допустимий"
+    },
+    {
+      "id": "t129",
+      "prompt": "Chronos-2 чи TimesFM — що взяти, якщо в мене є погодні дані як зовнішні змінні до прогнозу попиту?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 13: селектор foundation-моделей за підтримкою коваріат (Крок 2b)"
+    },
+    {
+      "id": "t130",
+      "prompt": "Zero-shot прогноз непоганий, але хочу дотиснути точність — чи можна дофайнтюнити foundation-модель прогнозування на своїх рядах?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 13: LoRA-файнтюн Chronos-2; НЕ llm-parameter-choice (це не LLM-параметри)"
+    },
+    {
+      "id": "t131",
+      "prompt": "LightGBM на лагових ознаках систематично недотягує прогноз на ряді зі зростаючим трендом. У чому причина?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 13 СТРЕС: стеля екстраполяції дерев (Крок 2, derivations §8); НЕ ml-tree-ensemble-params (питання про механізм forecasting, не про гіперпараметри) і НЕ ml-overfitting-diagnosis (це недо-, а не перенавчання)"
     }
   ]
 }

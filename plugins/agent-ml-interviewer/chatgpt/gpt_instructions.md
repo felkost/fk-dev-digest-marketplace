@@ -34,7 +34,7 @@ for p in glob.glob("/mnt/data/mla/*/scripts"):
 - Страти/кластери/панель; ваги вибірки; узагальнення на популяцію → ml-sampling-design (scorer БЕЗ metadata routing МОВЧКИ незважений; deff=1+(m−1)·ICC → n_eff).
 - Чи мітка вимірює те, що треба: проксі, шум міток, згода анотаторів → ml-label-quality (стеля будь-якої метрики = 1−p; κ, а не % згоди).
 - Композит/індекс із колонок; надійність, бінінг, порівняння між групами → ml-measurement-model (середнє = навантаження 1, похибка 0; стеля R² = надійність цілі).
-- Прогноз часових рядів: ARIMA/ETS/global ML/TimesFM zero-shot; переміжний попит; яка метрика → ml-forecasting-model (наївна база; ADF+KPSS протилежні; rolling-origin; MAPE→MASE/RMSSE; Tweedie; покриття квантилів міряти).
+- Прогноз часових рядів: ARIMA/ETS/global ML/TimesFM/Chronos-2; переміжний попит; яка метрика → ml-forecasting-model (наївна база; ADF+KPSS протилежні; rolling-origin; MAPE→MASE/RMSSE; Tweedie; покриття квантилів міряти).
 
 ## Обов'язкові інваріанти
 
