@@ -1,6 +1,6 @@
 ---
 name: build-ai-examples
-description: Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
+description: Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, a research-loop harness with a layered stop gate (stagnation detection, cost cap, de-duplicated follow-up queue), and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, an agent loop that needs enforceable stop conditions, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Робочі приклади застосунків
@@ -32,6 +32,13 @@ Docker + React 19** (+ бібліотеки візуалізації Python), м
   into a real LangGraph `StateGraph`; code in `scripts/guardrail_example/`, offline smoke tests
   plus a free live check of the graph wiring itself (both actually run), a production-deltas
   section.
+- [references/loop-example.md](references/loop-example.md) — a working Layer-2 research-loop
+  harness implementing the layered stop gate of `design-agent-architecture`'s agent-loop.md:
+  iteration+cost+wall-clock caps AND a stagnation detector, a de-duplicated follow-up queue with
+  a named breadth/depth switch, id-keyed tool-output offloading, explorer/writer separation;
+  code in `scripts/loop_example/`, offline smoke tests for exactly the properties its published
+  counterpart lacks (halts on near-identical summaries, queue refuses re-entry, imports without
+  executing).
 - [references/document-loading.md](references/document-loading.md) — витягування тексту з
   реальних файлів: Word/PDF/Excel/SQL/аудіо/зображення/відео з режимами відмови, три рівні
   парсингу (текст → layout-aware → мультимодальний), збагачення на етапі індексації (метадані,

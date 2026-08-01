@@ -1,11 +1,110 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-07-21, round **17** (retrieval
-authorization + memory architecture). Skills stay at **8**, references stay at **34** — no new
-reference file this round; `rag-pipeline.md` and `memory-vector-db.md` both grew instead, matching
-round 16's precedent of growing existing files. Round 18 is next (the agent loop, ch. 9's layer
-taxonomy), then 19–22. Written for a fresh Claude session with no conversation history — read this
-whole file before touching anything.
+Newest entry on top (eda-skills convention). Last updated 2026-08-29, round **18** (the agent
+loop: `agent-loop.md` + `loop_example`). Skills stay at **8**, references are now **36**
+(`design-agent-architecture/references/agent-loop.md`,
+`build-ai-examples/references/loop-example.md`), smoke checks **47 → 59**. Round **19** is next
+(TDAD / evaluation development loop), then 20–22, then **23** (code execution + agent workspaces,
+from the newly triaged second book — see the round-18 entry). Written for a fresh Claude session
+with no conversation history — read this whole file before touching anything.
+
+## What just happened (round 18 — the agent loop, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`)
+
+The next queued unit of work, executed as specified by the ch. 7–11 triage (layer taxonomy as
+the spine, every amendment honoured) — plus a targeted triage of two user-supplied PDFs, one of
+which turned out to be already consumed and one new.
+
+### Source triage first
+
+- **`AI agents in the action - merged (Зміст+links).pdf` (367 pages by `doc.page_count` — the
+  harness listing claimed 111, undercount number six) is the merged full text of the SAME book
+  rounds 12–14 and the ch. 7–11 triage already consumed.** TOC verified chapter-by-chapter
+  (ch. 1–11 + appendices, identical section titles). Nothing new to mine; the 19–22 queue
+  already carries its remaining content. No content was taken from it this round.
+- **`The brain of AI agents (merged) v2.pdf` (261 pages, ch. 2–10) is NEW.** Targeted triage
+  (ch. 4 loop internals, ch. 7 planning/reflection, ch. 8 code execution read in depth;
+  ch. 2/3/5/6/9/10 at section level — full triage is an open thread):
+  - **Ch. 8 (code execution) is the real gap → new round 23.** The plugin has zero coverage of
+    code-execution-as-action (CodeAct), sandboxed execution environments (E2B-class), porting
+    tools into the sandbox, full agent workspaces (filesystem + CLI), and Agent Skills as
+    hierarchical, token-efficient tool management. Its security half meets round 21's queued
+    sandboxing/egress material — round 23 must cross-reference, not duplicate.
+  - **Ch. 7 (planning/reflection as tools)**: the patterns are round 15's
+    (`reasoning-patterns.md`); the uncovered delta — reflection as a *scheduled programmatic
+    trigger* (every N steps / on a failure counter) rather than "reflect when appropriate" —
+    was folded into `agent-loop.md`'s programmatic/agent-triggered boundary section this round.
+  - **Ch. 4 (ReAct implementation)**: run/step/think/act decomposition and ExecutionContext map
+    onto `architectures.md`'s state substrates; its "tools as output formatters" structured-output
+    pattern and the GAIA benchmark are candidates for the full triage to place (GAIA most likely
+    a named-benchmark row for round 19).
+  - Ch. 5 (RAG) and ch. 6 (memory) look heavily covered by rounds 8–11/17 at section level; the
+    full triage must check ch. 6 against round 17's two-taxonomy reconciliation rule before
+    admitting any third memory vocabulary.
+
+### Shipped: `agent-loop.md` (the 35th reference)
+
+The inner-execution-loop reference the roadmap specified, all obligations met:
+
+- **Opens with the four-way disambiguation** — this file (inner loop) vs `loop-engineering.md`
+  (Osmani's outer developer loop, including its "cognitive surrender"), and the three colliding
+  numbered scales in one table: Google capability Levels 0–4 (`architectures.md`), Oracle
+  harness Levels 1–3, Lanham Layers 1–3 — named as orthogonal, each cited by owner.
+- The four loop elements (goal/plan/state/decision) with the summary-drops-state warning;
+  model-proposes/harness-disposes; **Layers 1–3 as where the elements live**, with
+  orchestration-first carried from round 16.
+- **The layered stop gate**: goal predicate vs terminal message (self-declared completion is a
+  biased self-assessment); stagnation as the stop failure the "same error signature" factor
+  never trips; the published specimen (chapter_09/04 promises five conditions, ships three)
+  recorded as the anti-example, including its prose-vs-exercise 85%-semantic/80%-word
+  discrepancy.
+- The programmatic/agent-triggered boundary (with the scheduled-reflection delta from the new
+  book's ch. 7); context economics in the loop (offload every iteration, append-don't-rewrite,
+  compaction preserves originals, filter-at-the-tool); **explorer must not write the report**;
+  breadth-vs-depth as a named queue parameter; the three surrounding loops (feedback/training/
+  human) with cross-references.
+
+### Shipped: `loop_example` (the fifth worked example) + 12 smoke checks
+
+`scripts/loop_example/loop_core.py` (pure stdlib, no import-time side effects) implements the
+gate the reference specifies: `stop_reason()` returns the *name* of the stop family
+(iteration/cost/wall-clock caps, stagnation, queue exhausted, goal predicate) — the reason is
+data; `StagnationDetector` (word-set Jaccard ≥ 0.8 on consecutive summaries — the offline
+stand-in for embedding cosine, mechanism identical); `FollowUpQueue` with permanent `_seen`
+(re-asked questions cannot re-enter even after being popped) and `order="breadth"|"depth"` as a
+constructor argument; `OffloadLog` (id + bounded digest out, `fetch(id)` keeps originals
+addressable); `run_loop` with `explore_fn`/`write_fn` as separate callables and findings as the
+only interface between them; injectable `clock`. `agent.py` wires a real model via OpenRouter
+behind `__main__`. `references/loop-example.md` documents the design against its published
+counterpart.
+
+Smoke **47 → 59** (checks 48–59), including the three negative properties the published
+specimen fails: **halts with `stop == "stagnation"` on two near-identical summaries and the
+third exploration never runs; the queue de-duplicates across case/punctuation and refuses
+re-entry after popping; the module imports without executing anything (AST-verified: no
+module-level calls, no environ reads).** One test fixed against itself during the round: the
+first version of the breadth/depth check asserted FIFO behaviour for both orders — the depth
+branch of the test was wrong, not the queue; rewritten with per-order expectations.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows (English rows into otherwise-Ukrainian bodies, per
+  the row-by-row language policy); `loop-engineering.md`'s row now carries the "outer developer
+  loop, not the agent loop" marker; both descriptions extended with loop-routing phrases.
+- **`check_docs.py` caught three staleness bugs on first run** — the zip had 34 references
+  against 36 on disk, and both `mcp-example.md` and `rag-example.md` still claimed "47 smoke
+  checks, all four examples". Counts updated to 59/five, zip rebuilt
+  (`ai_gen_knowledge.zip` **216 817 bytes**, instructions unchanged at 6 928/8 000 — routing
+  needed no new bytes because the loop routes through `design-agent-architecture`, which the
+  instructions already carry). The guard exists precisely for this failure class; it fired and
+  was obeyed.
+- `check_docs.py` → **docs OK**; smoke **59/59**.
+
+### Open threads added by this round
+
+- **Full triage of *The Brain of AI Agents*** (ch. 2/3/5/6/9/10 read only at section level) —
+  do it before round 23 is executed; ch. 6 must face the two-taxonomy memory rule.
+- **Round 23 (new): code execution + agent workspaces + Agent Skills**, cross-referencing
+  round 21's sandboxing/egress security material instead of duplicating it.
 
 ## What just happened (round 17 — retrieval authorization + memory architecture, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same session and branch as rounds 15–16, per the user's "use the current branch" instruction)
 

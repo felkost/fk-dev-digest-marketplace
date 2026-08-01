@@ -62,6 +62,30 @@ two-agent handoff in LangGraph; see references/guardrail-example.md):
  46-47. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
+What it pins, loop_example (Layer-2 research loop harness -- the layered stop
+gate agent-loop.md specifies; the published counterpart, chapter_09/04, ships
+three of its five promised stop conditions and executes at import time, which
+is exactly what checks 48 and 51-55 exist to forbid; see
+references/loop-example.md):
+ 48.   the directory exists with the expected files;
+ 49.   loop_core imports without executing anything -- no module-level call
+       of the loop, no import-time environ read (AST-verified);
+ 50.   loop_core imports ONLY stdlib;
+ 51.   two near-identical summaries halt the loop with stop == "stagnation"
+       and the third exploration never runs;
+ 52.   the follow-up queue de-duplicates across case/punctuation and refuses
+       re-entry even after the question was popped;
+ 53.   order="breadth" vs "depth" provably changes traversal order;
+ 54.   the cost cap stops a never-stagnating, always-branching explorer and
+       the run record names "cost_cap";
+ 55.   the wall-clock cap fires via the injected clock, deterministically;
+ 56.   the offload log returns an id plus a bounded digest and fetch(id)
+       still returns the original;
+ 57.   the writer receives only accumulated findings -- raw observations
+       never cross the explorer/writer boundary;
+ 58-59. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
 Console note: this box's console is cp1251, so output is ASCII-safe.
@@ -81,10 +105,12 @@ EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "rag_example"
 MCP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "mcp_example"
 REFLEXION_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reflexion_example"
 GUARDRAIL_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "guardrail_example"
+LOOP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "loop_example"
 sys.path.insert(0, str(EXAMPLE))
 sys.path.insert(0, str(MCP_EXAMPLE))
 sys.path.insert(0, str(REFLEXION_EXAMPLE))
 sys.path.insert(0, str(GUARDRAIL_EXAMPLE))
+sys.path.insert(0, str(LOOP_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -822,6 +848,176 @@ def _():
             assert value in ("", "not-needed-for-local"), (
                 f"{key} looks filled in ({value!r}) -- .env.example must ship blank"
             )
+
+
+# --------------------------------------------------------------------------- #
+# 48-59. loop_example: the layered stop gate, offline
+# --------------------------------------------------------------------------- #
+
+@check("loop_example directory exists with the expected files")
+def _():
+    for name in ("loop_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (LOOP_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("loop_core imports without executing anything (AST-verified)")
+def _():
+    tree = ast.parse((LOOP_EXAMPLE / "loop_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute the loop"
+        )
+    src = (LOOP_EXAMPLE / "loop_core.py").read_text(encoding="utf-8")
+    assert "os.environ" not in src, "loop_core must not read the environment"
+    import loop_core  # noqa: F401  -- and the import itself must succeed bare
+
+
+@check("loop_core imports ONLY stdlib (keeps this test runnable offline)")
+def _():
+    tree = ast.parse((LOOP_EXAMPLE / "loop_core.py").read_text(encoding="utf-8"))
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"re", "dataclasses", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+
+
+def _explorer(script):
+    """Build an explore_fn from a list of (summary, follow_ups, cost) tuples."""
+    calls = {"n": 0}
+
+    def explore_fn(question):
+        i = min(calls["n"], len(script) - 1)
+        calls["n"] += 1
+        summary, follow_ups, cost = script[i]
+        return f"RAW({question})", summary, list(follow_ups), cost
+
+    return explore_fn, calls
+
+
+@check("two near-identical summaries halt with stop == 'stagnation'")
+def _():
+    from loop_core import LoopBudget, run_loop
+    script = [
+        ("the capital of france is paris, a large city", ["q2"], 0.0),
+        ("paris is the capital of france -- a large city", ["q3"], 0.0),
+        ("something completely different entirely", ["q4"], 0.0),
+    ]
+    explore_fn, calls = _explorer(script)
+    result = run_loop(["q1"], explore_fn, lambda f: "r",
+                      budget=LoopBudget(max_iterations=10, max_cost=99, max_wall_clock_s=99))
+    assert result.stop == "stagnation", f"stopped by {result.stop}"
+    assert calls["n"] == 2, f"third exploration ran ({calls['n']} calls)"
+
+
+@check("follow-up queue de-duplicates and refuses re-entry after popping")
+def _():
+    from loop_core import FollowUpQueue
+    q = FollowUpQueue()
+    assert q.push("What is RRF?") is True
+    assert q.push("what is rrf") is False, "case-variant duplicate accepted"
+    assert q.push("What is RRF!?") is False, "punctuation-variant duplicate accepted"
+    assert len(q) == 1
+    q.pop()
+    assert q.push("What is RRF?") is False, "popped question re-entered the queue"
+
+
+@check("order='breadth' vs 'depth' provably changes traversal order")
+def _():
+    from loop_core import FollowUpQueue
+    # breadth (FIFO): siblings of the seed go first; depth (LIFO): the most
+    # recently opened thread goes first.
+    for order, first, second in (("breadth", "A", "B"), ("depth", "B", "C")):
+        q = FollowUpQueue(order=order)
+        q.push("A"); q.push("B")
+        assert q.pop() == first, f"{order}: wrong first pop"
+        q.push("C")  # follow-up opened by the first exploration
+        assert q.pop() == second, f"{order}: wrong second pop"
+
+
+@check("cost cap stops a never-stagnating, always-branching explorer")
+def _():
+    from loop_core import LoopBudget, run_loop
+    counter = {"n": 0}
+
+    def explore_fn(question):
+        counter["n"] += 1
+        i = counter["n"]
+        return f"RAW{i}", f"unique finding number {i} about topic {i}", [f"q{i + 100}"], 0.5
+
+    result = run_loop(["q1"], explore_fn, lambda f: "r",
+                      budget=LoopBudget(max_iterations=99, max_cost=1.0, max_wall_clock_s=99))
+    assert result.stop == "cost_cap", f"stopped by {result.stop}"
+    assert result.iterations == 2 and result.cost_spent == 1.0
+
+
+@check("wall-clock cap fires via the injected clock, deterministically")
+def _():
+    from loop_core import LoopBudget, run_loop
+    ticks = iter([0.0, 10.0, 20.0, 30.0, 40.0, 50.0])
+
+    def explore_fn(question):
+        return "RAW", f"different every time {question}", [f"fu-{question}"], 0.0
+
+    result = run_loop(["q1"], explore_fn, lambda f: "r",
+                      budget=LoopBudget(max_iterations=99, max_cost=99, max_wall_clock_s=15.0),
+                      clock=lambda: next(ticks))
+    assert result.stop == "wall_clock_cap", f"stopped by {result.stop}"
+
+
+@check("offload log returns id + bounded digest; fetch returns the original")
+def _():
+    from loop_core import OffloadLog
+    log = OffloadLog(digest_chars=20)
+    raw = "x" * 5000 + " tail"
+    rec_id, digest = log.store(raw)
+    assert rec_id == "obs-0001" and len(digest) <= 20
+    assert log.fetch(rec_id) == raw, "original must stay addressable"
+
+
+@check("the writer receives only accumulated findings, never raw output")
+def _():
+    from loop_core import LoopBudget, run_loop
+    seen = {}
+
+    def write_fn(findings):
+        seen["findings"] = findings
+        return "report"
+
+    def explore_fn(question):
+        return "RAW-SECRET", f"summary of {question}", [], 0.0
+
+    run_loop(["q1"], explore_fn, write_fn, budget=LoopBudget(max_iterations=5))
+    (question, rec_id, summary), = seen["findings"]
+    assert question == "q1" and rec_id.startswith("obs-") and "RAW-SECRET" not in summary
+
+
+@check("loop_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (LOOP_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (LOOP_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("loop_example .env.example ships no filled-in secret")
+def _():
+    for line in (LOOP_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
 
 
 # --------------------------------------------------------------------------- #

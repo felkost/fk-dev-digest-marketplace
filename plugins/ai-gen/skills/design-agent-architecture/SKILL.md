@@ -1,6 +1,6 @@
 ---
 name: design-agent-architecture
-description: Designs LLM/agent system architecture with explicit trade-offs and risks. Covers workflow patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) versus agents, ReAct, Tree of Thoughts, Reflexion, RAG, multi-agent, and human-in-the-loop patterns, connecting models to MCP servers and tools, short-term and long-term memory including persistent knowledge bases, vector databases for retrieval, and autonomous loops with stop contracts and maker-checker separation. Use for agent architecture decisions, choosing a reasoning structure, RAG pipeline design, tool integration via MCP, memory/state design, vector store selection, and deciding what an agent may do unattended. Respond in Ukrainian unless the user requests another language.
+description: Designs LLM/agent system architecture with explicit trade-offs and risks. Covers workflow patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) versus agents, ReAct, Tree of Thoughts, Reflexion, RAG, multi-agent, and human-in-the-loop patterns, the inner agent execution loop (layered stop gate, stagnation detection, goal predicate versus the model saying it is done, context economics and offloading inside the loop, explorer/writer separation), connecting models to MCP servers and tools, short-term and long-term memory including persistent knowledge bases, vector databases for retrieval, and autonomous loops with stop contracts and maker-checker separation. Use for agent architecture decisions, choosing a reasoning structure, designing or debugging an agent loop that never stops or repeats itself, RAG pipeline design, tool integration via MCP, memory/state design, vector store selection, and deciding what an agent may do unattended. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Архітектура агентних систем
@@ -35,7 +35,14 @@ description: Designs LLM/agent system architecture with explicit trade-offs and 
   структурно не відповідає на глобальні й багатокрокові питання; побудова графа знань через LLM
   і entity resolution; спільноти та їхні підсумки, global vs local режими; text2cypher; чесна
   вартість індексації та таблиця «коли графа не треба».
-- [references/loop-engineering.md](references/loop-engineering.md) — система навколо моделі:
+- [references/agent-loop.md](references/agent-loop.md) — the inner execution loop of one agent
+  turn: the four loop elements (goal/plan/state/decision) and Layers 1–3 of where they live;
+  three colliding numbered scales disambiguated; the layered stop gate (goal predicate vs
+  terminal message, stagnation as the stop failure never trips); the programmatic vs
+  agent-triggered boundary; context economics in the loop (offloading every iteration,
+  append-don't-rewrite); explorer≠writer; breadth vs depth as which queue end you pop.
+- [references/loop-engineering.md](references/loop-engineering.md) — система навколо моделі
+  (ЗОВНІШНІЙ цикл розробника, не цикл агента — розрізнення в agent-loop.md):
   автоматизації, worktrees, скіли, конектори, субагенти; maker-checker; зовнішній стан; ризики
   автономного циклу.
 - [references/autonomy-contracts.md](references/autonomy-contracts.md) — контракт автономії:

@@ -12,7 +12,7 @@ already triaged (see `HANDOFF.md` round 13).
 - Run it
 - Layout
 - Decisions worth explaining
-- What the tests pin (47 offline total, this file's share 9, + 10 live, all actually run)
+- What the tests pin (59 offline total, this file's share 9, + 10 live, all actually run)
 - Production deltas
 
 ## Run it
@@ -99,13 +99,13 @@ far costs nothing; only the model call inside `agent.py`'s `ainvoke` spends Open
 ## What the tests pin
 
 Two tiers, both actually run this round — not just written.
-`python tests/smoke_test.py` has 47 checks total, all four examples this plugin ships;
+`python tests/smoke_test.py` has 59 checks total, all five examples this plugin ships;
 mcp_example's share is checks 19-27 (the other three examples' shares are in `rag-example.md`,
 `reflexion-example.md` and `guardrail-example.md`):
 
 | Tier | Where | What it needs | Result |
 |---|---|---|---|
-| Offline pure logic | `tests/smoke_test.py` checks 19-27 | bare interpreter | 9/9 this file's share (47/47 whole file) |
+| Offline pure logic | `tests/smoke_test.py` checks 19-27 | bare interpreter | 9/9 this file's share (59/59 whole file) |
 | Live protocol round-trip | `scripts/mcp_example/test_live_stdio.py` | `mcp` installed, no key/network | 10/10 |
 
 The offline tier pins `journal.py` only: sequential ids, blank text rejected, an unknown id reads
