@@ -1,6 +1,6 @@
 ---
 name: deploy-ai-environments
-description: Sets up and deploys environments for running models and agent applications — locally, in Docker, and on AWS, Google Cloud, or Azure. Covers local inference (Ollama/vLLM class), containerizing Python agent apps, choosing between serverless, container services and GPU instances in each cloud, secrets and API-key hygiene, and cost guardrails. Use for "how do I run this locally", Docker setup for LLM apps, cloud deployment choice, and environment configuration best practices. Respond in Ukrainian unless the user requests another language.
+description: Sets up and deploys environments for running models and agent applications — locally, in Docker, and on AWS, Google Cloud, or Azure. Covers local inference (Ollama/vLLM class), containerizing Python agent apps, choosing between serverless, container services and GPU instances in each cloud, secrets and API-key hygiene, cost guardrails, runtime choice by latency (edge/synchronous API/event-driven worker), the three communication wires with the MCP transport correction, the front-door serving pattern, browser deployment as a security decision, the reliability ladder (time budget, fallback, circuit breaker, graceful degradation), idempotency keyed by operation id, release engineering (versioning, gated promotion, per-turn version pinning), threat modeling as an asset-to-surface mapping, direct versus indirect prompt injection, tool sandboxing and egress allowlists, schema-first argument validation as a security control, why policy belongs outside the prompt, and human-in-the-loop as a designed mechanism (trigger, reviewer context, durable state across the wait, bypass defenses). Use for "how do I run this locally", Docker setup for LLM apps, cloud deployment choice, choosing a serving runtime or communication channel by latency, an agent that needs to degrade gracefully instead of erroring, shipping a prompt/model/tool change safely, threat-modeling a deployed agent, sandboxing a tool or restricting its network egress, designing a human-approval checkpoint that survives a restart, and environment configuration best practices. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Середовища запуску та розгортання
@@ -16,6 +16,19 @@ Docker і в хмарі (AWS / Google Cloud / Azure) — з гігієною с�
 - [references/cloud-aws-gcp-azure.md](references/cloud-aws-gcp-azure.md) — мапа еквівалентних
   сервісів трьох хмар, вибір між serverless / контейнерним сервісом / GPU-інстансом, типові
   помилки вартості.
+- [references/serving-release.md](references/serving-release.md) — serving-топологія і release
+  engineering: вибір рантайму за латентністю (edge/API/event-driven), три "дроти" зв'язку з
+  виправленою прив'язкою MCP-транспорту, front-door-патерн, браузерне розгортання як рішення
+  безпеки, тунелі лише для розробки, драбина надійності (бюджет часу → fallback → circuit
+  breaker → graceful degradation), ідемпотентність за operation id, а не хешем аргументів,
+  release engineering (версіонування, gate-и промоції, пінінг версій на хід).
+- [references/security-governance.md](references/security-governance.md) — threat model як
+  мапа asset↔surface (не чеклист); direct vs indirect prompt injection; sandboxing інструментів
+  і egress-контроль (deny-by-default, allowlist доменів) — раніше нуль покриття; schema-first
+  валідація аргументів як security-контроль (`additionalProperties: false`); чому policy живе
+  поза промптом (крихкий проти injection, неаудитовний); HITL як чотири окремі рішення — що
+  тригерить чекпоінт, що бачить рев'юєр, як стан переживає очікування (async resumption,
+  durable state, timeout, ескалація), що робити, якщо HITL обійдено.
 
 ## Обов'язкові правила
 

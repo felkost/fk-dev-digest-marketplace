@@ -1,6 +1,6 @@
 ---
 name: build-ai-examples
-description: Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
+description: Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, a research-loop harness with a layered stop gate (stagnation detection, cost cap, de-duplicated follow-up queue), a test-driven agent development harness (normalizing evaluator, grounding check with explicit context, defect localization, N-repeat benchmarking), a serving-reliability harness (time-budget/fallback/circuit-breaker ladder, operation-id-keyed idempotency vs the argument-hash anti-pattern), a tool-security harness (hostname-resolving egress allowlist, schema-first argument validator, durable HITL checkpoint with timeout escalation) demonstrated against a real indirect-prompt-injection attempt, a metacognitive monitoring harness (confidence gate reading tracked state rather than a verbal claim, dual-signal stagnation detector combining content-cosine and confidence-plateau, graceful degradation from real token logprobs to a declared fallback), and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, an agent loop that needs enforceable stop conditions, a harness for developing an agent against tests, a circuit breaker or fallback ladder that needs testing, an idempotency key that should not collide across distinct operations, an egress allowlist or schema validator or HITL checkpoint that needs testing, a confidence gate or stagnation detector that needs testing, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Робочі приклади застосунків
@@ -32,6 +32,42 @@ Docker + React 19** (+ бібліотеки візуалізації Python), м
   into a real LangGraph `StateGraph`; code in `scripts/guardrail_example/`, offline smoke tests
   plus a free live check of the graph wiring itself (both actually run), a production-deltas
   section.
+- [references/loop-example.md](references/loop-example.md) — a working Layer-2 research-loop
+  harness implementing the layered stop gate of `design-agent-architecture`'s agent-loop.md:
+  iteration+cost+wall-clock caps AND a stagnation detector, a de-duplicated follow-up queue with
+  a named breadth/depth switch, id-keyed tool-output offloading, explorer/writer separation;
+  code in `scripts/loop_example/`, offline smoke tests for exactly the properties its published
+  counterpart lacks (halts on near-identical summaries, queue refuses re-entry, imports without
+  executing).
+- [references/tdad-example.md](references/tdad-example.md) — a working Test-Driven Agent
+  Development harness implementing `evaluate-optimize-models`'s agent-tdad.md: a normalizing
+  evaluator, a grounding check taking context as an explicit argument (the structural fix to a
+  real module-global bug from the companion repository), N-repeat benchmarking, defect
+  localization (evaluator bug / instruction bug / capability gap), the minimum-change ladder, a
+  named retry-ceiling policy; code in `scripts/tdad_example/`, offline smoke tests reproducing
+  and then fixing the exact concurrency and accumulated-context failures the bug caused.
+- [references/reliability-example.md](references/reliability-example.md) — a working serving
+  reliability harness implementing `deploy-ai-environments`'s serving-release.md: a time-budget,
+  fallback, circuit-breaker and graceful-degradation ladder as a state machine that always
+  returns a named outcome, plus an operation-id-keyed idempotency cache contrasted directly
+  against the argument-hash anti-pattern from the companion repository; code in
+  `scripts/reliability_example/`, offline smoke tests reproducing the exact collision the bug
+  causes and then fixing it.
+- [references/security-example.md](references/security-example.md) — a working tool-security
+  harness implementing `deploy-ai-environments`'s security-governance.md: an egress allowlist
+  that resolves the real hostname instead of trusting a substring match, a schema-first argument
+  validator that rejects unknown fields, a durable HITL checkpoint that survives a simulated
+  restart and escalates on timeout; code in `scripts/security_example/`, whose `agent.py` shows
+  a real model facing an indirect-prompt-injection attempt and the egress layer blocking the
+  exfiltration try regardless of what the model decides; offline smoke tests reproducing the
+  lookalike-hostname and premature-escalation failures the design prevents.
+- [references/metacog-example.md](references/metacog-example.md) — a working metacognitive
+  monitoring harness implementing `design-agent-architecture`'s agent-metacognition.md: a
+  confidence gate reading tracked state rather than a verbal claim, a dual-signal stagnation
+  detector (content-cosine and confidence-plateau, independently testable), and a resolver that
+  prefers a real logprob-derived signal and degrades to a declared fallback when none is
+  available; code in `scripts/metacog_example/`, offline smoke tests including the
+  signal-independence case a single-signal detector would miss.
 - [references/document-loading.md](references/document-loading.md) — витягування тексту з
   реальних файлів: Word/PDF/Excel/SQL/аудіо/зображення/відео з режимами відмови, три рівні
   парсингу (текст → layout-aware → мультимодальний), збагачення на етапі індексації (метадані,

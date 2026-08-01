@@ -185,3 +185,14 @@ asked to touch another plugin or the marketplace root.
   `python-dotenv`, anchored to the script's directory; `settings.py` stays stdlib-only on purpose
   and only reads `os.environ` (see `rag-example.md`) — don't add dotenv or any other third-party
   import there.
+- **Every worked example's pure module needs a name unique across ALL examples in the plugin, not
+  just within its own directory.** `tests/smoke_test.py` inserts every example's directory onto
+  `sys.path`, so two examples that both name their pure module e.g. `harness_core.py` collide —
+  Python's import cache silently serves whichever one loaded first, and the *other* example's
+  checks fail with `ImportError`s for names that only exist in the file that lost the race (found
+  and fixed in round 20, before it reached a commit). Existing names taken: `chunking`/
+  `retrieval`/`settings` (rag), `journal` (mcp), `reflexion_core`, `guardrail_core`, `loop_core`,
+  `harness_core` (tdad), `reliability_core`. Check that list — or
+  `ls skills/build-ai-examples/scripts/*/*.py` — before naming a new example's module, and always
+  run the **entire** smoke suite after adding one, not only the checks just added: a collision
+  like this only shows up cross-example, never in a subset.
