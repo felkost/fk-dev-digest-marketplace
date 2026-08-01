@@ -1,6 +1,6 @@
 ---
 name: ml-forecasting-model
-description: Chooses the time-series forecasting model and its core settings — whether the task is genuine forecasting (extrapolating a series' own past) versus cross-sectional regression on time features, the stationarity check with ADF and KPSS reading them together because they test opposite nulls, the model ladder from naive and seasonal-naive baselines through ETS/Holt-Winters and ARIMA/SARIMAX to global gradient-boosted models on lag features, local versus global fitting, ACF/PACF versus AIC order selection, the Tweedie loss for intermittent (many-zero) demand where squared error biases the zero-day forecast upward, the direct per-horizon versus recursive multi-step strategy, zero-shot pretrained foundation models (TimesFM, Chronos-2) as a second baseline that still must beat seasonal-naive on your own backtest, choosing between them by covariate support, interval calibration and LoRA fine-tuning, why tree ensembles cannot extrapolate a trend beyond the training range and modelling differences fixes it, automated feature extraction for the global rung (tsfel, feature-engine lag/window transformers), and the scale-free MASE/RMSSE/WRMSSE metrics (the M5 family) because MAPE explodes on zeros and volume-weighting changes what you optimise. Use when forecasting a series forward, when choosing between ARIMA, ETS, Prophet, ML and a pretrained foundation model, when asked whether TimesFM or Chronos-2 or zero-shot forecasting is worth trying, when a foundation model needs exogenous covariates or fine-tuning, when asked how many differences or which seasonal order, which loss for sparse/intermittent sales, how to forecast many horizons ahead, how to get forecast intervals, which forecasting error metric, or deciding local per-series versus one global model. Does NOT design the backtest splitter itself (use ml-validation-design for rolling-origin/purged CV) and does NOT tune the gradient-boosting hyperparameters (use ml-tree-ensemble-params).
+description: Chooses the time-series forecasting model and its core settings — whether the task is genuine forecasting (extrapolating a series' own past) versus cross-sectional regression on time features, the stationarity check with ADF and KPSS reading them together because they test opposite nulls, the model ladder from naive and seasonal-naive baselines through ETS/Holt-Winters and ARIMA/SARIMAX to global gradient-boosted models on lag features, local versus global fitting, ACF/PACF versus AIC order selection, the Tweedie loss for intermittent (many-zero) demand where squared error biases the zero-day forecast upward, the direct per-horizon versus recursive multi-step strategy, zero-shot pretrained foundation models (TimesFM, Chronos-2) as a second baseline that still must beat seasonal-naive on your own backtest, choosing between them by covariate support, interval calibration and LoRA fine-tuning with the measured ordering (zero-shot first, then known-future covariates, fine-tune last, and a sibling adapter does not rescue a cold start), using the forecast quantile band as the normality corridor for anomaly detection on a series, why tree ensembles cannot extrapolate a trend beyond the training range and modelling differences fixes it, Prophet's real control surface (changepoints placed only in the first 80 percent of history, interval_width defaulting to 0.8 not 0.95, MCMC needed for seasonal uncertainty, outliers set to NaN, holidays and shocks as special events, built-in cross_validation), checking ARIMA order sufficiency with the Ljung-Box test on residuals, automated feature extraction for the global rung (tsfel, feature-engine lag/window transformers), and the scale-free MASE/RMSSE/WRMSSE metrics (the M5 family) because MAPE explodes on zeros and volume-weighting changes what you optimise. Use when forecasting a series forward, when choosing between ARIMA, ETS, Prophet, ML and a pretrained foundation model, when asked whether TimesFM or Chronos-2 or zero-shot forecasting is worth trying, when a foundation model needs exogenous covariates or fine-tuning, when asked how many differences or which seasonal order, which loss for sparse/intermittent sales, how to forecast many horizons ahead, how to get forecast intervals, which forecasting error metric, or deciding local per-series versus one global model. Does NOT design the backtest splitter itself (use ml-validation-design for rolling-origin/purged CV) and does NOT tune the gradient-boosting hyperparameters (use ml-tree-ensemble-params).
 ---
 
 # Forecasting часових рядів: яку модель і які налаштування
@@ -138,8 +138,38 @@ Tweedie p=1.9 **0.744**, −6.7%). Книга (M5) повідомляє біль
   Чистий univariate і швидкість → TimesFM (інференс 1.1 с проти 5.1 с CPU).
   Виміряно чесно: коваріати платять лише інформацією, якої НЕМАЄ в історії
   цілі — детермінований сезон як known-future коваріата дав нуль
-  (MAE 0.349 → 0.355); виграш статей (8.4% → 2.8% WAPE) — від погоди/
-  зайнятості, яких в історії справді немає. API і тихі пастки — api-2026 §6.
+  (MAE 0.349 → 0.355); а там, де коваріати несуть фізику (погода/зайнятість →
+  HVAC), вони ріжуть WAPE удвічі ще ДО файнтюну (8.4→4.2%, ноутбуки авторів).
+- **Файнтюн — після zero-shot із коваріатами, не замість:** LoRA лише по цілі
+  дає −7..9% WAPE, з коваріатами −27..33% (до 2.8%); coverage після файнтюну
+  звужується (98→91%), а **cold-start із 3 днями контексту адаптер не рятує
+  (15.6→15.5%)**. Порядок: сезонний наївний → zero-shot → +коваріати →
+  LoRA, і кожен крок має виправдати наступний числом. Прогноз працює і як
+  детектор аномалій — квантильна смуга як «норма» (api-2026 §6).
+
+## Крок 2c — Prophet: декомпозиційна регресія для бізнес-денних даних
+
+Коли ряд денний, зі святами, пропусками й викидами — **Prophet** (тренд зі
+зламами + сезонності Фур'є + свята як регресори) конкурує зі щаблями 1-2 за
+мізерну ціну налаштування. Живий прогін на тих самих рядах (prophet 1.3.0,
+дефолти): A MAE **0.437** (≈Chronos-2, за ETS), B **1.408** (≈ETS). Пастки —
+усі перевірені живцем:
+
+- **`interval_width` за замовчуванням 0.8, не 0.95** — «інтервал Prophet»
+  вужчий, ніж звикли читати; і без `mcmc_samples>0` невизначеність — ЛИШЕ
+  тренд+шум (MAP), без сезонної складової: покриття 80%-смуги на сезонному
+  ряді A — **62.5%**. Повна байєсова — `mcmc_samples=300`, на порядки довше.
+- **25 потенційних зламів лише в перших 80% ряду** (`changepoint_range=0.8`):
+  свіжий злам тренду в останніх 20% модель точкою зламу не побачить.
+  Гнучкість — `changepoint_prior_scale` (дефолт 0.05).
+- **Викиди → `NaN`, не видалення рядка**: Prophet толерує пропуски; два
+  класи шкоди від викидів — розгойдана сезонність і роздуті інтервали. Шок
+  (локдаун) — не викид, а спеціальна подія: моделювати holiday-вікном.
+- Місячні дані: автодетекція сезонностей коректно лишає тільки `yearly`
+  (перевірено); `make_future_dataframe(freq="MS")` — без freq буде денна сітка.
+- Вбудовані `cross_validation(initial/period/horizon)` + `performance_metrics`
+  — rolling-origin з коробки. Установка тепер проста: `pip install prophet`
+  (1.3.0, Windows/3.12) — рекомендація «лише Anaconda» застаріла.
 
 ## Крок 3 — порядок (p,d,q)(P,D,Q)ₛ
 
@@ -149,6 +179,10 @@ Tweedie p=1.9 **0.744**, −6.7%). Книга (M5) повідомляє біль
   (`pmdarima.auto_arima` тут відсутній — сітка руками або `statsmodels`).
 - **Не роздувати.** ARIMA(1,1,1) чи (2,1,2) покриває більшість; високі порядки
   зазвичай ловлять шум і гірше екстраполюють.
+- **Достатність порядку перевіряє Ljung-Box на залишках**, не лише AIC:
+  недоспецифікована ARIMA(1,0,0) на AR(2)-даних — p=0.0000 (залишки ще
+  автокорельовані, структура недобрана), коректна (2,0,0) — p=0.90
+  (`acorr_ljungbox(res.resid, lags=[10], model_df=p+q)`, живий прогін).
 
 ## Крок 4 — валідація: лише rolling-origin
 
@@ -213,6 +247,10 @@ MASE (один викид: RMSSE 0.5→1.0, MASE лишається 0.655).
   знає твоїх даних; на чистому ряді ETS побив обидві foundation-моделі (Крок 2b).
 - **Бустинг на сирих рівнях трендового ряду** — прогноз упирається в максимум
   train і систематично недотягує (MAE 10.44 → 0.72 після переходу на різниці).
+- **Інтервал Prophet прочитано як 95%** — дефолт `interval_width=0.8`, і без
+  MCMC він не містить сезонної невизначеності (покриття 62.5% на ряді A).
+- **Залишки не перевірені після підбору порядку** — AIC мовчить про
+  недоспецифікацію, яку Ljung-Box показує одразу (Крок 3).
 - **Номінальне покриття інтервалів без перевірки** — «80%» смуга квантильної
   голови покрила 37.5% на переміжному ряді; покриття міряється на backtest.
 
@@ -232,7 +270,7 @@ MASE (один викид: RMSSE 0.5→1.0, MASE лишається 0.655).
 
 | Файл | Коли читати |
 |---|---|
-| `references/api-2026.md` | statsmodels (ARIMA/ETS/adfuller/kpss), lightgbm tweedie/quantile, TimesFM 2.5 (§6), tsfel/feature-engine (§7), чого немає |
+| `references/api-2026.md` | statsmodels (ARIMA/ETS/adfuller/kpss), lightgbm tweedie/quantile, TimesFM 2.5 і Chronos-2 (§6), tsfel/feature-engine (§7), Prophet 1.3 (§8) |
 | `references/derivations.md` | ADF vs KPSS, MASE/RMSSE/WRMSSE формально, рекурсивний vs прямий, Tweedie, ACF/PACF, zero-shot проти ETS (§7), стеля дерев (§8) |
 
 ## Джерела
@@ -246,7 +284,11 @@ Tweedie-втрата для переміжного попиту, прямий pe
 TimesFM 2.5 (github.com/google-research/timesfm, HF
 `google/timesfm-2.5-200m-pytorch`) і Chronos-2 (HF `amazon/chronos-2`,
 `chronos-forecasting`) — Крок 2b, перевірено живцем 2026-08-01/08; файнтюн-числа
-Chronos-2 (WAPE 8.4→2.8%) — заявка статті TDS, не власний прогін.
+Chronos-2 (WAPE 8.4→2.8%) — заявка статті TDS, не власний прогін. Rafferty,
+*Forecasting Time Series Data with Prophet* (2-ге вид., Packt 2023) — Крок 2c,
+кожен дефолт і пастка переперевірені на prophet 1.3.0. Brownlee, *Introduction
+to Time Series Forecasting with Python* v1.9 — діагностика залишків (Крок 3,
+Ljung-Box як формалізація його розд. 19).
 **Усі числа вище — власні живі прогони на statsmodels 0.14.6 / lightgbm 4.6.0 /
-sklearn 1.9.0 / timesfm 2.0.2 / chronos-forecasting 2.3.1 (torch 2.13.0)**,
-не переказ книг чи README.
+sklearn 1.9.0 / timesfm 2.0.2 / chronos-forecasting 2.3.1 / prophet 1.3.0
+(torch 2.13.0)**, не переказ книг чи README.

@@ -1,5 +1,5 @@
 {
-  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані). Дев'ята звірка: +t104-t109 (4 позитивні на ml-measurement-model, 2 стрес-тести на межі з ml-label-quality/ml-distribution-choice), n14 негативний. v9 (2026-07-20): розведено межу t18 tree-ensemble ↔ dimensionality-features (аудит важливостей → dimensionality). Раунд 12 (2026-08-01): t121-t127 — zero-shot/TimesFM, AutoML-sweep, інтервали, екстракція ознак; t128 — борг межі Tweedie з раунду 10. Раунд 13 (2026-08-08): t129-t131 — вибір між foundation-моделями, файнтюн, стеля дерев.",
+  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані). Дев'ята звірка: +t104-t109 (4 позитивні на ml-measurement-model, 2 стрес-тести на межі з ml-label-quality/ml-distribution-choice), n14 негативний. v9 (2026-07-20): розведено межу t18 tree-ensemble ↔ dimensionality-features (аудит важливостей → dimensionality). Раунд 12 (2026-08-01): t121-t127 — zero-shot/TimesFM, AutoML-sweep, інтервали, екстракція ознак; t128 — борг межі Tweedie з раунду 10. Раунд 13 (2026-08-08): t129-t131 — вибір між foundation-моделями, файнтюн, стеля дерев. Раунд 14 (2026-08-15): t132-t134 — Prophet проти SARIMAX, Ljung-Box, прогноз-як-детектор.",
   "items": [
     {
       "id": "t01",
@@ -822,6 +822,24 @@
       "prompt": "LightGBM на лагових ознаках систематично недотягує прогноз на ряді зі зростаючим трендом. У чому причина?",
       "expected": "ml-forecasting-model",
       "fixture_note": "РАУНД 13 СТРЕС: стеля екстраполяції дерев (Крок 2, derivations §8); НЕ ml-tree-ensemble-params (питання про механізм forecasting, не про гіперпараметри) і НЕ ml-overfitting-diagnosis (це недо-, а не перенавчання)"
+    },
+    {
+      "id": "t132",
+      "prompt": "Денні продажі зі святами, пропусками й викидами — брати Prophet чи SARIMAX?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 14: Крок 2c Prophet (interval_width 0.8, changepoints у перших 80%, NaN-викиди)"
+    },
+    {
+      "id": "t133",
+      "prompt": "Підібрав порядок ARIMA за AIC. Як переконатися, що модель справді вибрала всю структуру ряду?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 14: Ljung-Box на залишках (Крок 3); НЕ ml-overfitting-diagnosis (це недоспецифікація, не розрив train/test)"
+    },
+    {
+      "id": "t134",
+      "prompt": "Хочу ловити аномалії у витратах електроенергії, порівнюючи факт із прогнозом. Це робочий підхід?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 14: прогноз як детектор аномалій (квантильна смуга = коридор норми, коваріати ріжуть хибні тривоги)"
     }
   ]
 }
