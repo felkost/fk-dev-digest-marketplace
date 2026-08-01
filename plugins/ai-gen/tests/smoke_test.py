@@ -115,6 +115,33 @@ fixed by the explicit-argument signature; see references/tdad-example.md):
  72-73. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
+What it pins, reliability_example (the time-budget/fallback/circuit-breaker/
+graceful-degradation ladder, and the idempotency contrast
+deploy-ai-environments/references/serving-release.md specifies; the
+motivating bug is chapter_08/06_idempotent_key_example.py's argument-hash-only
+cache, reproduced by check 81 and fixed by ArgHashCache vs IdempotencyCache;
+see references/reliability-example.md):
+ 74.   the directory exists with the expected files;
+ 75.   reliability_core imports without executing anything, and imports ONLY
+       stdlib;
+ 76.   a successful primary never touches any fallback;
+ 77.   a primary exceeding its time budget falls back, and the fallback's
+       success is what the result reports;
+ 78.   every rung failing returns outcome == "degraded" with the supplied
+       value, never an unhandled exception;
+ 79.   the circuit breaker opens after the failure threshold and sheds load
+       (outcome == "circuit_open") without calling primary while open;
+ 80.   a successful HALF_OPEN probe closes the breaker; a failed probe
+       reopens it immediately, without waiting to re-count failures;
+ 81.   the idempotency contrast -- two different operation_ids with
+       IDENTICAL arguments both execute under IdempotencyCache, but collapse
+       into one execution under ArgHashCache, reproducing the book's bug on
+       purpose;
+ 82.   the SAME operation_id called twice executes the underlying function
+       once under IdempotencyCache -- the cache hit path;
+ 83-84. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
 Console note: this box's console is cp1251, so output is ASCII-safe.
@@ -136,12 +163,14 @@ REFLEXION_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reflexi
 GUARDRAIL_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "guardrail_example"
 LOOP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "loop_example"
 TDAD_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "tdad_example"
+RELIABILITY_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reliability_example"
 sys.path.insert(0, str(EXAMPLE))
 sys.path.insert(0, str(MCP_EXAMPLE))
 sys.path.insert(0, str(REFLEXION_EXAMPLE))
 sys.path.insert(0, str(GUARDRAIL_EXAMPLE))
 sys.path.insert(0, str(LOOP_EXAMPLE))
 sys.path.insert(0, str(TDAD_EXAMPLE))
+sys.path.insert(0, str(RELIABILITY_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -1224,6 +1253,190 @@ def _():
 @check("tdad_example .env.example ships no filled-in secret")
 def _():
     for line in (TDAD_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
+
+
+# --------------------------------------------------------------------------- #
+# 74-84. reliability_example: the ladder and the idempotency contrast, offline
+# --------------------------------------------------------------------------- #
+
+@check("reliability_example directory exists with the expected files")
+def _():
+    for name in ("reliability_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (RELIABILITY_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("reliability_example reliability_core imports without executing anything, ONLY stdlib")
+def _():
+    tree = ast.parse((RELIABILITY_EXAMPLE / "reliability_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute anything"
+        )
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"hashlib", "json", "dataclasses", "enum", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+    import reliability_core  # noqa: F401  -- the import itself must succeed bare
+
+
+def _ladder_stub(elapsed: float, value):
+    return lambda: (elapsed, value)
+
+
+def _ladder_stub_raises():
+    def _fn():
+        raise RuntimeError("boom")
+    return _fn
+
+
+@check("a successful primary never touches any fallback")
+def _():
+    from reliability_core import CircuitBreaker, run_ladder
+    fallback_called = {"n": 0}
+
+    def fallback():
+        fallback_called["n"] += 1
+        return 0.1, "fallback-value"
+
+    result = run_ladder(
+        _ladder_stub(0.1, "primary-value"), [("secondary", fallback)],
+        breaker=CircuitBreaker(), time_budget=1.0, now=0,
+    )
+    assert result.outcome == "primary" and result.value == "primary-value"
+    assert fallback_called["n"] == 0
+
+
+@check("a primary exceeding its time budget falls back, reporting the fallback's success")
+def _():
+    from reliability_core import CircuitBreaker, run_ladder
+    result = run_ladder(
+        _ladder_stub(5.0, "too-slow"), [("secondary", _ladder_stub(0.1, "fast-enough"))],
+        breaker=CircuitBreaker(), time_budget=1.0, now=0,
+    )
+    assert result.outcome == "fallback:secondary" and result.value == "fast-enough"
+
+
+@check("every rung failing returns outcome == 'degraded', never an unhandled exception")
+def _():
+    from reliability_core import CircuitBreaker, run_ladder
+    result = run_ladder(
+        _ladder_stub_raises(), [("secondary", _ladder_stub_raises())],
+        breaker=CircuitBreaker(), time_budget=1.0, now=0, degraded_value="sorry",
+    )
+    assert result.outcome == "degraded" and result.value == "sorry"
+    assert result.attempts == ("primary", "fallback:secondary", "degraded")
+
+
+@check("circuit breaker opens after the threshold and sheds load without calling primary")
+def _():
+    from reliability_core import CircuitBreaker, run_ladder
+    breaker = CircuitBreaker(failure_threshold=2, cooldown=100)
+    for now in (0, 1):
+        run_ladder(_ladder_stub_raises(), [], breaker=breaker, time_budget=1.0, now=now,
+                   degraded_value=None)
+    assert breaker.state.value == "open"
+
+    primary_called = {"n": 0}
+
+    def primary():
+        primary_called["n"] += 1
+        return 0.1, "should-not-run"
+
+    result = run_ladder(primary, [], breaker=breaker, time_budget=1.0, now=2, degraded_value="x")
+    assert result.outcome == "circuit_open" and primary_called["n"] == 0
+
+
+@check("a successful HALF_OPEN probe closes the breaker; a failed one reopens immediately")
+def _():
+    from reliability_core import BreakerState, CircuitBreaker
+
+    closing = CircuitBreaker(failure_threshold=1, cooldown=5)
+    closing.record_failure(now=0)
+    assert closing.state == BreakerState.OPEN
+    assert closing.allow(now=5) is True and closing.state == BreakerState.HALF_OPEN
+    closing.record_success()
+    assert closing.state == BreakerState.CLOSED
+
+    reopening = CircuitBreaker(failure_threshold=1, cooldown=5)
+    reopening.record_failure(now=0)
+    assert reopening.allow(now=5) is True and reopening.state == BreakerState.HALF_OPEN
+    reopening.record_failure(now=5)
+    assert reopening.state == BreakerState.OPEN, "a failed probe must reopen, not stay half-open"
+
+
+@check("idempotency contrast: distinct operation_ids both execute under IdempotencyCache, "
+       "collapse into one under ArgHashCache")
+def _():
+    from reliability_core import ArgHashCache, IdempotencyCache
+    args = {"amount": 10, "customer": "cust_1"}
+
+    calls = {"n": 0}
+
+    def execute():
+        calls["n"] += 1
+        return calls["n"]
+
+    good = IdempotencyCache()
+    r1, cached1 = good.call("op-1", execute)
+    r2, cached2 = good.call("op-2", execute)
+    assert cached1 is False and cached2 is False
+    assert r1 != r2, "two distinct operation_ids must both actually execute"
+    assert calls["n"] == 2
+
+    calls["n"] = 0
+    broken = ArgHashCache()
+    b1, bcached1 = broken.call("charge", args, execute)
+    b2, bcached2 = broken.call("charge", args, execute)
+    assert bcached1 is False and bcached2 is True, (
+        "the argument-hash cache should silently treat the second distinct "
+        "operation as a cache hit -- reproducing chapter_08/06's bug"
+    )
+    assert b1 == b2 and calls["n"] == 1, "the bug: only one real execution happened"
+
+
+@check("the SAME operation_id called twice executes the function once (the cache-hit path)")
+def _():
+    from reliability_core import IdempotencyCache
+    calls = {"n": 0}
+
+    def execute():
+        calls["n"] += 1
+        return "result"
+
+    cache = IdempotencyCache()
+    _, cached1 = cache.call("op-1", execute)
+    _, cached2 = cache.call("op-1", execute)
+    assert cached1 is False and cached2 is True
+    assert calls["n"] == 1
+
+
+@check("reliability_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (RELIABILITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (RELIABILITY_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("reliability_example .env.example ships no filled-in secret")
+def _():
+    for line in (RELIABILITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

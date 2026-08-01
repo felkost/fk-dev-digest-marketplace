@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-01T11:35:49.833Z",
+  "generatedAt": "2026-08-01T11:54:27.156Z",
   "marketplace": {
     "name": "fk-dev-digest-marketplace",
     "displayName": "Dev Digest",
@@ -473,11 +473,11 @@
       "skills": [
         {
           "name": "build-ai-examples",
-          "description": "Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, a research-loop harness with a layered stop gate (stagnation detection, cost cap, de-duplicated follow-up queue), a test-driven agent development harness (normalizing evaluator, grounding check with explicit context, defect localization, N-repeat benchmarking), and visualizing agent/eval results with matplotlib/plotly. Use for \"show me a working example\", demo app scaffolds, LangGraph agent code, an agent loop that needs enforceable stop conditions, a harness for developing an agent against tests, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language."
+          "description": "Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, a research-loop harness with a layered stop gate (stagnation detection, cost cap, de-duplicated follow-up queue), a test-driven agent development harness (normalizing evaluator, grounding check with explicit context, defect localization, N-repeat benchmarking), a serving-reliability harness (time-budget/fallback/circuit-breaker ladder, operation-id-keyed idempotency vs the argument-hash anti-pattern), and visualizing agent/eval results with matplotlib/plotly. Use for \"show me a working example\", demo app scaffolds, LangGraph agent code, an agent loop that needs enforceable stop conditions, a harness for developing an agent against tests, a circuit breaker or fallback ladder that needs testing, an idempotency key that should not collide across distinct operations, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language."
         },
         {
           "name": "deploy-ai-environments",
-          "description": "Sets up and deploys environments for running models and agent applications — locally, in Docker, and on AWS, Google Cloud, or Azure. Covers local inference (Ollama/vLLM class), containerizing Python agent apps, choosing between serverless, container services and GPU instances in each cloud, secrets and API-key hygiene, and cost guardrails. Use for \"how do I run this locally\", Docker setup for LLM apps, cloud deployment choice, and environment configuration best practices. Respond in Ukrainian unless the user requests another language."
+          "description": "Sets up and deploys environments for running models and agent applications — locally, in Docker, and on AWS, Google Cloud, or Azure. Covers local inference (Ollama/vLLM class), containerizing Python agent apps, choosing between serverless, container services and GPU instances in each cloud, secrets and API-key hygiene, cost guardrails, runtime choice by latency (edge/synchronous API/event-driven worker), the three communication wires with the MCP transport correction, the front-door serving pattern, browser deployment as a security decision, the reliability ladder (time budget, fallback, circuit breaker, graceful degradation), idempotency keyed by operation id, and release engineering (versioning, gated promotion, per-turn version pinning). Use for \"how do I run this locally\", Docker setup for LLM apps, cloud deployment choice, choosing a serving runtime or communication channel by latency, an agent that needs to degrade gracefully instead of erroring, shipping a prompt/model/tool change safely, and environment configuration best practices. Respond in Ukrainian unless the user requests another language."
         },
         {
           "name": "design-agent-architecture",

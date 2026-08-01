@@ -1,6 +1,6 @@
 ---
 name: build-ai-examples
-description: Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, a research-loop harness with a layered stop gate (stagnation detection, cost cap, de-duplicated follow-up queue), a test-driven agent development harness (normalizing evaluator, grounding check with explicit context, defect localization, N-repeat benchmarking), and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, an agent loop that needs enforceable stop conditions, a harness for developing an agent against tests, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
+description: Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, a research-loop harness with a layered stop gate (stagnation detection, cost cap, de-duplicated follow-up queue), a test-driven agent development harness (normalizing evaluator, grounding check with explicit context, defect localization, N-repeat benchmarking), a serving-reliability harness (time-budget/fallback/circuit-breaker ladder, operation-id-keyed idempotency vs the argument-hash anti-pattern), and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, an agent loop that needs enforceable stop conditions, a harness for developing an agent against tests, a circuit breaker or fallback ladder that needs testing, an idempotency key that should not collide across distinct operations, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Робочі приклади застосунків
@@ -46,6 +46,13 @@ Docker + React 19** (+ бібліотеки візуалізації Python), м
   localization (evaluator bug / instruction bug / capability gap), the minimum-change ladder, a
   named retry-ceiling policy; code in `scripts/tdad_example/`, offline smoke tests reproducing
   and then fixing the exact concurrency and accumulated-context failures the bug caused.
+- [references/reliability-example.md](references/reliability-example.md) — a working serving
+  reliability harness implementing `deploy-ai-environments`'s serving-release.md: a time-budget,
+  fallback, circuit-breaker and graceful-degradation ladder as a state machine that always
+  returns a named outcome, plus an operation-id-keyed idempotency cache contrasted directly
+  against the argument-hash anti-pattern from the companion repository; code in
+  `scripts/reliability_example/`, offline smoke tests reproducing the exact collision the bug
+  causes and then fixing it.
 - [references/document-loading.md](references/document-loading.md) — витягування тексту з
   реальних файлів: Word/PDF/Excel/SQL/аудіо/зображення/відео з режимами відмови, три рівні
   парсингу (текст → layout-aware → мультимодальний), збагачення на етапі індексації (метадані,

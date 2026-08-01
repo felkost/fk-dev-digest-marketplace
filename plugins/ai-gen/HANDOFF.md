@@ -1,13 +1,124 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-08-29, round **19** (the TDAD
-development loop: `agent-tdad.md` + `tdad_example`). Skills stay at **8**, references are now
-**38** (`evaluate-optimize-models/references/agent-tdad.md`,
-`build-ai-examples/references/tdad-example.md`), smoke checks **59 → 73**. Round **20** is next
-(serving runtimes, wires, front-door topology, release engineering), then 21–22, then **23**
+Newest entry on top (eda-skills convention). Last updated 2026-08-29, round **20** (serving
+topology + release engineering: `serving-release.md` + `reliability_example`). Skills stay at
+**8**, references are now **40** (`deploy-ai-environments/references/serving-release.md`,
+`build-ai-examples/references/reliability-example.md`), smoke checks **73 → 84**. Round **21**
+is next (threat model, tool sandboxing, HITL as a designed mechanism), then **22**, then **23**
 (code execution + agent workspaces, from the second-book triage — see the round-18 entry).
 Written for a fresh Claude session with no conversation history — read this whole file before
 touching anything.
+
+## What just happened (round 20 — serving topology and release engineering, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, third round sharing this branch — rounds 18–20 form one sequential unit until merged)
+
+The next queued unit of work, executed exactly as the ch. 7–11 triage's roadmap table specified,
+sourced from ch. 8 §8.1–8.3 of the (already-consumed) first book — re-read specifically for this
+round's assigned sections, not re-triaged from scratch.
+
+### Locating the exact source material first
+
+The roadmap's "three wires ... with the MCP transport corrected" pointed at a real, named
+section: **§8.3.2 "The three 'wires' of communication."** Read in full before writing anything,
+confirming the exact stale claim: the book labels its HTTP+streaming wire **"HTTP + SSE (MCP)"**
+and separately says "you may choose to connect to MCP servers locally using STDIO instead of
+HTTP+SSE" — the same pre-2025-03-26 "stdio and SSE are the two MCP transports" error
+`mcp-tools.md` already corrected for ch. 3's version of it (rounds 13/14), now confirmed to
+recur in ch. 8 too, worded almost identically. §8.1 (three deployment/consumption patterns:
+embedded/browser, API-backend, MCP-or-A2A-as-tool) supplied the front-door and
+browser-as-security-decision material; §8.3.1/8.3.3/8.3.5/8.3.7/8.3.8 supplied runtime choice,
+the front-door pattern by name, release engineering, the reliability ladder, and cost-to-value —
+all in the book's own words, none inferred from a chapter title (the standing rule since
+round 12).
+
+### Shipped: `serving-release.md` (the 39th reference)
+
+Runtime choice by latency (edge / synchronous API / event-driven worker, "start with API, move
+hot paths to edge, offload bursty work to workers" as the default); the three wires **with the
+mislabel corrected in the text itself** — WebRTC/WebSocket, HTTP+streaming (explicitly *not*
+called MCP, with a pointer to `mcp-tools.md`'s actual stdio/Streamable-HTTP story), message bus
+— cross-referencing rather than re-explaining MCP's transport; the **front-door pattern** framed
+as `architectures.md`'s orchestrator-workers applied to serving topology, not a new pattern;
+**browser deployment as a security decision** (extractable keys, CORS, the shared-vs-per-browser
+rate-limit dilemma, ephemeral server-minted secrets); **tunnels as a development tool** with the
+explicit "when a tunnel would need to run for a while, that's the signal to deploy instead"
+framing; the **reliability ladder** (time budget enforced at the caller → fallback → circuit
+breaker → graceful degradation, each rung catching what the one before missed) as newly-covered
+ground — checked first, and confirmed zero prior coverage of circuit breakers/fallbacks as a
+service-reliability pattern anywhere in the plugin; the **idempotency design rule** (key by an
+explicit operation id, never by hashing arguments alone) stated here, with the failure mode
+deferred to the worked example; and **release engineering** (version everything, promote through
+gates — offline eval → shadow → canary → full rollout with auto-rollback — pin exact
+model/tool/prompt versions per turn), explicitly named as one level up from `agent-tdad.md`'s
+minimum-change ladder, the same discipline applied to shipping instead of fixing.
+
+**Numbers deliberately not carried**, confirmed against round 18's forbidden list and found
+repeated verbatim in this ch. 8 material: "30% to 80%" and "90% of input costs" cache savings,
+the "$0.50/$0.10/$50" cost illustration, and the 1,024-token minimum cacheable-prefix figure —
+all present in §8.3.8 word-for-word matching the earlier-flagged Lanham numbers, confirming they
+are the same author's recurring illustrations, not independent measurements. The **framings**
+(cost-to-value ratio, three cost levers with tradeoffs, the cache-candidacy question) are
+carried; the specific percentages are not.
+
+### Shipped: `token-latency-cost.md` enrichment (evaluate-optimize-models)
+
+Two additions, both extending existing sections rather than duplicating them: a **cost-to-value
+framing** at the top ("cost makes sense only relative to what the agent replaces," instrument
+cost per session/task/user *before* optimizing, spend effort where the ratio is worst) and a
+**cache-candidacy rule** inside the existing caching section (good candidates: deterministic,
+expensive, stable across a defined window, each with its own natural TTL; poor candidates:
+results the cache key cannot fully capture the context for, or where staleness is hard to
+detect — auth state, full conversation history, freshest-data-dependent outputs).
+
+### Shipped: `reliability_example` (the seventh worked example) + 11 smoke checks
+
+`scripts/reliability_example/reliability_core.py` (pure stdlib, no import-time side effects)
+implements the ladder as an explicit state machine (`run_ladder()` returns a named `outcome` —
+`"primary"` / `"fallback:<name>"` / `"degraded"` / `"circuit_open"` — never a raw exception, the
+same "name the reason" discipline `loop_example` and `tdad_example` both use) and the
+idempotency contrast the reference specifies: `IdempotencyCache` (keyed by operation id) versus
+`ArgHashCache`, a deliberate reproduction of `chapter_08/06_idempotent_key_example.py`'s
+`sha256(name + args)`-only cache. `CircuitBreaker`'s `HALF_OPEN` probe reopens **immediately** on
+a failed probe rather than waiting to re-count toward the threshold — a failed probe is strong
+evidence the dependency is still down, and re-counting would let a persistently broken
+dependency get probed on every request during its outage.
+
+Smoke **73 → 84** (checks 74–84), including the round's headline case: **two calls with
+different `operation_id`s and identical arguments both execute under `IdempotencyCache`, but
+collapse into a single execution under `ArgHashCache`** — the bug reproduced on purpose, then
+shown fixed by the correct cache shape, in the same test.
+
+**A naming collision caught and fixed before it reached a commit.** `tdad_example` (round 19)
+and this round's first draft of `reliability_example` both named their pure module
+`harness_core.py`. Because `tests/smoke_test.py` inserts every example's directory onto
+`sys.path`, the two identically-named modules collided — Python's import cache silently served
+whichever one loaded first, and running the full suite made `tdad_example`'s checks fail with
+`ImportError`s for names that exist only in `reliability_example`'s file. Caught immediately by
+running the full suite (not just the new checks) after adding them — the module was renamed to
+`reliability_core.py`, matching the per-example unique-name convention every prior example
+(`loop_core`, `reflexion_core`, `guardrail_core`) already followed and this round's first draft
+broke. **New standing rule, added to `CLAUDE.md`: every worked example's pure module needs a
+name unique across ALL examples in the plugin, not just within its own directory** — verify with
+`ls skills/build-ai-examples/scripts/*/[a-z]*_core.py` (or equivalent) before naming a new one,
+and always run the *entire* smoke suite after adding an example's checks, not only the ones just
+added, since a collision like this one only shows up cross-example.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows, descriptions extended. `evaluate-optimize-models`'s
+  SKILL.md also got its `token-latency-cost.md` row updated for the cache-candidacy addition.
+  `openai.yaml` left untouched for both skills, per the rule confirmed in round 19.
+- `skill-router.md` gets a new row for `serving-release.md`.
+- **`check_docs.py` caught the same staleness class a third time** — zip had 38 references
+  against 40 on disk, and both `mcp-example.md` and `rag-example.md` still said "73 checks, all
+  six examples." Fixed to 84/seven; zip rebuilt (`ai_gen_knowledge.zip` **245 012 bytes**,
+  instructions unchanged at 6 928/8 000).
+- `check_docs.py` → **docs OK**; smoke **84/84**.
+
+### Open threads unchanged
+
+Full triage of *The Brain of AI Agents* (ch. 2/3/5/6/9/10 at section level only) is still owed
+before round 23; ch. 6 must face the two-taxonomy memory rule from round 17 before any third
+memory vocabulary is admitted.
 
 ## What just happened (round 19 — the TDAD development loop, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, same branch as round 18 — sequential rounds share a branch until merged, matching rounds 15–17's precedent)
 

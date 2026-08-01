@@ -25,7 +25,10 @@ description: Measures model quality correctly and optimizes efficiency. Covers c
   retry ceiling as a named design decision, grounding as a technique vs the grounding agent as
   one implementation (the module-global bug that motivates the worked example).
 - [references/token-latency-cost.md](references/token-latency-cost.md) — важелі оптимізації:
-  бюджет промпта, кешування, батчинг, right-sizing моделі, квантизація; що міряти до і після.
+  бюджет промпта, кешування (+ правило кандидатності кешу: детерміноване/дороге/стабільне вікно
+  проти auth-стану й повної історії розмови), батчинг, right-sizing моделі, квантизація;
+  cost-to-value рамка (вартість відносно того, що агент замінює, не в абсолюті); що міряти
+  до і після.
 
 ## Обов'язкові правила
 
