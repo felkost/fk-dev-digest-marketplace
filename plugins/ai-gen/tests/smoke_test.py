@@ -142,6 +142,32 @@ see references/reliability-example.md):
  83-84. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
+What it pins, security_example (the egress allowlist, schema-first argument
+validator, and durable HITL checkpoint deploy-ai-environments/references/
+security-governance.md specifies; agent.py demonstrates the point directly --
+a real model is shown an indirect-prompt-injection attempt and the egress
+allowlist blocks the exfiltration try regardless of what the model decides;
+see references/security-example.md):
+ 85.   the directory exists with the expected files;
+ 86.   security_core imports without executing anything, and imports ONLY
+       stdlib;
+ 87.   the egress allowlist denies lookalike hostnames
+       (docs.myapp.com.attacker.com, notdocs.myapp.com) a naive substring
+       check would have let through, while allowing the real listed host;
+ 88.   the schema validator rejects an unknown field even when every
+       required field is present and correctly typed;
+ 89.   the schema validator reports a missing required field and a wrong
+       type as distinct errors;
+ 90.   a checkpoint created in one CheckpointStore and read from a second
+       instance wrapping the same backing dict has identical state --
+       restart survival without an actual restart;
+ 91.   a pending checkpoint past its timeout escalates; one still within
+       the window does not;
+ 92.   an already-approved checkpoint is immune to a later timeout check --
+       resolving first must not let escalation overwrite it;
+ 93-94. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
 Console note: this box's console is cp1251, so output is ASCII-safe.
@@ -164,6 +190,7 @@ GUARDRAIL_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "guardra
 LOOP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "loop_example"
 TDAD_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "tdad_example"
 RELIABILITY_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reliability_example"
+SECURITY_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "security_example"
 sys.path.insert(0, str(EXAMPLE))
 sys.path.insert(0, str(MCP_EXAMPLE))
 sys.path.insert(0, str(REFLEXION_EXAMPLE))
@@ -171,6 +198,7 @@ sys.path.insert(0, str(GUARDRAIL_EXAMPLE))
 sys.path.insert(0, str(LOOP_EXAMPLE))
 sys.path.insert(0, str(TDAD_EXAMPLE))
 sys.path.insert(0, str(RELIABILITY_EXAMPLE))
+sys.path.insert(0, str(SECURITY_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -1437,6 +1465,131 @@ def _():
 @check("reliability_example .env.example ships no filled-in secret")
 def _():
     for line in (RELIABILITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
+
+
+# --------------------------------------------------------------------------- #
+# 85-94. security_example: egress allowlist, schema validator, HITL checkpoint
+# --------------------------------------------------------------------------- #
+
+@check("security_example directory exists with the expected files")
+def _():
+    for name in ("security_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (SECURITY_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("security_example security_core imports without executing anything, ONLY stdlib")
+def _():
+    tree = ast.parse((SECURITY_EXAMPLE / "security_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute anything"
+        )
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"dataclasses", "urllib", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+    import security_core  # noqa: F401  -- the import itself must succeed bare
+
+
+@check("egress allowlist denies lookalike hostnames, allows the real one")
+def _():
+    from security_core import EgressPolicy
+    policy = EgressPolicy(allowed_hosts=frozenset({"docs.myapp.com"}))
+    assert policy.allows("https://docs.myapp.com/page") is True
+    assert policy.allows("https://docs.myapp.com.attacker.com/page") is False, (
+        "suffix-spoofed lookalike host should be denied"
+    )
+    assert policy.allows("https://notdocs.myapp.com/page") is False, (
+        "prefix-spoofed lookalike host should be denied"
+    )
+    assert policy.allows("https://attacker.example/exfiltrate") is False
+
+
+@check("schema validator rejects an unknown field even when required fields are valid")
+def _():
+    from security_core import ToolSchema
+    schema = ToolSchema(required={"url": str})
+    result = schema.validate({"url": "https://docs.myapp.com", "extra_field": "sneaky"})
+    assert result.valid is False
+    assert any("extra_field" in e for e in result.errors)
+
+
+@check("schema validator reports missing-required and wrong-type as distinct errors")
+def _():
+    from security_core import ToolSchema
+    schema = ToolSchema(required={"url": str, "timeout_ms": int})
+    result = schema.validate({"timeout_ms": "not-an-int"})
+    assert result.valid is False
+    assert any("missing required field: 'url'" in e for e in result.errors)
+    assert any("timeout_ms" in e and "expected int" in e for e in result.errors)
+
+
+@check("a checkpoint survives being read from a second store over the same backing dict")
+def _():
+    from security_core import CheckpointStore
+    backing = {}
+    store_a = CheckpointStore(backing)
+    store_a.create("cp-1", "fetch https://docs.myapp.com", now=0.0)
+
+    # simulate a restart: a brand-new store instance, same backing dict
+    store_b = CheckpointStore(backing)
+    resumed = store_b.get("cp-1")
+    assert resumed.status == "pending"
+    assert resumed.action_description == "fetch https://docs.myapp.com"
+
+
+@check("a pending checkpoint past its timeout escalates; one within the window does not")
+def _():
+    from security_core import CheckpointStore
+    store = CheckpointStore()
+    store.create("cp-timeout", "risky action", now=0.0)
+    store.create("cp-ok", "risky action", now=0.0)
+
+    timed_out = store.check_timeout("cp-timeout", now=100.0, timeout_s=60.0)
+    still_waiting = store.check_timeout("cp-ok", now=30.0, timeout_s=60.0)
+
+    assert timed_out.status == "escalated"
+    assert still_waiting.status == "pending"
+
+
+@check("an already-approved checkpoint is immune to a later timeout check")
+def _():
+    from security_core import CheckpointStore
+    store = CheckpointStore()
+    store.create("cp-approved", "risky action", now=0.0)
+    store.resolve("cp-approved", "approved", reviewer_note="looks fine")
+
+    result = store.check_timeout("cp-approved", now=1000.0, timeout_s=60.0)
+    assert result.status == "approved", "a resolved checkpoint must not be escalated later"
+
+
+@check("security_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (SECURITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (SECURITY_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("security_example .env.example ships no filled-in secret")
+def _():
+    for line in (SECURITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

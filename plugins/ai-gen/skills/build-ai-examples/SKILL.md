@@ -1,6 +1,6 @@
 ---
 name: build-ai-examples
-description: Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, a research-loop harness with a layered stop gate (stagnation detection, cost cap, de-duplicated follow-up queue), a test-driven agent development harness (normalizing evaluator, grounding check with explicit context, defect localization, N-repeat benchmarking), a serving-reliability harness (time-budget/fallback/circuit-breaker ladder, operation-id-keyed idempotency vs the argument-hash anti-pattern), and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, an agent loop that needs enforceable stop conditions, a harness for developing an agent against tests, a circuit breaker or fallback ladder that needs testing, an idempotency key that should not collide across distinct operations, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
+description: Builds worked example applications on the reference stack — Python + LangChain/LangGraph + Docker + React 19 frontend + Python visualization libraries — using OpenRouter for models and Tavily for web search. Covers project layout, a minimal agent backend (FastAPI + LangGraph), streaming to a React 19 UI, a research-loop harness with a layered stop gate (stagnation detection, cost cap, de-duplicated follow-up queue), a test-driven agent development harness (normalizing evaluator, grounding check with explicit context, defect localization, N-repeat benchmarking), a serving-reliability harness (time-budget/fallback/circuit-breaker ladder, operation-id-keyed idempotency vs the argument-hash anti-pattern), a tool-security harness (hostname-resolving egress allowlist, schema-first argument validator, durable HITL checkpoint with timeout escalation) demonstrated against a real indirect-prompt-injection attempt, and visualizing agent/eval results with matplotlib/plotly. Use for "show me a working example", demo app scaffolds, LangGraph agent code, an agent loop that needs enforceable stop conditions, a harness for developing an agent against tests, a circuit breaker or fallback ladder that needs testing, an idempotency key that should not collide across distinct operations, an egress allowlist or schema validator or HITL checkpoint that needs testing, OpenRouter/Tavily integration, and full-stack GenAI app structure. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Робочі приклади застосунків
@@ -53,6 +53,14 @@ Docker + React 19** (+ бібліотеки візуалізації Python), м
   against the argument-hash anti-pattern from the companion repository; code in
   `scripts/reliability_example/`, offline smoke tests reproducing the exact collision the bug
   causes and then fixing it.
+- [references/security-example.md](references/security-example.md) — a working tool-security
+  harness implementing `deploy-ai-environments`'s security-governance.md: an egress allowlist
+  that resolves the real hostname instead of trusting a substring match, a schema-first argument
+  validator that rejects unknown fields, a durable HITL checkpoint that survives a simulated
+  restart and escalates on timeout; code in `scripts/security_example/`, whose `agent.py` shows
+  a real model facing an indirect-prompt-injection attempt and the egress layer blocking the
+  exfiltration try regardless of what the model decides; offline smoke tests reproducing the
+  lookalike-hostname and premature-escalation failures the design prevents.
 - [references/document-loading.md](references/document-loading.md) — витягування тексту з
   реальних файлів: Word/PDF/Excel/SQL/аудіо/зображення/відео з режимами відмови, три рівні
   парсингу (текст → layout-aware → мультимодальний), збагачення на етапі індексації (метадані,

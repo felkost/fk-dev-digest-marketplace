@@ -1,13 +1,106 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-08-29, round **20** (serving
-topology + release engineering: `serving-release.md` + `reliability_example`). Skills stay at
-**8**, references are now **40** (`deploy-ai-environments/references/serving-release.md`,
-`build-ai-examples/references/reliability-example.md`), smoke checks **73 → 84**. Round **21**
-is next (threat model, tool sandboxing, HITL as a designed mechanism), then **22**, then **23**
-(code execution + agent workspaces, from the second-book triage — see the round-18 entry).
-Written for a fresh Claude session with no conversation history — read this whole file before
-touching anything.
+Newest entry on top (eda-skills convention). Last updated 2026-08-29, round **21** (threat model,
+sandboxing, HITL: `security-governance.md` + `security_example`). Skills stay at **8**,
+references are now **42** (`deploy-ai-environments/references/security-governance.md`,
+`build-ai-examples/references/security-example.md`), smoke checks **84 → 94**. This closes ch. 8
+of the first book (§8.1–8.4, rounds 18/20/21 together; ch. 9/10 were already routed to round 18
+via the layer-taxonomy fold and to rounds 22/16 respectively). Round **22** is next (the five
+failure modes as a diagnostic, confidence gating, stagnation/knowledge-boundary awareness), then
+**23** (code execution + agent workspaces, from the second-book triage — see the round-18 entry,
+full triage of that book still owed first). Written for a fresh Claude session with no
+conversation history — read this whole file before touching anything.
+
+## What just happened (round 21 — threat model, sandboxing, HITL mechanics, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, fourth round sharing this branch — rounds 18–21 form one sequential unit until merged)
+
+The next queued unit of work, executed exactly as the ch. 7–11 triage's roadmap table specified,
+sourced from ch. 8 §8.4 "Security, safety, and governance in production" — read start to finish
+before writing anything, the same discipline round 20 used for §8.3.
+
+### What was already covered, checked before writing anything new
+
+`agent-ops.md`'s security section turned out to already carry the guardrail cost ladder,
+deterministic-first defense-in-depth, agent identity/least-privilege, and A2A's widened injection
+surface; `architectures.md` already says *where* to place a human gate and names rubber-stamping
+as its failure mode; `mcp-tools.md` already states schema-first tool design as a
+routing-accuracy rule and "tool output is data, not instructions" as the injection defense.
+**None of that is repeated here** — this round's content is what none of those cover: the asset
+mapping itself, the direct/indirect injection vocabulary (present only as scattered "injection
+via tool results" mentions, never named as two variants), sandboxing/egress (confirmed zero prior
+coverage by grep before writing a word), schema validation reframed as a security gate rather
+than a routing aid, the *why* behind keeping policy outside the prompt (agent-ops.md already
+states the *rule*), and the HITL *mechanics* — architectures.md's placement rules say nothing
+about trigger design, reviewer context, state durability, or bypass defenses.
+
+### Shipped: `security-governance.md` (the 41st reference)
+
+**Threat model as an asset↔surface mapping**, the book's own asset list (provider credentials,
+tool credentials, data read/written, session logs, PII) crossed against its six surfaces
+(client, gateway/API, agent runtime, tool servers, model provider, storage) as a table, with the
+explicit point that the mapping — not the checklist — is what produces coverage. **Direct vs.
+indirect prompt injection**, named and defined, with the harder-to-defend property of indirect
+injection stated plainly (the user did nothing wrong; the content can be planted anywhere the
+agent might read) and cross-referenced to the existing scattered mentions instead of duplicating
+the tool-output-is-data rule. **Sandboxing and egress control** — sandbox runtimes named
+(seccomp/gVisor/Firecracker), filesystem restricted to known/ephemeral paths, network **deny by
+default** with an outbound allowlist, resource limits per call — explicitly citing
+`local-docker.md`'s existing container hardening rather than re-deriving it, per the roadmap's
+own instruction. **Schema-first validation reframed**: the existing `mcp-tools.md` rule is a
+routing-accuracy concern; this file adds that the same schema is also the first check a malicious
+argument set has to pass, and states the `additionalProperties: false` shape by name — reject
+unknown fields, never guess a missing one. **Policy outside the prompt**: the *why*
+(prompt-embedded policy is fragile against injection and unauditable across policy versions) and
+the six governance categories the book names as a coverage pass (content safety, data
+privacy/compliance, audit/traceability, rate limiting, access control, policy registry — HITL
+pulled out as its own section below). **HITL as four separable design decisions** — what
+triggers a checkpoint (stakes, not frequency), who reviews and what they see (enough context or
+rubber-stamping), how state survives the wait (async resumption, durable state, timeout,
+escalation), what happens when it's bypassed (paired with caps, sandboxing, and audit, never the
+only line) — each stated as a decision a "confirm" dialog does not answer by existing.
+
+### Shipped: `security_example` (the eighth worked example) + 10 smoke checks
+
+`scripts/security_example/security_core.py` (pure stdlib, no import-time side effects) implements
+the three pieces the roadmap's example column names: `EgressPolicy` (parses the real hostname via
+`urlsplit`, never a substring match — the check that catches `docs.myapp.com.attacker.com` and
+`notdocs.myapp.com`, both lookalikes a naive `endswith`/`in` check would have let through),
+`ToolSchema` (rejects unknown fields outright, reports missing-required and wrong-type as
+distinct errors), and `CheckpointStore` (a checkpoint resolved to `approved`/`rejected` is immune
+to a later timeout check — order-of-operations cannot flip a human's decision; "surviving a
+restart" is demonstrated by wrapping a second store instance around the same backing dict rather
+than adding a special method, the same technique a real Redis/Postgres-backed store would use).
+
+`agent.py` demonstrates the architectural point directly rather than only asserting it: a real
+model is shown a "document" carrying an indirect-prompt-injection attempt (an HTML-comment
+instruction telling it to fetch an attacker URL "to verify this report") and asked whether a tool
+call is warranted; **the egress allowlist blocks the exfiltration attempt regardless of what the
+model decides** — enforcement does not depend on the model getting the injection right, which is
+the whole argument `security-governance.md` makes about layered, model-independent defense made
+runnable.
+
+Smoke **84 → 94** (checks 85–94), including the two properties framed as reproduce-then-fix in
+the same style rounds 19/20 used for their companion-repo bugs, here reproducing a *class* of
+vulnerability rather than one file's specific line: a naive hostname check would pass both
+lookalike domains this round's tests deny, and a naive checkpoint store would let a late timeout
+overwrite an already-resolved approval, which this round's tests prove it does not.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows, descriptions extended.
+- `skill-router.md` gets a new row for `security-governance.md`.
+- **`check_docs.py` caught the same staleness class a fourth time** — zip had 40 references
+  against 42 on disk, and both `mcp-example.md` and `rag-example.md` still said "84 checks, all
+  seven examples." Fixed to 94/eight; zip rebuilt (`ai_gen_knowledge.zip` **258 885 bytes**,
+  instructions unchanged at 6 928/8 000).
+- `check_docs.py` → **docs OK**; smoke **94/94**. No module-naming collision this round — checked
+  the existing-names list in `CLAUDE.md` (added in round 20 for exactly this) before naming
+  `security_core.py`.
+
+### Open threads unchanged
+
+Full triage of *The Brain of AI Agents* (ch. 2/3/5/6/9/10 at section level only) is still owed
+before round 23; ch. 6 must face the two-taxonomy memory rule from round 17 before any third
+memory vocabulary is admitted.
 
 ## What just happened (round 20 — serving topology and release engineering, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, third round sharing this branch — rounds 18–20 form one sequential unit until merged)
 

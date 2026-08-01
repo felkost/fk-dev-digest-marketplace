@@ -109,6 +109,7 @@ Ukrainian the user is likely to type.
 | «запусти локально», Docker, GPU, vLLM/Ollama | `deploy-ai-environments` | `references/local-docker.md` |
 | «розгорни в AWS/GCP/Azure», serverless, secrets, budget alarms | `deploy-ai-environments` | `references/cloud-aws-gcp-azure.md` |
 | «edge чи API чи воркер», front-door pattern, circuit breaker, graceful degradation, release engineering | `deploy-ai-environments` | `references/serving-release.md` |
+| threat model, direct/indirect prompt injection, sandboxing інструментів, egress allowlist, HITL-чекпоінт | `deploy-ai-environments` | `references/security-governance.md` |
 | «покажи робочий приклад», LangGraph + OpenRouter + Tavily | `build-ai-examples` | `references/stack-langgraph-openrouter.md` |
 | «фронтенд до агента», React 19, streaming UI | `build-ai-examples` | `references/react19-frontend.md` |
 | «побудуй графік/дашборд» over model output | `build-ai-examples` | `references/python-visualization.md` |
