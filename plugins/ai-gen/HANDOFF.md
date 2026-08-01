@@ -1,15 +1,214 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-08-29, round **21** (threat model,
-sandboxing, HITL: `security-governance.md` + `security_example`). Skills stay at **8**,
-references are now **42** (`deploy-ai-environments/references/security-governance.md`,
-`build-ai-examples/references/security-example.md`), smoke checks **84 → 94**. This closes ch. 8
-of the first book (§8.1–8.4, rounds 18/20/21 together; ch. 9/10 were already routed to round 18
-via the layer-taxonomy fold and to rounds 22/16 respectively). Round **22** is next (the five
-failure modes as a diagnostic, confidence gating, stagnation/knowledge-boundary awareness), then
-**23** (code execution + agent workspaces, from the second-book triage — see the round-18 entry,
-full triage of that book still owed first). Written for a fresh Claude session with no
-conversation history — read this whole file before touching anything.
+Newest entry on top (eda-skills convention). Last updated 2026-08-01, round **22** (agent
+metacognition: five failure modes as a diagnostic, confidence gating, dual-signal stagnation
+detection, knowledge-boundary awareness, metacognitive calibration: `agent-metacognition.md` +
+`metacog_example`). Skills stay at **8**, references are now **44**
+(`design-agent-architecture/references/agent-metacognition.md`,
+`build-ai-examples/references/metacog-example.md`), smoke checks **94 → 107**. This closes ch. 10
+of the first book, and with it the entire ch. 7–11 triage's roadmap — rounds 15–22 are now all
+shipped. Round **23** is next (code execution + agent workspaces + Agent Skills, from the
+second-book triage — see the round-18 entry; full triage of that book is still owed first).
+Written for a fresh Claude session with no conversation history — read this whole file before
+touching anything.
+
+## What just happened (round 22 — agent metacognition, 2026-08-01, branch `feat/ai-gen-agent-loop-round18` off `main`, fifth round sharing this branch — rounds 18–22 form one sequential unit until merged)
+
+The last queued unit of the ch. 7–11 triage's roadmap table, sourced from ch. 10 "Exploring the
+cognitive agent that thinks, monitors, and adapts" (pp. 303–339) — read start to finish before
+writing anything, the same discipline every prior round in this sequence used. **The source PDF
+itself was not on disk at session start** (the `C:\Users\felko\Downloads\...` copies rounds 12–21
+read no longer exist there) and had to be re-supplied by the user mid-session, this time from
+`F:\Data\Lenovo\Документы\AI_courses\AI_agent_LLM\AI agents in the action - merged
+(Зміст+links).pdf` — the same merged file round 18 already checked chapter-by-chapter against the
+book's TOC. `pdftoppm` is not installed on this machine, so the Read tool's page-image path is
+unavailable for PDFs here; chapter text was extracted directly via PyMuPDF (`fitz`) instead —
+worth recording as the working method for any future round that hits the same gap, since it reads
+faster and more literally than page-image OCR would.
+
+### What was already covered, checked before writing anything new
+
+`agent-loop.md` already treats "broken record" as its stagnation anti-pattern by name and a
+word-Jaccard detector on consecutive summaries as "the offline stand-in for embedding cosine,
+mechanism identical" — this round's stagnation section carries the mechanism that stood in for,
+rather than re-deriving it, and adds the one signal `agent-loop.md` has no analogue for at all
+(confidence-plateau). `agent-loop.md`'s goal-predicate-vs-terminal-message section already names
+self-graded completion a biased self-assessment; this round applies the same shape to answer
+*quality* instead of task completion, cross-referenced rather than repeated.
+`reasoning-patterns.md` already owns CoT/ReAct/ToT/Reflexion as primitives and Reflexion's
+feedback-signal honesty — this round treats them as the primitives something else selects among,
+never redefining any of the four. `memory-vector-db.md`'s "the vocabulary is a tool, not a model"
+line (round 17, for cognitive-memory labels) is reused verbatim in spirit to refuse this
+chapter's own Minsky/Baars/Kahneman "theoretical foundations" as an architectural warrant.
+`serving-release.md`'s reliability ladder already ends in a rung named "graceful degradation" —
+confirmed by name, and this round's own use of the same term (for a confidence/knowledge-driven
+agent behaviour, not a latency/infrastructure one) gets one explicit sentence saying so, so the
+two are not read as the same mechanism. `agent-tdad.md`'s threshold-calibration caution ("a sweep
+that finds where rubric/human agreement peaks, not a round-number guess") is reused for this
+round's own illustrative gate/stagnation constants. `evaluation.md` was checked and is unrelated —
+its only "calibrate" is human-vs-judge agreement, a different axis from an agent's own
+confidence-vs-correctness calibration. **None of this is repeated in the new file** — what
+follows is what none of the above already states.
+
+### Refused, and why — the always-carry-a-technique rule cuts the other way here
+
+Ch. 10 spends a full section (§10.1.5, "Three theoretical foundations") arguing that Minsky's
+society of mind, Baars' global workspace theory and Kahneman's system 1/2 justify a specific
+seven-piece architecture (a shared `CognitiveWorkspace` plus perception/planning/execution/
+evaluation/attention/memory modules, §10.2 in full). The ch. 7–11 triage's own standing rule
+(round 13/round-18-entry: "a correct practitioner technique is always carried") does not flip
+here into "carry the architecture" — the rule is about techniques, and this is the same
+borrowed-vocabulary-as-warrant move round 17 already refused once for cognitive-memory labels.
+Refused specifically: the Minsky/Baars/Kahneman mapping as an engineering justification, and the
+fixed module taxonomy as something to build wholesale ("a second full module taxonomy as
+doctrine", per the roadmap's own pre-registered call). **Carried, individually, stripped of the
+architecture they arrived in**: confidence gating, the dual-signal stagnation check,
+knowledge-boundary awareness, the evaluation-during/Reflexion-after timing distinction, and the
+four "emergent behaviours" — each usable inside any harness shape, not only the book's own seven
+modules.
+
+### Shipped: `agent-metacognition.md` (the 43rd reference)
+
+**The five failure modes as a diagnostic** (§10.1.1), each with the book's own missing-capability
+and structural-fix language carried faithfully: confident wrong answer → evidence evaluation;
+broken record → stagnation awareness; rigid plan → model updating; overcommitted guess →
+knowledge-boundary detection; shallow composition → compositional reasoning — plus the chapter's
+own five-query diagnostic runnable against any existing agent, and the explicit statement that
+two of the five are already `agent-loop.md`'s stop conditions under the same names. **Cognition
+vs metacognition, defined for engineering** (§10.1.3–10.1.4), with the borrowed-vocabulary refusal
+stated inline rather than left implicit. **Confidence gating as a structural check, not a verbal
+one** (§10.3.4): hard floor, soft band with a retry budget, an independent contradiction check, a
+declining-trend check — the shape, explicitly not the source's specific numbers, which join this
+round's own "not carried" list below. **Stagnation detection as two independent signals**
+(§10.3.5): content-cosine (the mechanism `agent-loop.md`'s word-overlap detector already named as
+its own offline stand-in) plus a confidence-plateau signal that file has no analogue for at all —
+a flatlined trend and repeated content are different failure signatures, and a detector watching
+only one misses what the other catches. **Knowledge-boundary awareness and the "I don't know"
+off-ramp** (§10.3.6, plus the ch. 11 delta the roadmap routed here): the MetaMedQA citation,
+carried as verified. **Evaluation-during vs Reflexion-after** (§10.2.6's callout, verbatim
+distinction, paraphrased): real-time monitoring that catches a bad step before it compounds,
+against Reflexion's post-hoc full-attempt critique — complementary, not competing.
+**Metacognitive calibration as a measurement** (§10.4.1): cognitive efficiency, the
+confidence/accuracy calibration curve, adaptation rate, and knowledge-boundary accuracy with
+false positives named **beside** false negatives, per the roadmap's explicit instruction. **The
+four "emergent behaviours" reframed as rules, not dropped** (§10.3.7, and the new rule 3 from the
+ch. 7–11 triage that reversed an initial call to cut them): curiosity, adaptive persistence,
+selective depth and graceful degradation, each rewritten as the explicit if-then rule it actually
+is — the source's own "3–5x faster" fast-path figure is named and explicitly excluded as an
+unaudited illustration, joining the round's other excluded numbers.
+
+### A misattributed citation, run all the way down — the biggest finding this round
+
+Ch. 10 justifies confidence gating by claiming implicit, token-likelihood-derived confidence
+predicts correctness better than verbalized confidence, attributing this to "Wang et al. (2025)
+in the DMC framework" — the exact misattribution the ch. 7–11 triage had already flagged from the
+abstract alone and explicitly deferred to this round: *"round 22 either finds the claim in the
+paper's body and may cite it, or cites DMC only for what the abstract supports."* That obligation
+is now closed, and the answer is the second branch, with more evidence than the abstract alone
+gave:
+
+- **The paper itself** (Wang, Wu, Ye, Cheng, Chen & Zheng, "Decoupling Metacognition from
+  Cognition," *AAAI* 39(24), 2025, pp. 25353–25361) was fetched as a PDF via `WebFetch` and read
+  directly with PyMuPDF rather than trusted from a summarizing pass — the same "read the source,
+  not a paraphrase of it" discipline round 15 established for `sequential-thinking`, applied here
+  to a full paper. Its own experiments compare **verbalized** methods (vanilla, CoT, top-k)
+  against **consistency-based** methods (self-random, perturbation) — a different axis entirely
+  from implicit-vs-verbal, and neither its abstract nor its body ranks any method as a better
+  predictor of correctness than another.
+- **DMC's own related-work section is the closer read**: the one place it touches
+  token-likelihood confidence at all, it characterizes a *different* paper (Tian et al., 2023) as
+  favouring **verbal confidence over token-likelihood confidence** for RLHF-tuned models — the
+  opposite direction from the claim attached to DMC here. (Tian et al. itself was not
+  independently re-verified — only DMC's characterization of it was read, and the entry says so
+  plainly rather than chaining one citation's authority onto another's.)
+- **The deeper problem is prose vs code, this plugin's own recurring species of source error**:
+  ch. 10's shipped `CognitiveWorkspace.confidence` is never derived from a token probability
+  anywhere in the listings — it is a float an evaluation-agent LLM call self-reports each step
+  (`confidence_delta`, "return a value from −0.3 to +0.3"), accumulated across iterations. That is
+  a verbalized judgment wearing a numeric type, not the implicit signal the citation was recruited
+  to justify.
+
+`agent-metacognition.md` carries the correction, not the claim, and turns it into the worked
+example's actual design principle: prefer a genuinely implicit signal (OpenRouter's documented,
+per-model-unverified `logprobs`/`top_logprobs`) when available, and degrade to a **declared,
+labelled** fallback — never a number that looks principled but isn't — when it is not.
+
+### Shipped: `metacog_example` (the ninth worked example) + 13 smoke checks
+
+`scripts/metacog_example/metacog_core.py` (pure stdlib, no import-time side effects, module name
+checked against `CLAUDE.md`'s existing-names list before writing — `metacog_core` was free)
+implements: `check_confidence_gate` (floor/band/contradiction/trend, matching the reference's
+shape with its own illustrative defaults, documented as such in the docstring); `cosine` (dimension
+mismatch raises, zero vector returns `0.0`, matching `rag_example`'s own edge-case handling rather
+than reinventing it differently); `detect_stagnation` combining `detect_content_stagnation`
+(cosine over **injected** embedding vectors — real ones in production, stub ones in tests) and
+`detect_confidence_plateau`, always naming which signal fired; and `resolve_confidence`, which
+calls `implicit_confidence_from_logprobs` (mean per-token logprob through `exp()`, returning `None`
+— never a guessed number — when no logprobs are given) and falls back to a caller-declared value
+only when that returns `None`, always labelling which path produced the number
+(`implicit_logprob` vs `fallback_declared`). `agent.py` requests real OpenRouter logprobs via
+`ChatOpenAI(model_kwargs={"logprobs": True, "top_logprobs": 1})` and prints which path fired for
+each of two questions — the graceful-degradation property made runnable, not just asserted.
+
+Smoke **94 → 107** (checks 95–107), including the round's signal-independence case: a
+confidence-plateau trend (`[0.52, 0.51, 0.53]`) fires stagnation even when the paired embeddings
+are constructed to be maximally dissimilar, proving the two stagnation signals are independent
+rather than one dressed up as two. All 13 checks passed on the first full-suite run.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows, descriptions extended (both now mention the new
+  content by name) — `build:catalog` re-run because of it, per the standing rule.
+- `skill-router.md` gets one new row, for `agent-metacognition.md` only — matching rounds 18–21's
+  own pattern of one router row per new *concept* reference, not per worked-example doc (rounds
+  15–17 added both; the four most recent rounds before this one did not, and this round follows
+  them rather than the older precedent).
+- **`check_docs.py` caught the same staleness class a fifth time** — 44 references on disk against
+  42 in the zip, and both `mcp-example.md` and `rag-example.md` still said "94 checks, all eight
+  examples." Fixed to 107/nine; zip rebuilt (`ai_gen_knowledge.zip` **274 952 bytes**, instructions
+  unchanged at 6 928/8 000).
+- `check_docs.py` → **docs OK**; smoke **107/107**.
+- **Five of six CI gates run and green**: `npm run lint` (8 plugins, 0 warnings), `lint:plugins` (9
+  targets, 4 accepted warnings, unchanged), `lint:markdown` (**415** files, 0 errors),
+  `lint:format` clean, `npm run build:catalog` (61 skills, regenerated `site/public/catalog.json`)
+  followed by the site's own `tsc --noEmit && vite build` (both clean) as the site-build gate.
+  **Not run, consistent with every prior round in this sequence**: `evals/`'s `eval:quality`
+  static gate — untouched by a content-only change to `plugins/ai-gen`, and no round back to at
+  least 17 has run it locally either.
+
+### Open threads
+
+- Full triage of *The Brain of AI Agents* (ch. 2/3/5/6/9/10 at section level only) is still owed
+  before round 23; ch. 6 must face the two-taxonomy memory rule from round 17 before any third
+  memory vocabulary is admitted.
+- **Noticed, not investigated**: the ch. 7–11 triage's ch. 11 coverage note routes
+  "persona-as-API-contract and dynamic instruction injection" to `engineer-prompt-context`, "in
+  round 19" — but the roadmap table it sits beside never actually reserves a round for
+  `engineer-prompt-context`, and the round 19 that shipped was `agent-tdad.md`
+  (`evaluate-optimize-models`). Either this delta was folded into `engineer-prompt-context`
+  outside this round sequence and the note is stale, or it was never carried at all. Whoever
+  triages ch. 11 properly (it was read only as "almost entirely recap" so far, per the ch. 7–11
+  triage entry) should settle this rather than assume either answer.
+- The 8-`SKILL.md`-body / `README.md` language migration (round-17-era open item) is still
+  outstanding and still not blocking; not touched this round for the same reason it wasn't touched
+  in 18–21 (no `SKILL.md` prose body was rewritten, only routing rows and descriptions added).
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 22 is newest. Skills stay at 8, references at 44, smoke
+at 107. The ch. 7–11 triage's roadmap (rounds 15–22) is now fully shipped. **Default next unit of
+work is round 23: code execution + agent workspaces + Agent Skills**, from *The Brain of AI
+Agents* — but the round-18 entry's own open thread must close first: a full triage of that book
+(currently read only at ch. 2/3/5/6/9/10 section-level, plus ch. 4/7/8 in depth) is owed before
+round 23 can be planned with the same rigor every round since 12 has used. Ch. 6 in particular must
+be checked against round 17's two-taxonomy reconciliation rule before a third memory vocabulary is
+admitted anywhere. Do this triage the way the ch. 7–11 triage was done: read every chapter start to
+finish (not by section heading), verify every citable claim against its primary source, check the
+companion repository's code against the book's own prose, and produce a roadmap table before
+writing any reference content. Ask the user for the source PDF at the start of the session — it is
+not persisted in this repository or anywhere else on disk between sessions, by design (copyrighted
+book content), and the exact path drifts (round 22 needed a fresh one after the round-12–21 copies
+were no longer at their recorded location)."*
 
 ## What just happened (round 21 — threat model, sandboxing, HITL mechanics, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, fourth round sharing this branch — rounds 18–21 form one sequential unit until merged)
 

@@ -99,7 +99,7 @@ far costs nothing; only the model call inside `agent.py`'s `ainvoke` spends Open
 ## What the tests pin
 
 Two tiers, both actually run this round — not just written.
-`python tests/smoke_test.py` has 94 checks total, all eight examples this plugin ships;
+`python tests/smoke_test.py` has 107 checks total, all nine examples this plugin ships;
 mcp_example's share is checks 19-27 (the other three examples' shares are in `rag-example.md`,
 `reflexion-example.md` and `guardrail-example.md`):
 

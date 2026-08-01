@@ -168,6 +168,35 @@ see references/security-example.md):
  93-94. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
+What it pins, metacog_example (the confidence gate and dual-signal stagnation
+detector design-agent-architecture/references/agent-metacognition.md
+specifies; the motivating gap is the source's own prose-vs-code split --
+it argues for logprob-derived confidence, then ships an LLM self-report
+instead -- which resolve_confidence's honestly-labelled fallback exists to
+never repeat; see references/metacog-example.md):
+ 95.   the directory exists with the expected files;
+ 96.   metacog_core imports without executing anything, and imports ONLY
+       stdlib;
+ 97.   the gate signals uncertainty below the floor, regardless of other
+       state;
+ 98.   the soft band gathers more while a retry budget remains, and signals
+       uncertainty once it is exhausted;
+ 99.   an open contradiction forces GATHER_MORE even at high confidence;
+ 100.  a declining confidence trend forces GATHER_MORE at high confidence;
+       a flat-or-rising trend presents;
+ 101.  cosine rejects mismatched dimensions and returns 0.0 for a zero
+       vector;
+ 102.  content stagnation fires on near-identical injected vectors and not
+       on dissimilar ones;
+ 103.  confidence-plateau stagnation fires on a flatlined trend even with
+       deliberately dissimilar embeddings -- the signal-independence case;
+ 104.  implicit_confidence_from_logprobs returns a value in (0, 1] given
+       real logprobs, and None -- never a guessed number -- given none;
+ 105.  resolve_confidence labels its source correctly in both directions,
+       and the fallback branch returns the caller's value unchanged;
+ 106-107. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
 Console note: this box's console is cp1251, so output is ASCII-safe.
@@ -191,6 +220,7 @@ LOOP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "loop_example
 TDAD_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "tdad_example"
 RELIABILITY_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reliability_example"
 SECURITY_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "security_example"
+METACOG_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "metacog_example"
 sys.path.insert(0, str(EXAMPLE))
 sys.path.insert(0, str(MCP_EXAMPLE))
 sys.path.insert(0, str(REFLEXION_EXAMPLE))
@@ -199,6 +229,7 @@ sys.path.insert(0, str(LOOP_EXAMPLE))
 sys.path.insert(0, str(TDAD_EXAMPLE))
 sys.path.insert(0, str(RELIABILITY_EXAMPLE))
 sys.path.insert(0, str(SECURITY_EXAMPLE))
+sys.path.insert(0, str(METACOG_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -1590,6 +1621,142 @@ def _():
 @check("security_example .env.example ships no filled-in secret")
 def _():
     for line in (SECURITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
+
+
+# --------------------------------------------------------------------------- #
+# 95-107. metacog_example: confidence gate, dual-signal stagnation detector
+# --------------------------------------------------------------------------- #
+
+@check("metacog_example directory exists with the expected files")
+def _():
+    for name in ("metacog_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (METACOG_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("metacog_example metacog_core imports without executing anything, ONLY stdlib")
+def _():
+    tree = ast.parse((METACOG_EXAMPLE / "metacog_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute anything"
+        )
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"dataclasses", "enum", "math", "typing", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+    import metacog_core  # noqa: F401  -- the import itself must succeed bare
+
+
+@check("confidence gate signals uncertainty below the floor regardless of other state")
+def _():
+    from metacog_core import ConfidenceState, GateDecision, check_confidence_gate
+    state = ConfidenceState(value=0.1, retries_used=99, trend=(0.9, 0.9, 0.9))
+    assert check_confidence_gate(state) == GateDecision.SIGNAL_UNCERTAINTY
+
+
+@check("soft band gathers more within the retry budget, signals uncertainty once exhausted")
+def _():
+    from metacog_core import ConfidenceState, GateDecision, check_confidence_gate
+    within_budget = ConfidenceState(value=0.4, retries_used=1)
+    exhausted = ConfidenceState(value=0.4, retries_used=3)
+    assert check_confidence_gate(within_budget, max_retries=3) == GateDecision.GATHER_MORE
+    assert check_confidence_gate(exhausted, max_retries=3) == GateDecision.SIGNAL_UNCERTAINTY
+
+
+@check("an open contradiction forces GATHER_MORE even at high confidence")
+def _():
+    from metacog_core import ConfidenceState, GateDecision, check_confidence_gate
+    state = ConfidenceState(value=0.95, has_open_contradiction=True)
+    assert check_confidence_gate(state) == GateDecision.GATHER_MORE
+
+
+@check("a declining confidence trend forces GATHER_MORE; flat-or-rising presents")
+def _():
+    from metacog_core import ConfidenceState, GateDecision, check_confidence_gate
+    declining = ConfidenceState(value=0.9, trend=(0.95, 0.93, 0.91))
+    rising = ConfidenceState(value=0.9, trend=(0.7, 0.8, 0.85))
+    assert check_confidence_gate(declining) == GateDecision.GATHER_MORE
+    assert check_confidence_gate(rising) == GateDecision.PRESENT
+
+
+@check("cosine rejects mismatched dimensions and returns 0.0 for a zero vector")
+def _():
+    from metacog_core import cosine
+    try:
+        cosine([1.0, 0.0], [1.0, 0.0, 0.0])
+        raise AssertionError("expected ValueError on dimension mismatch")
+    except ValueError:
+        pass
+    assert cosine([0.0, 0.0], [1.0, 1.0]) == 0.0
+
+
+@check("content stagnation fires on near-identical embeddings, not on dissimilar ones")
+def _():
+    from metacog_core import detect_content_stagnation
+    identical_ish = [[1.0, 0.0], [0.99, 0.01]]
+    orthogonal = [[1.0, 0.0], [0.0, 1.0]]
+    assert detect_content_stagnation(identical_ish) is True
+    assert detect_content_stagnation(orthogonal) is False
+
+
+@check("confidence-plateau stagnation fires on a flatlined trend, independent of content")
+def _():
+    from metacog_core import detect_stagnation
+    # Deliberately dissimilar embeddings -- content stagnation must NOT fire --
+    # paired with a flatlined confidence trend, which must fire on its own.
+    dissimilar_embeddings = [[1.0, 0.0], [0.0, 1.0]]
+    flatlined_trend = [0.52, 0.51, 0.53]
+    verdict = detect_stagnation(dissimilar_embeddings, flatlined_trend)
+    assert verdict.stagnant is True
+    assert verdict.signal == "confidence_plateau"
+
+
+@check("implicit_confidence_from_logprobs: a value in (0, 1] given logprobs, None given none")
+def _():
+    from metacog_core import implicit_confidence_from_logprobs
+    estimate = implicit_confidence_from_logprobs([-0.1, -0.2, -0.05])
+    assert estimate is not None and 0.0 < estimate <= 1.0
+    assert implicit_confidence_from_logprobs(None) is None
+    assert implicit_confidence_from_logprobs([]) is None
+
+
+@check("resolve_confidence labels its source correctly and never alters the fallback value")
+def _():
+    from metacog_core import resolve_confidence
+    with_signal = resolve_confidence([-0.1, -0.2], fallback=0.5)
+    without_signal = resolve_confidence(None, fallback=0.42)
+    assert with_signal.source == "implicit_logprob"
+    assert without_signal.source == "fallback_declared"
+    assert without_signal.value == 0.42
+
+
+@check("metacog_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (METACOG_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (METACOG_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("metacog_example .env.example ships no filled-in secret")
+def _():
+    for line in (METACOG_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

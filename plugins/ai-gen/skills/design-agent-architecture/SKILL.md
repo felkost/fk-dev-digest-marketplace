@@ -1,6 +1,6 @@
 ---
 name: design-agent-architecture
-description: Designs LLM/agent system architecture with explicit trade-offs and risks. Covers workflow patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) versus agents, ReAct, Tree of Thoughts, Reflexion, RAG, multi-agent, and human-in-the-loop patterns, the inner agent execution loop (layered stop gate, stagnation detection, goal predicate versus the model saying it is done, context economics and offloading inside the loop, explorer/writer separation), connecting models to MCP servers and tools, short-term and long-term memory including persistent knowledge bases, vector databases for retrieval, and autonomous loops with stop contracts and maker-checker separation. Use for agent architecture decisions, choosing a reasoning structure, designing or debugging an agent loop that never stops or repeats itself, RAG pipeline design, tool integration via MCP, memory/state design, vector store selection, and deciding what an agent may do unattended. Respond in Ukrainian unless the user requests another language.
+description: Designs LLM/agent system architecture with explicit trade-offs and risks. Covers workflow patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) versus agents, ReAct, Tree of Thoughts, Reflexion, RAG, multi-agent, and human-in-the-loop patterns, the inner agent execution loop (layered stop gate, stagnation detection, goal predicate versus the model saying it is done, context economics and offloading inside the loop, explorer/writer separation), agent metacognition (five production failure modes as a diagnostic, confidence gating as a structural check rather than a verbal one, stagnation detection extended with a confidence-plateau signal, knowledge-boundary awareness, metacognitive calibration as a measurement), connecting models to MCP servers and tools, short-term and long-term memory including persistent knowledge bases, vector databases for retrieval, and autonomous loops with stop contracts and maker-checker separation. Use for agent architecture decisions, choosing a reasoning structure, designing or debugging an agent loop that never stops or repeats itself, diagnosing why a shipped agent confidently answers wrong or gets stuck repeating itself, deciding when an agent should say it does not know, RAG pipeline design, tool integration via MCP, memory/state design, vector store selection, and deciding what an agent may do unattended. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Архітектура агентних систем
@@ -41,6 +41,13 @@ description: Designs LLM/agent system architecture with explicit trade-offs and 
   terminal message, stagnation as the stop failure never trips); the programmatic vs
   agent-triggered boundary; context economics in the loop (offloading every iteration,
   append-don't-rewrite); explorer≠writer; breadth vs depth as which queue end you pop.
+- [references/agent-metacognition.md](references/agent-metacognition.md) — five recurring
+  failure modes as a diagnostic (confident wrong answer, broken record, rigid plan, overcommitted
+  guess, shallow composition), each with its missing capability and structural fix; confidence
+  gating as a structural check, not a verbal one (with a misattributed DMC citation corrected);
+  stagnation detection extended with a confidence-plateau signal; knowledge-boundary awareness
+  and the "I don't know" off-ramp (MetaMedQA); evaluation-during vs Reflexion-after; metacognitive
+  calibration as a measurement (false positives beside false negatives).
 - [references/loop-engineering.md](references/loop-engineering.md) — система навколо моделі
   (ЗОВНІШНІЙ цикл розробника, не цикл агента — розрізнення в agent-loop.md):
   автоматизації, worktrees, скіли, конектори, субагенти; maker-checker; зовнішній стан; ризики

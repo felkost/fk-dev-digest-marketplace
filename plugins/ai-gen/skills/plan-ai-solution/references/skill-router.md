@@ -95,6 +95,7 @@ Ukrainian the user is likely to type.
 | «покажи робочий Reflexion-цикл», solver-critic loop, код LangGraph StateGraph | `build-ai-examples` | `references/reflexion-example.md` |
 | «покажи робочий guardrail», типізований pass-off, polarity test | `build-ai-examples` | `references/guardrail-example.md` |
 | «агент зациклився / не зупиняється», stagnation, goal predicate vs terminal message, inner execution loop | `design-agent-architecture` | `references/agent-loop.md` |
+| «агент упевнено помиляється / не визнає, що не знає», confidence gating, five failure modes, metacognitive calibration | `design-agent-architecture` | `references/agent-metacognition.md` |
 | «щоб працювало саме», автономний цикл, автоматизації, worktrees, субагенти | `design-agent-architecture` | `references/loop-engineering.md` |
 | «коли агенту можна не питати», stop conditions, autonomy boundaries | `design-agent-architecture` | `references/autonomy-contracts.md` |
 | «як виміряти якість», eval set, LLM-суддя, регресії якості | `evaluate-optimize-models` | `references/evaluation.md` |
