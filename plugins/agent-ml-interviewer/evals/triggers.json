@@ -1,5 +1,5 @@
 {
-  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані). Дев'ята звірка: +t104-t109 (4 позитивні на ml-measurement-model, 2 стрес-тести на межі з ml-label-quality/ml-distribution-choice), n14 негативний. v9 (2026-07-20): розведено межу t18 tree-ensemble ↔ dimensionality-features (аудит важливостей → dimensionality).",
+  "note": "Tier B: промпт -> очікуваний скіл; 'none' = не має тригеритись нічого. Розширено 2026-07-18 під 16 скілів (t31-t47, n08-n09); під 17-й скіл ml-bayesian-inference (t48-t51); під 21 скіл — ml-missing-data, ml-sampling-design, ml-label-quality, ml-forecasting-model (t52-t59 позитивні, t60-t67 стрес-тести на межі, n10-n11). Восьма звірка (v6): +t85-t95, n12-n13 на межі двох скілів, зони яких розширено — ml-decision-threshold (вартісний поріг) і ml-validation-design (мережеві дані). Дев'ята звірка: +t104-t109 (4 позитивні на ml-measurement-model, 2 стрес-тести на межі з ml-label-quality/ml-distribution-choice), n14 негативний. v9 (2026-07-20): розведено межу t18 tree-ensemble ↔ dimensionality-features (аудит важливостей → dimensionality). Раунд 12 (2026-08-01): t121-t127 — zero-shot/TimesFM, AutoML-sweep, інтервали, екстракція ознак; t128 — борг межі Tweedie з раунду 10.",
   "items": [
     {
       "id": "t01",
@@ -755,6 +755,55 @@
       "prompt": "RandomForest дає 0.99 на train і 0.71 на test. Як це діагностувати?",
       "expected": "ml-overfitting-diagnosis",
       "fixture_note": "РЕГРЕСІЯ: сусід не має постраждати від нових зон"
+    },
+    {
+      "id": "t121",
+      "prompt": "Чи варто спробувати TimesFM замість ARIMA для прогнозу продажів?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 12: zero-shot foundation model — нова зона Кроку 2b"
+    },
+    {
+      "id": "t122",
+      "prompt": "Кажуть, часовий ряд можна прогнозувати взагалі без навчання моделі — претренованою foundation-моделлю. Це справді працює?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 12: zero-shot без згадки TimesFM — має ловитись словами pretrained/zero-shot з опису"
+    },
+    {
+      "id": "t123",
+      "prompt": "PyCaret compare_models поставив LDA на перше місце серед 15 моделей. Наскільки цій таблиці можна вірити?",
+      "expected": "ml-model-selection",
+      "fixture_note": "РАУНД 12: AutoML-sweep — нова зона Кроку 3a"
+    },
+    {
+      "id": "t124",
+      "prompt": "Мені потрібні інтервали прогнозу попиту на 24 тижні вперед, не лише точковий прогноз. Як їх отримати й перевірити?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 12: квантильна голова/покриття; НЕ має піти в ml-bayesian-inference (credible intervals — не forecasting)"
+    },
+    {
+      "id": "t125",
+      "prompt": "Хочу автоматично нагенерувати ознаки з часових рядів для LightGBM — tsfel, tsfresh чи щось інше?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 12: автоматична екстракція ознак для global-щабля; НЕ ml-dimensionality-features (там відбір/проєкція, не породження)"
+    },
+    {
+      "id": "t126",
+      "prompt": "Модель прогнозування стоїть першою на лідерборді GIFT-Eval. Можна її брати в прод без власного бектесту?",
+      "expected": "ml-forecasting-model",
+      "fixture_note": "РАУНД 12 СТРЕС: лідерборд-скепсис; НЕ ml-validation-design (питання про модель, бектест — аргумент)"
+    },
+    {
+      "id": "t127",
+      "prompt": "Після pip install pycaret у проєкті понизився scikit-learn і код почав падати. Що я зробив не так?",
+      "expected": "ml-model-selection",
+      "fixture_note": "РАУНД 12 СТРЕС: версійний дрейф AutoML з опису (version-drift pitfalls)"
+    },
+    {
+      "id": "t128",
+      "prompt": "Яку функцію втрат узяти для прогнозу розріджених продажів, де 70% днів — нулі?",
+      "expected": "ml-forecasting-model",
+      "acceptable_alt": "ml-distribution-choice",
+      "fixture_note": "БОРГ РАУНДУ 10: межа Tweedie-як-втрата (forecasting) проти Tweedie-як-розподіл (distribution-choice); alt допустимий"
     }
   ]
 }

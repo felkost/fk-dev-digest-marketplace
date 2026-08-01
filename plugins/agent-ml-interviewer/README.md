@@ -9,8 +9,8 @@ Vodafone-KPI) і чарт розподілів Leemis & McQueston на **про�
 ml-task-framing               тип задачі, ціль з горизонтом, контракт входу, хто в даних
 ml-label-quality              чи мітка = конструкт: проксі, шум, згода анотаторів [scripts]
 ml-sampling-design            страти/кластери/ваги, design effect → n_eff        [scripts]
-ml-forecasting-model          наївна база→ETS→ARIMA→global ML; ADF+KPSS; MASE    [scripts]
-ml-model-selection            сім обмежень → сімейство; WAIC/LOO для байєсових
+ml-forecasting-model          наївна база→ETS→ARIMA→global ML→zero-shot; MASE    [scripts]
+ml-model-selection            сім обмежень → сімейство; AutoML-sweep; WAIC/LOO
 ml-validation-design          схема сплітів, K, gap/rolling, вкладена CV
 ml-tuning-workflow            оркестратор: метрика→базлайн→діагноз→пошук→поріг→звіт
 ├─ ml-missing-data            MCAR/MAR/MNAR → стратегія, пропуск як ознака    [scripts]
