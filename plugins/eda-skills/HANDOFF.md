@@ -1,6 +1,6 @@
 # Session handoff — eda_skills
 
-Written 2026-07-19, last updated 2026-08-08 at the end of round 30 (a small cross-plugin enrichment: measured window-leakage and fold-spread facts), for a fresh Claude session with no conversation history. Read this whole file before touching anything. Newest round first: 30, then 29 (measurement quality), then 28 (latent factor structure), then 27 (the marketplace migration).
+Written 2026-07-19, last updated 2026-08-15 at the end of round 31 (anomaly scoring + EMD naming, measured), for a fresh Claude session with no conversation history. Read this whole file before touching anything. Newest round first: 31, then 30 (window-leakage and fold-spread facts), then 29 (measurement quality), then 28 (latent factor structure), then 27 (the marketplace migration).
 
 ## What this project is
 
@@ -20,6 +20,32 @@ Each has `SKILL.md` (Ukrainian body, Claude-facing) + `references/*.md` (English
 - `dist/eda_skills_knowledge.zip`: rebuilt in round 28 — **25 references + 29 scripts**, up from the 24 + 28 that round 27 established. (Round 27 is where those counts became trustworthy at all: the previously-committed zip showed 21/27 because `chatgpt/build_gpt_package.ps1` had the same path bug and was silently packaging a stale pre-migration snapshot.) The five per-skill `dist/<name>.zip` files are a pre-migration artifact of the standalone-repo build pattern (see "No per-skill build script exists" further down) and were not part of this fix.
 - **`chatgpt/gpt_instructions.md` is at 7,014 / 8,000 UTF-8 bytes** (986 B headroom, up from 20 B). Round 27 moved the modality-routing table out of the instructions and into `plan-eda-dataset/references/modality-routing.md`, leaving only a branch index + pointer inline — freeing ~1,000 bytes that had been the single largest non-procedural section. Every modality added from now on costs 0 instruction bytes.
 - **The authoritative history for rounds 1–26 is `MEMORY.md` → `eda-skills-deliverable.md`**, but that auto-memory account key was tied to the pre-migration working directory (`...F--Data-Neoversity-ai-eda-skills...`). Post-migration, auto-memory is keyed to `C:\Users\felko\.claude\projects\F--Data-Neoversity-ai-fk-dev-digest-marketplace\memory\` — a **different** memory scope with no round history of its own yet. If the old memory file is still reachable, it has one dense paragraph per round (26 rounds) with exact measured numbers and reasoning for every pre-migration design decision; if not, this HANDOFF plus round 27 below is what a fresh session has to work from.
+
+## What just happened (round 31 — anomaly scoring and EMD naming, same cross-plugin vein, 2026-08-15)
+
+Second enrichment round from a source batch triaged for the sibling plugin's
+round 14. **One reference touched** (`discover-eda-structure/references/
+time-series.md`), three additions, all measured:
+
+- **Rolling z-score point anomalies: exclude the point from its own window.**
+  An 8σ spike scored with itself inside the window gets z=**3.72**; the same
+  point scored leave-one-out gets z=**8.14** — the spike inflates its own
+  window's std. At 4.5σ the naive score (3.03) grazes |z|>3 while LOO (4.56)
+  clears it. Also records the four-layer anomaly taxonomy (point / volatility
+  / trend / series-level) from the TDS toolkit article.
+- **Forecast-band anomaly detection** (from the Chronos-2 notebook 3, author's
+  own run): score = distance outside the forecast quantile band scaled by the
+  band half-width; known-future covariates cut false alarms (precision
+  67.6% → 96.3%, recall 68.7 → 77.6% on four injected events); gradual drift
+  is the measured weak spot (33/48 hours) — it starts inside the band.
+- **EMD naming traps, all verified live**: the tutorial call
+  `emd.emd(signal, max_imf=10)` exists in NO package; PyPI `emd` 0.8.1 is
+  `emd.sift.sift(..., max_imfs=)` with IMFs as columns, PyPI `EMD-signal`
+  1.10.0 (imported `PyEMD`) is `PyEMD.EMD().emd(..., max_imf=)` with IMFs as
+  rows — different spellings, transposed outputs.
+
+Smoke **84/84**, `check_docs.py` exit 0, zip rebuilt. Committed separately
+from the sibling's round-14 commit, same branch.
 
 ## What just happened (round 30 — two measured leakage facts from a cross-plugin source batch, 2026-08-08)
 

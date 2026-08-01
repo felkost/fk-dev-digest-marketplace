@@ -21,6 +21,22 @@
 - Check autocorrelation of missingness and observation frequency.
 - Compare distributions and target rates across rolling periods to identify drift or structural breaks.
 - Track cumulative counts and the running event/positive rate over time to reveal regime shifts and emerging anomalies; treat a rising cumulative rate as a hypothesis to investigate, not an automatic detector — its thresholds and baselines still need statistical justification.
+- **Point anomalies via rolling z-score: exclude the point from its own window
+  — measured (2026-08-15).** An 8σ spike scored with a window that contains it
+  gets z = **3.72**; leave-one-out scoring of the same point gives z = **8.14**
+  — the spike inflates its own window's std and roughly halves its own score.
+  At 4.5σ the naive score (3.03) grazes the standard |z|>3 threshold that the
+  LOO score (4.56) clears comfortably. Layer checks by anomaly kind: single
+  points (LOO z-score), volatility (variance vs the dataset baseline after
+  detrending), trend breaks, and whole-series outliers against the bank of
+  series.
+- **Forecast-band anomaly detection**: forecast the window from clean history,
+  score each observation by its distance outside the forecast quantile band
+  (scaled by the band's half-width). Known-future covariates are the
+  false-alarm killer — on an injected-anomaly benchmark precision went
+  67.6% → **96.3%** (recall 68.7→77.6%) because expected covariate-driven
+  demand stops looking anomalous. Gradual drift is the weak spot (starts
+  inside the band); spikes, dropouts and stuck-on equipment are caught fully.
 
 ## A change over time is not automatically a change in the world
 
@@ -94,6 +110,21 @@ the process really is I(1), ADF works and the scan correctly returns d = 0.30.
 If long memory itself is the question, estimate it with a method built for it
 (log-periodogram, R/S), not with this scan.
 - Treat these tests as diagnostics, not gates — combine with ACF/PACF, the decomposition residual, and domain knowledge.
+
+## Adaptive decomposition (EMD) — names measured before use
+
+Empirical Mode Decomposition splits a signal into oscillatory IMFs without a
+fixed basis — an option when STL's fixed period misfits. Three name traps,
+all verified live (2026-08-15): the call circulating in tutorials,
+`emd.emd(signal, max_imf=10)`, **does not exist in any package**
+(`AttributeError`); the PyPI package `emd` (0.8.1) exposes
+`emd.sift.sift(sig, max_imfs=10)` returning IMFs **as columns** `(n, k)`,
+while the PyPI package `EMD-signal` (1.10.0, imported as `PyEMD`) exposes
+`PyEMD.EMD().emd(sig, max_imf=10)` returning IMFs **as rows** `(k, n)` —
+different argument spellings and transposed outputs. Method caveats: mode
+mixing, sensitivity to small perturbations, no uniqueness guarantee — treat
+IMFs as exploratory views, not stable features, unless their downstream value
+is validated like any engineered feature.
 
 ## Candidate features
 
