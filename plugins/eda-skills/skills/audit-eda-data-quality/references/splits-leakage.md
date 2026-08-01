@@ -95,3 +95,13 @@ What to do with a hit: it is a **question for whoever produced the column** ("ho
 - Compare suspiciously predictive single features with domain semantics and acquisition time.
 - Verify all fitted pipeline steps expose only training indices.
 - Keep validation for decisions and test/holdout for the final untouched estimate.
+- Treat **near-ceiling scores with near-zero fold spread** as a leakage
+  hypothesis to investigate — but not fold consistency alone. Measured
+  (2026-08-08, logistic regression, 5-fold AUC): clean informative features
+  give 0.900 ± 0.025 at n=300 and 0.970 ± **0.007** at n=5000 — spread
+  legitimately shrinks with n, so "suspiciously consistent folds" by itself
+  flags nothing. Adding one leaked feature (target + noise) gives
+  1.0000 ± 0.0000 at both sizes. The joint signature — an implausibly high
+  level *and* a spread below the metric's resampling noise — is what warrants
+  the probes above; the circulating heuristic "perfect consistency indicates
+  leakage" fires on healthy large-n models if applied alone.

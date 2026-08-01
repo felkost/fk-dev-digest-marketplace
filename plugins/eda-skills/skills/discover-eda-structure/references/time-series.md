@@ -109,6 +109,15 @@ If long memory itself is the question, estimate it with a method built for it
 
 - Split chronologically before fitting normalization, decomposition, lag selection, or feature selection.
 - Shift before rolling when the current observation is unavailable at inference.
+- **Pandas window defaults include the current row — measured (2026-08-08).**
+  `rolling(3).mean()` on `[1, 2, 3, 4, 100]` returns **35.67** at the last row,
+  not 3.0: the window at `t` covers `t-2..t`, so used as a feature for
+  predicting `y[t]` it leaks the target itself. `ewm().mean()` includes the
+  current row too. Neither looks into the *future* — changing every value
+  after `t` leaves `ewm` at `t` bit-identical (verified) — so the popular
+  claim that `ewm` "needs future points" is wrong, and so is calling raw
+  `rolling` "safe". The direction of the leak is the current row, and the
+  universal fix for both is `.shift(1)`.
 - Impute time-series gaps with past-only methods (`ffill`, forward time interpolation); fit any model-based or multivariate imputer on train only, and never interpolate across the prediction cutoff or a validation boundary using future observations.
 - Fit seasonal/trend decomposition and any learned representation within training windows.
 - Use rolling/expanding validation or backtesting that matches deployment.
