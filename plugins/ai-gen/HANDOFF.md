@@ -1,11 +1,602 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-07-21, round **17** (retrieval
-authorization + memory architecture). Skills stay at **8**, references stay at **34** — no new
-reference file this round; `rag-pipeline.md` and `memory-vector-db.md` both grew instead, matching
-round 16's precedent of growing existing files. Round 18 is next (the agent loop, ch. 9's layer
-taxonomy), then 19–22. Written for a fresh Claude session with no conversation history — read this
-whole file before touching anything.
+Newest entry on top (eda-skills convention). Last updated 2026-08-01, round **22** (agent
+metacognition: five failure modes as a diagnostic, confidence gating, dual-signal stagnation
+detection, knowledge-boundary awareness, metacognitive calibration: `agent-metacognition.md` +
+`metacog_example`). Skills stay at **8**, references are now **44**
+(`design-agent-architecture/references/agent-metacognition.md`,
+`build-ai-examples/references/metacog-example.md`), smoke checks **94 → 107**. This closes ch. 10
+of the first book, and with it the entire ch. 7–11 triage's roadmap — rounds 15–22 are now all
+shipped. Round **23** is next (code execution + agent workspaces + Agent Skills, from the
+second-book triage — see the round-18 entry; full triage of that book is still owed first).
+Written for a fresh Claude session with no conversation history — read this whole file before
+touching anything.
+
+## What just happened (round 22 — agent metacognition, 2026-08-01, branch `feat/ai-gen-agent-loop-round18` off `main`, fifth round sharing this branch — rounds 18–22 form one sequential unit until merged)
+
+The last queued unit of the ch. 7–11 triage's roadmap table, sourced from ch. 10 "Exploring the
+cognitive agent that thinks, monitors, and adapts" (pp. 303–339) — read start to finish before
+writing anything, the same discipline every prior round in this sequence used. **The source PDF
+itself was not on disk at session start** (the `C:\Users\felko\Downloads\...` copies rounds 12–21
+read no longer exist there) and had to be re-supplied by the user mid-session, this time from
+`F:\Data\Lenovo\Документы\AI_courses\AI_agent_LLM\AI agents in the action - merged
+(Зміст+links).pdf` — the same merged file round 18 already checked chapter-by-chapter against the
+book's TOC. `pdftoppm` is not installed on this machine, so the Read tool's page-image path is
+unavailable for PDFs here; chapter text was extracted directly via PyMuPDF (`fitz`) instead —
+worth recording as the working method for any future round that hits the same gap, since it reads
+faster and more literally than page-image OCR would.
+
+### What was already covered, checked before writing anything new
+
+`agent-loop.md` already treats "broken record" as its stagnation anti-pattern by name and a
+word-Jaccard detector on consecutive summaries as "the offline stand-in for embedding cosine,
+mechanism identical" — this round's stagnation section carries the mechanism that stood in for,
+rather than re-deriving it, and adds the one signal `agent-loop.md` has no analogue for at all
+(confidence-plateau). `agent-loop.md`'s goal-predicate-vs-terminal-message section already names
+self-graded completion a biased self-assessment; this round applies the same shape to answer
+*quality* instead of task completion, cross-referenced rather than repeated.
+`reasoning-patterns.md` already owns CoT/ReAct/ToT/Reflexion as primitives and Reflexion's
+feedback-signal honesty — this round treats them as the primitives something else selects among,
+never redefining any of the four. `memory-vector-db.md`'s "the vocabulary is a tool, not a model"
+line (round 17, for cognitive-memory labels) is reused verbatim in spirit to refuse this
+chapter's own Minsky/Baars/Kahneman "theoretical foundations" as an architectural warrant.
+`serving-release.md`'s reliability ladder already ends in a rung named "graceful degradation" —
+confirmed by name, and this round's own use of the same term (for a confidence/knowledge-driven
+agent behaviour, not a latency/infrastructure one) gets one explicit sentence saying so, so the
+two are not read as the same mechanism. `agent-tdad.md`'s threshold-calibration caution ("a sweep
+that finds where rubric/human agreement peaks, not a round-number guess") is reused for this
+round's own illustrative gate/stagnation constants. `evaluation.md` was checked and is unrelated —
+its only "calibrate" is human-vs-judge agreement, a different axis from an agent's own
+confidence-vs-correctness calibration. **None of this is repeated in the new file** — what
+follows is what none of the above already states.
+
+### Refused, and why — the always-carry-a-technique rule cuts the other way here
+
+Ch. 10 spends a full section (§10.1.5, "Three theoretical foundations") arguing that Minsky's
+society of mind, Baars' global workspace theory and Kahneman's system 1/2 justify a specific
+seven-piece architecture (a shared `CognitiveWorkspace` plus perception/planning/execution/
+evaluation/attention/memory modules, §10.2 in full). The ch. 7–11 triage's own standing rule
+(round 13/round-18-entry: "a correct practitioner technique is always carried") does not flip
+here into "carry the architecture" — the rule is about techniques, and this is the same
+borrowed-vocabulary-as-warrant move round 17 already refused once for cognitive-memory labels.
+Refused specifically: the Minsky/Baars/Kahneman mapping as an engineering justification, and the
+fixed module taxonomy as something to build wholesale ("a second full module taxonomy as
+doctrine", per the roadmap's own pre-registered call). **Carried, individually, stripped of the
+architecture they arrived in**: confidence gating, the dual-signal stagnation check,
+knowledge-boundary awareness, the evaluation-during/Reflexion-after timing distinction, and the
+four "emergent behaviours" — each usable inside any harness shape, not only the book's own seven
+modules.
+
+### Shipped: `agent-metacognition.md` (the 43rd reference)
+
+**The five failure modes as a diagnostic** (§10.1.1), each with the book's own missing-capability
+and structural-fix language carried faithfully: confident wrong answer → evidence evaluation;
+broken record → stagnation awareness; rigid plan → model updating; overcommitted guess →
+knowledge-boundary detection; shallow composition → compositional reasoning — plus the chapter's
+own five-query diagnostic runnable against any existing agent, and the explicit statement that
+two of the five are already `agent-loop.md`'s stop conditions under the same names. **Cognition
+vs metacognition, defined for engineering** (§10.1.3–10.1.4), with the borrowed-vocabulary refusal
+stated inline rather than left implicit. **Confidence gating as a structural check, not a verbal
+one** (§10.3.4): hard floor, soft band with a retry budget, an independent contradiction check, a
+declining-trend check — the shape, explicitly not the source's specific numbers, which join this
+round's own "not carried" list below. **Stagnation detection as two independent signals**
+(§10.3.5): content-cosine (the mechanism `agent-loop.md`'s word-overlap detector already named as
+its own offline stand-in) plus a confidence-plateau signal that file has no analogue for at all —
+a flatlined trend and repeated content are different failure signatures, and a detector watching
+only one misses what the other catches. **Knowledge-boundary awareness and the "I don't know"
+off-ramp** (§10.3.6, plus the ch. 11 delta the roadmap routed here): the MetaMedQA citation,
+carried as verified. **Evaluation-during vs Reflexion-after** (§10.2.6's callout, verbatim
+distinction, paraphrased): real-time monitoring that catches a bad step before it compounds,
+against Reflexion's post-hoc full-attempt critique — complementary, not competing.
+**Metacognitive calibration as a measurement** (§10.4.1): cognitive efficiency, the
+confidence/accuracy calibration curve, adaptation rate, and knowledge-boundary accuracy with
+false positives named **beside** false negatives, per the roadmap's explicit instruction. **The
+four "emergent behaviours" reframed as rules, not dropped** (§10.3.7, and the new rule 3 from the
+ch. 7–11 triage that reversed an initial call to cut them): curiosity, adaptive persistence,
+selective depth and graceful degradation, each rewritten as the explicit if-then rule it actually
+is — the source's own "3–5x faster" fast-path figure is named and explicitly excluded as an
+unaudited illustration, joining the round's other excluded numbers.
+
+### A misattributed citation, run all the way down — the biggest finding this round
+
+Ch. 10 justifies confidence gating by claiming implicit, token-likelihood-derived confidence
+predicts correctness better than verbalized confidence, attributing this to "Wang et al. (2025)
+in the DMC framework" — the exact misattribution the ch. 7–11 triage had already flagged from the
+abstract alone and explicitly deferred to this round: *"round 22 either finds the claim in the
+paper's body and may cite it, or cites DMC only for what the abstract supports."* That obligation
+is now closed, and the answer is the second branch, with more evidence than the abstract alone
+gave:
+
+- **The paper itself** (Wang, Wu, Ye, Cheng, Chen & Zheng, "Decoupling Metacognition from
+  Cognition," *AAAI* 39(24), 2025, pp. 25353–25361) was fetched as a PDF via `WebFetch` and read
+  directly with PyMuPDF rather than trusted from a summarizing pass — the same "read the source,
+  not a paraphrase of it" discipline round 15 established for `sequential-thinking`, applied here
+  to a full paper. Its own experiments compare **verbalized** methods (vanilla, CoT, top-k)
+  against **consistency-based** methods (self-random, perturbation) — a different axis entirely
+  from implicit-vs-verbal, and neither its abstract nor its body ranks any method as a better
+  predictor of correctness than another.
+- **DMC's own related-work section is the closer read**: the one place it touches
+  token-likelihood confidence at all, it characterizes a *different* paper (Tian et al., 2023) as
+  favouring **verbal confidence over token-likelihood confidence** for RLHF-tuned models — the
+  opposite direction from the claim attached to DMC here. (Tian et al. itself was not
+  independently re-verified — only DMC's characterization of it was read, and the entry says so
+  plainly rather than chaining one citation's authority onto another's.)
+- **The deeper problem is prose vs code, this plugin's own recurring species of source error**:
+  ch. 10's shipped `CognitiveWorkspace.confidence` is never derived from a token probability
+  anywhere in the listings — it is a float an evaluation-agent LLM call self-reports each step
+  (`confidence_delta`, "return a value from −0.3 to +0.3"), accumulated across iterations. That is
+  a verbalized judgment wearing a numeric type, not the implicit signal the citation was recruited
+  to justify.
+
+`agent-metacognition.md` carries the correction, not the claim, and turns it into the worked
+example's actual design principle: prefer a genuinely implicit signal (OpenRouter's documented,
+per-model-unverified `logprobs`/`top_logprobs`) when available, and degrade to a **declared,
+labelled** fallback — never a number that looks principled but isn't — when it is not.
+
+### Shipped: `metacog_example` (the ninth worked example) + 13 smoke checks
+
+`scripts/metacog_example/metacog_core.py` (pure stdlib, no import-time side effects, module name
+checked against `CLAUDE.md`'s existing-names list before writing — `metacog_core` was free)
+implements: `check_confidence_gate` (floor/band/contradiction/trend, matching the reference's
+shape with its own illustrative defaults, documented as such in the docstring); `cosine` (dimension
+mismatch raises, zero vector returns `0.0`, matching `rag_example`'s own edge-case handling rather
+than reinventing it differently); `detect_stagnation` combining `detect_content_stagnation`
+(cosine over **injected** embedding vectors — real ones in production, stub ones in tests) and
+`detect_confidence_plateau`, always naming which signal fired; and `resolve_confidence`, which
+calls `implicit_confidence_from_logprobs` (mean per-token logprob through `exp()`, returning `None`
+— never a guessed number — when no logprobs are given) and falls back to a caller-declared value
+only when that returns `None`, always labelling which path produced the number
+(`implicit_logprob` vs `fallback_declared`). `agent.py` requests real OpenRouter logprobs via
+`ChatOpenAI(model_kwargs={"logprobs": True, "top_logprobs": 1})` and prints which path fired for
+each of two questions — the graceful-degradation property made runnable, not just asserted.
+
+Smoke **94 → 107** (checks 95–107), including the round's signal-independence case: a
+confidence-plateau trend (`[0.52, 0.51, 0.53]`) fires stagnation even when the paired embeddings
+are constructed to be maximally dissimilar, proving the two stagnation signals are independent
+rather than one dressed up as two. All 13 checks passed on the first full-suite run.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows, descriptions extended (both now mention the new
+  content by name) — `build:catalog` re-run because of it, per the standing rule.
+- `skill-router.md` gets one new row, for `agent-metacognition.md` only — matching rounds 18–21's
+  own pattern of one router row per new *concept* reference, not per worked-example doc (rounds
+  15–17 added both; the four most recent rounds before this one did not, and this round follows
+  them rather than the older precedent).
+- **`check_docs.py` caught the same staleness class a fifth time** — 44 references on disk against
+  42 in the zip, and both `mcp-example.md` and `rag-example.md` still said "94 checks, all eight
+  examples." Fixed to 107/nine; zip rebuilt (`ai_gen_knowledge.zip` **274 952 bytes**, instructions
+  unchanged at 6 928/8 000).
+- `check_docs.py` → **docs OK**; smoke **107/107**.
+- **Five of six CI gates run and green**: `npm run lint` (8 plugins, 0 warnings), `lint:plugins` (9
+  targets, 4 accepted warnings, unchanged), `lint:markdown` (**415** files, 0 errors),
+  `lint:format` clean, `npm run build:catalog` (61 skills, regenerated `site/public/catalog.json`)
+  followed by the site's own `tsc --noEmit && vite build` (both clean) as the site-build gate.
+  **Not run, consistent with every prior round in this sequence**: `evals/`'s `eval:quality`
+  static gate — untouched by a content-only change to `plugins/ai-gen`, and no round back to at
+  least 17 has run it locally either.
+
+### Open threads
+
+- Full triage of *The Brain of AI Agents* (ch. 2/3/5/6/9/10 at section level only) is still owed
+  before round 23; ch. 6 must face the two-taxonomy memory rule from round 17 before any third
+  memory vocabulary is admitted.
+- **Noticed, not investigated**: the ch. 7–11 triage's ch. 11 coverage note routes
+  "persona-as-API-contract and dynamic instruction injection" to `engineer-prompt-context`, "in
+  round 19" — but the roadmap table it sits beside never actually reserves a round for
+  `engineer-prompt-context`, and the round 19 that shipped was `agent-tdad.md`
+  (`evaluate-optimize-models`). Either this delta was folded into `engineer-prompt-context`
+  outside this round sequence and the note is stale, or it was never carried at all. Whoever
+  triages ch. 11 properly (it was read only as "almost entirely recap" so far, per the ch. 7–11
+  triage entry) should settle this rather than assume either answer.
+- The 8-`SKILL.md`-body / `README.md` language migration (round-17-era open item) is still
+  outstanding and still not blocking; not touched this round for the same reason it wasn't touched
+  in 18–21 (no `SKILL.md` prose body was rewritten, only routing rows and descriptions added).
+
+### Prompt for the next round
+
+*"Read `plugins/ai-gen/HANDOFF.md` — round 22 is newest. Skills stay at 8, references at 44, smoke
+at 107. The ch. 7–11 triage's roadmap (rounds 15–22) is now fully shipped. **Default next unit of
+work is round 23: code execution + agent workspaces + Agent Skills**, from *The Brain of AI
+Agents* — but the round-18 entry's own open thread must close first: a full triage of that book
+(currently read only at ch. 2/3/5/6/9/10 section-level, plus ch. 4/7/8 in depth) is owed before
+round 23 can be planned with the same rigor every round since 12 has used. Ch. 6 in particular must
+be checked against round 17's two-taxonomy reconciliation rule before a third memory vocabulary is
+admitted anywhere. Do this triage the way the ch. 7–11 triage was done: read every chapter start to
+finish (not by section heading), verify every citable claim against its primary source, check the
+companion repository's code against the book's own prose, and produce a roadmap table before
+writing any reference content. Ask the user for the source PDF at the start of the session — it is
+not persisted in this repository or anywhere else on disk between sessions, by design (copyrighted
+book content), and the exact path drifts (round 22 needed a fresh one after the round-12–21 copies
+were no longer at their recorded location)."*
+
+## What just happened (round 21 — threat model, sandboxing, HITL mechanics, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, fourth round sharing this branch — rounds 18–21 form one sequential unit until merged)
+
+The next queued unit of work, executed exactly as the ch. 7–11 triage's roadmap table specified,
+sourced from ch. 8 §8.4 "Security, safety, and governance in production" — read start to finish
+before writing anything, the same discipline round 20 used for §8.3.
+
+### What was already covered, checked before writing anything new
+
+`agent-ops.md`'s security section turned out to already carry the guardrail cost ladder,
+deterministic-first defense-in-depth, agent identity/least-privilege, and A2A's widened injection
+surface; `architectures.md` already says *where* to place a human gate and names rubber-stamping
+as its failure mode; `mcp-tools.md` already states schema-first tool design as a
+routing-accuracy rule and "tool output is data, not instructions" as the injection defense.
+**None of that is repeated here** — this round's content is what none of those cover: the asset
+mapping itself, the direct/indirect injection vocabulary (present only as scattered "injection
+via tool results" mentions, never named as two variants), sandboxing/egress (confirmed zero prior
+coverage by grep before writing a word), schema validation reframed as a security gate rather
+than a routing aid, the *why* behind keeping policy outside the prompt (agent-ops.md already
+states the *rule*), and the HITL *mechanics* — architectures.md's placement rules say nothing
+about trigger design, reviewer context, state durability, or bypass defenses.
+
+### Shipped: `security-governance.md` (the 41st reference)
+
+**Threat model as an asset↔surface mapping**, the book's own asset list (provider credentials,
+tool credentials, data read/written, session logs, PII) crossed against its six surfaces
+(client, gateway/API, agent runtime, tool servers, model provider, storage) as a table, with the
+explicit point that the mapping — not the checklist — is what produces coverage. **Direct vs.
+indirect prompt injection**, named and defined, with the harder-to-defend property of indirect
+injection stated plainly (the user did nothing wrong; the content can be planted anywhere the
+agent might read) and cross-referenced to the existing scattered mentions instead of duplicating
+the tool-output-is-data rule. **Sandboxing and egress control** — sandbox runtimes named
+(seccomp/gVisor/Firecracker), filesystem restricted to known/ephemeral paths, network **deny by
+default** with an outbound allowlist, resource limits per call — explicitly citing
+`local-docker.md`'s existing container hardening rather than re-deriving it, per the roadmap's
+own instruction. **Schema-first validation reframed**: the existing `mcp-tools.md` rule is a
+routing-accuracy concern; this file adds that the same schema is also the first check a malicious
+argument set has to pass, and states the `additionalProperties: false` shape by name — reject
+unknown fields, never guess a missing one. **Policy outside the prompt**: the *why*
+(prompt-embedded policy is fragile against injection and unauditable across policy versions) and
+the six governance categories the book names as a coverage pass (content safety, data
+privacy/compliance, audit/traceability, rate limiting, access control, policy registry — HITL
+pulled out as its own section below). **HITL as four separable design decisions** — what
+triggers a checkpoint (stakes, not frequency), who reviews and what they see (enough context or
+rubber-stamping), how state survives the wait (async resumption, durable state, timeout,
+escalation), what happens when it's bypassed (paired with caps, sandboxing, and audit, never the
+only line) — each stated as a decision a "confirm" dialog does not answer by existing.
+
+### Shipped: `security_example` (the eighth worked example) + 10 smoke checks
+
+`scripts/security_example/security_core.py` (pure stdlib, no import-time side effects) implements
+the three pieces the roadmap's example column names: `EgressPolicy` (parses the real hostname via
+`urlsplit`, never a substring match — the check that catches `docs.myapp.com.attacker.com` and
+`notdocs.myapp.com`, both lookalikes a naive `endswith`/`in` check would have let through),
+`ToolSchema` (rejects unknown fields outright, reports missing-required and wrong-type as
+distinct errors), and `CheckpointStore` (a checkpoint resolved to `approved`/`rejected` is immune
+to a later timeout check — order-of-operations cannot flip a human's decision; "surviving a
+restart" is demonstrated by wrapping a second store instance around the same backing dict rather
+than adding a special method, the same technique a real Redis/Postgres-backed store would use).
+
+`agent.py` demonstrates the architectural point directly rather than only asserting it: a real
+model is shown a "document" carrying an indirect-prompt-injection attempt (an HTML-comment
+instruction telling it to fetch an attacker URL "to verify this report") and asked whether a tool
+call is warranted; **the egress allowlist blocks the exfiltration attempt regardless of what the
+model decides** — enforcement does not depend on the model getting the injection right, which is
+the whole argument `security-governance.md` makes about layered, model-independent defense made
+runnable.
+
+Smoke **84 → 94** (checks 85–94), including the two properties framed as reproduce-then-fix in
+the same style rounds 19/20 used for their companion-repo bugs, here reproducing a *class* of
+vulnerability rather than one file's specific line: a naive hostname check would pass both
+lookalike domains this round's tests deny, and a naive checkpoint store would let a late timeout
+overwrite an already-resolved approval, which this round's tests prove it does not.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows, descriptions extended.
+- `skill-router.md` gets a new row for `security-governance.md`.
+- **`check_docs.py` caught the same staleness class a fourth time** — zip had 40 references
+  against 42 on disk, and both `mcp-example.md` and `rag-example.md` still said "84 checks, all
+  seven examples." Fixed to 94/eight; zip rebuilt (`ai_gen_knowledge.zip` **258 885 bytes**,
+  instructions unchanged at 6 928/8 000).
+- `check_docs.py` → **docs OK**; smoke **94/94**. No module-naming collision this round — checked
+  the existing-names list in `CLAUDE.md` (added in round 20 for exactly this) before naming
+  `security_core.py`.
+
+### Open threads unchanged
+
+Full triage of *The Brain of AI Agents* (ch. 2/3/5/6/9/10 at section level only) is still owed
+before round 23; ch. 6 must face the two-taxonomy memory rule from round 17 before any third
+memory vocabulary is admitted.
+
+## What just happened (round 20 — serving topology and release engineering, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, third round sharing this branch — rounds 18–20 form one sequential unit until merged)
+
+The next queued unit of work, executed exactly as the ch. 7–11 triage's roadmap table specified,
+sourced from ch. 8 §8.1–8.3 of the (already-consumed) first book — re-read specifically for this
+round's assigned sections, not re-triaged from scratch.
+
+### Locating the exact source material first
+
+The roadmap's "three wires ... with the MCP transport corrected" pointed at a real, named
+section: **§8.3.2 "The three 'wires' of communication."** Read in full before writing anything,
+confirming the exact stale claim: the book labels its HTTP+streaming wire **"HTTP + SSE (MCP)"**
+and separately says "you may choose to connect to MCP servers locally using STDIO instead of
+HTTP+SSE" — the same pre-2025-03-26 "stdio and SSE are the two MCP transports" error
+`mcp-tools.md` already corrected for ch. 3's version of it (rounds 13/14), now confirmed to
+recur in ch. 8 too, worded almost identically. §8.1 (three deployment/consumption patterns:
+embedded/browser, API-backend, MCP-or-A2A-as-tool) supplied the front-door and
+browser-as-security-decision material; §8.3.1/8.3.3/8.3.5/8.3.7/8.3.8 supplied runtime choice,
+the front-door pattern by name, release engineering, the reliability ladder, and cost-to-value —
+all in the book's own words, none inferred from a chapter title (the standing rule since
+round 12).
+
+### Shipped: `serving-release.md` (the 39th reference)
+
+Runtime choice by latency (edge / synchronous API / event-driven worker, "start with API, move
+hot paths to edge, offload bursty work to workers" as the default); the three wires **with the
+mislabel corrected in the text itself** — WebRTC/WebSocket, HTTP+streaming (explicitly *not*
+called MCP, with a pointer to `mcp-tools.md`'s actual stdio/Streamable-HTTP story), message bus
+— cross-referencing rather than re-explaining MCP's transport; the **front-door pattern** framed
+as `architectures.md`'s orchestrator-workers applied to serving topology, not a new pattern;
+**browser deployment as a security decision** (extractable keys, CORS, the shared-vs-per-browser
+rate-limit dilemma, ephemeral server-minted secrets); **tunnels as a development tool** with the
+explicit "when a tunnel would need to run for a while, that's the signal to deploy instead"
+framing; the **reliability ladder** (time budget enforced at the caller → fallback → circuit
+breaker → graceful degradation, each rung catching what the one before missed) as newly-covered
+ground — checked first, and confirmed zero prior coverage of circuit breakers/fallbacks as a
+service-reliability pattern anywhere in the plugin; the **idempotency design rule** (key by an
+explicit operation id, never by hashing arguments alone) stated here, with the failure mode
+deferred to the worked example; and **release engineering** (version everything, promote through
+gates — offline eval → shadow → canary → full rollout with auto-rollback — pin exact
+model/tool/prompt versions per turn), explicitly named as one level up from `agent-tdad.md`'s
+minimum-change ladder, the same discipline applied to shipping instead of fixing.
+
+**Numbers deliberately not carried**, confirmed against round 18's forbidden list and found
+repeated verbatim in this ch. 8 material: "30% to 80%" and "90% of input costs" cache savings,
+the "$0.50/$0.10/$50" cost illustration, and the 1,024-token minimum cacheable-prefix figure —
+all present in §8.3.8 word-for-word matching the earlier-flagged Lanham numbers, confirming they
+are the same author's recurring illustrations, not independent measurements. The **framings**
+(cost-to-value ratio, three cost levers with tradeoffs, the cache-candidacy question) are
+carried; the specific percentages are not.
+
+### Shipped: `token-latency-cost.md` enrichment (evaluate-optimize-models)
+
+Two additions, both extending existing sections rather than duplicating them: a **cost-to-value
+framing** at the top ("cost makes sense only relative to what the agent replaces," instrument
+cost per session/task/user *before* optimizing, spend effort where the ratio is worst) and a
+**cache-candidacy rule** inside the existing caching section (good candidates: deterministic,
+expensive, stable across a defined window, each with its own natural TTL; poor candidates:
+results the cache key cannot fully capture the context for, or where staleness is hard to
+detect — auth state, full conversation history, freshest-data-dependent outputs).
+
+### Shipped: `reliability_example` (the seventh worked example) + 11 smoke checks
+
+`scripts/reliability_example/reliability_core.py` (pure stdlib, no import-time side effects)
+implements the ladder as an explicit state machine (`run_ladder()` returns a named `outcome` —
+`"primary"` / `"fallback:<name>"` / `"degraded"` / `"circuit_open"` — never a raw exception, the
+same "name the reason" discipline `loop_example` and `tdad_example` both use) and the
+idempotency contrast the reference specifies: `IdempotencyCache` (keyed by operation id) versus
+`ArgHashCache`, a deliberate reproduction of `chapter_08/06_idempotent_key_example.py`'s
+`sha256(name + args)`-only cache. `CircuitBreaker`'s `HALF_OPEN` probe reopens **immediately** on
+a failed probe rather than waiting to re-count toward the threshold — a failed probe is strong
+evidence the dependency is still down, and re-counting would let a persistently broken
+dependency get probed on every request during its outage.
+
+Smoke **73 → 84** (checks 74–84), including the round's headline case: **two calls with
+different `operation_id`s and identical arguments both execute under `IdempotencyCache`, but
+collapse into a single execution under `ArgHashCache`** — the bug reproduced on purpose, then
+shown fixed by the correct cache shape, in the same test.
+
+**A naming collision caught and fixed before it reached a commit.** `tdad_example` (round 19)
+and this round's first draft of `reliability_example` both named their pure module
+`harness_core.py`. Because `tests/smoke_test.py` inserts every example's directory onto
+`sys.path`, the two identically-named modules collided — Python's import cache silently served
+whichever one loaded first, and running the full suite made `tdad_example`'s checks fail with
+`ImportError`s for names that exist only in `reliability_example`'s file. Caught immediately by
+running the full suite (not just the new checks) after adding them — the module was renamed to
+`reliability_core.py`, matching the per-example unique-name convention every prior example
+(`loop_core`, `reflexion_core`, `guardrail_core`) already followed and this round's first draft
+broke. **New standing rule, added to `CLAUDE.md`: every worked example's pure module needs a
+name unique across ALL examples in the plugin, not just within its own directory** — verify with
+`ls skills/build-ai-examples/scripts/*/[a-z]*_core.py` (or equivalent) before naming a new one,
+and always run the *entire* smoke suite after adding an example's checks, not only the ones just
+added, since a collision like this one only shows up cross-example.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows, descriptions extended. `evaluate-optimize-models`'s
+  SKILL.md also got its `token-latency-cost.md` row updated for the cache-candidacy addition.
+  `openai.yaml` left untouched for both skills, per the rule confirmed in round 19.
+- `skill-router.md` gets a new row for `serving-release.md`.
+- **`check_docs.py` caught the same staleness class a third time** — zip had 38 references
+  against 40 on disk, and both `mcp-example.md` and `rag-example.md` still said "73 checks, all
+  six examples." Fixed to 84/seven; zip rebuilt (`ai_gen_knowledge.zip` **245 012 bytes**,
+  instructions unchanged at 6 928/8 000).
+- `check_docs.py` → **docs OK**; smoke **84/84**.
+
+### Open threads unchanged
+
+Full triage of *The Brain of AI Agents* (ch. 2/3/5/6/9/10 at section level only) is still owed
+before round 23; ch. 6 must face the two-taxonomy memory rule from round 17 before any third
+memory vocabulary is admitted.
+
+## What just happened (round 19 — the TDAD development loop, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, same branch as round 18 — sequential rounds share a branch until merged, matching rounds 15–17's precedent)
+
+The next queued unit of work, executed exactly as the ch. 7–11 triage's roadmap table specified.
+
+### A router gap from round 18, caught and fixed first
+
+`skill-router.md`'s granular trigger table had no row for `agent-loop.md` — round 18 added the
+reference and its `design-agent-architecture` description-level routing phrase, but missed the
+per-reference row every other reference in that skill has. Fixed before starting round 19's own
+work, so it does not compound into a second missed row.
+
+### Shipped: `agent-tdad.md` (the 37th reference)
+
+Every gap item the roadmap table named, none skipped, each cross-referenced instead of duplicated:
+TDAD as a red/green/refactor loop adapted for a stochastic system under test and a fallible
+oracle; running each **case** N times before believing a pass (narrower than, and cross-referenced
+to, `evaluation.md`'s set-level statistical-hygiene section); testing the **trajectory**, not only
+the final answer, using `agent-loop.md`'s run record as the thing that makes a trajectory
+checkable at all; the **minimum-change ladder** (word → clause → sentence → section → tool →
+model, escalating only after the cheaper tier is confirmed to have failed); **defect
+localization** as a three-way split (evaluator bug / instruction bug / capability gap) that checks
+the evaluator's own correctness first, because a wrong verdict on a right answer poisons everything
+downstream; **rubric construction** (concrete, checkable anchors) plus **threshold calibration as
+a sweep that finds where rubric/human agreement peaks**, not a round-number guess, extending
+`evaluation.md`'s existing hand-calibration line rather than repeating it; **agent collusion and
+evaluation governance** — zero prior coverage — with the framing that a colluding evaluation layer
+is worse than none because it manufactures false confidence, plus its four guards (different
+model family for the evaluator, human review of a random sample of the *unflagged* cases, an
+authority hierarchy with logged agent-to-agent messages, escalation rules); the **retry ceiling as
+a named design decision** for what happens the instant `autonomy-contracts.md`'s cap fires
+(retry / escalate-human / escalate-model / partial-with-flag), not left as a gap the harness falls
+through; **grounding as a technique vs. the grounding agent as one implementation** — the
+distinction whose absence is what let the companion repo's bug through in the first place; human
+feedback as noisy data (aggregate across raters, run outlier detection on raters not only on data,
+stratify the review sample); annotations becoming a permanent regression set, tying together
+`agent-ops.md`'s incident→eval-case loop and TDAD's own local version of the same discipline; and
+an explicitly volatile note on observability tooling instead of naming products that will be stale
+within a quarter.
+
+### Shipped: `tdad_example` (the sixth worked example) + 14 smoke checks
+
+`scripts/tdad_example/harness_core.py` (pure stdlib, no import-time side effects) is built around
+the concrete bug the reference documents: `chapter_07/06_RAG_grounding_with_guardrails.py`'s
+grounding check reads a module-level global that every search overwrites, so a two-search answer
+only ever gets checked against the *last* search's context, and no concurrency is needed to trigger
+it. The fix is structural — `is_grounded(answer, context, threshold=...)` takes context as a plain
+argument, and `AccumulatingContext.snapshot()` returns an immutable copy so a caller checking
+*accumulated* evidence passes the whole snapshot, not the latest `add()`'s piece. Also:
+`normalize()`/`exact_match()` (the reference's "Photons." equals "photons" case, by name);
+`run_benchmark()` returning a **rate** over N runs, never a single boolean; `classify_failure()`
+checking evaluator-correctness first, then trajectory (`required_tool` membership), before
+concluding capability gap; `LADDER` and `escalate_fix_tier()` refusing to skip a tier or wrap past
+`"model"`; `retry_ceiling_action()` returning `"retry"` under the cap and a **named** policy
+outcome at it, raising on an unrecognized policy rather than defaulting to one. `agent.py` wires a
+real solver via OpenRouter at nonzero temperature (repetition only demonstrates anything if the
+solver can vary) behind `__main__`.
+
+Smoke **59 → 73** (checks 60–73), including the two checks that directly reproduce and then fix
+the companion-repo bug's exact failure shapes: **two `AccumulatingContext` instances never
+contaminate each other's `is_grounded` result under interleaved `add()`/`snapshot()` calls, and an
+answer citing only the first of two searches is provably NOT grounded when checked against the
+second search's content alone but IS grounded against the full accumulated snapshot.** All 14
+checks passed on the first run — no test needed fixing against itself this round, unlike round 18.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows, descriptions extended with TDAD-routing phrases.
+  `openai.yaml` for both skills was **deliberately left untouched** — checked the commit history
+  first (`git log -- '**/agents/openai.yaml'`) and confirmed these files are only touched when a
+  skill is first created, never when an existing skill's content deepens; an initial edit to
+  `evaluate-optimize-models/agents/openai.yaml` was reverted once that pattern was confirmed,
+  rather than quietly breaking the convention.
+- `skill-router.md` gets a new row for `agent-tdad.md`, plus the round-18 `agent-loop.md` row
+  fixed above.
+- **`check_docs.py` caught the same staleness class it caught in round 18** — zip had 36
+  references against 38 on disk, and both `mcp-example.md` and `rag-example.md` still said "59
+  checks, all five examples". Fixed to 73/six; zip rebuilt (`ai_gen_knowledge.zip`
+  **231 411 bytes**, instructions unchanged at 6 928/8 000 — `gpt_instructions.md`'s stage-level
+  routing line for `evaluate-optimize-models` stays generic on purpose, matching round 18's choice
+  not to enumerate individual references there).
+- `check_docs.py` → **docs OK**; smoke **73/73**.
+
+### Open threads unchanged
+
+Full triage of *The Brain of AI Agents* (ch. 2/3/5/6/9/10 at section level only) is still owed
+before round 23; ch. 6 must face the two-taxonomy memory rule from round 17 before any third
+memory vocabulary is admitted.
+
+## What just happened (round 18 — the agent loop, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`)
+
+The next queued unit of work, executed as specified by the ch. 7–11 triage (layer taxonomy as
+the spine, every amendment honoured) — plus a targeted triage of two user-supplied PDFs, one of
+which turned out to be already consumed and one new.
+
+### Source triage first
+
+- **`AI agents in the action - merged (Зміст+links).pdf` (367 pages by `doc.page_count` — the
+  harness listing claimed 111, undercount number six) is the merged full text of the SAME book
+  rounds 12–14 and the ch. 7–11 triage already consumed.** TOC verified chapter-by-chapter
+  (ch. 1–11 + appendices, identical section titles). Nothing new to mine; the 19–22 queue
+  already carries its remaining content. No content was taken from it this round.
+- **`The brain of AI agents (merged) v2.pdf` (261 pages, ch. 2–10) is NEW.** Targeted triage
+  (ch. 4 loop internals, ch. 7 planning/reflection, ch. 8 code execution read in depth;
+  ch. 2/3/5/6/9/10 at section level — full triage is an open thread):
+  - **Ch. 8 (code execution) is the real gap → new round 23.** The plugin has zero coverage of
+    code-execution-as-action (CodeAct), sandboxed execution environments (E2B-class), porting
+    tools into the sandbox, full agent workspaces (filesystem + CLI), and Agent Skills as
+    hierarchical, token-efficient tool management. Its security half meets round 21's queued
+    sandboxing/egress material — round 23 must cross-reference, not duplicate.
+  - **Ch. 7 (planning/reflection as tools)**: the patterns are round 15's
+    (`reasoning-patterns.md`); the uncovered delta — reflection as a *scheduled programmatic
+    trigger* (every N steps / on a failure counter) rather than "reflect when appropriate" —
+    was folded into `agent-loop.md`'s programmatic/agent-triggered boundary section this round.
+  - **Ch. 4 (ReAct implementation)**: run/step/think/act decomposition and ExecutionContext map
+    onto `architectures.md`'s state substrates; its "tools as output formatters" structured-output
+    pattern and the GAIA benchmark are candidates for the full triage to place (GAIA most likely
+    a named-benchmark row for round 19).
+  - Ch. 5 (RAG) and ch. 6 (memory) look heavily covered by rounds 8–11/17 at section level; the
+    full triage must check ch. 6 against round 17's two-taxonomy reconciliation rule before
+    admitting any third memory vocabulary.
+
+### Shipped: `agent-loop.md` (the 35th reference)
+
+The inner-execution-loop reference the roadmap specified, all obligations met:
+
+- **Opens with the four-way disambiguation** — this file (inner loop) vs `loop-engineering.md`
+  (Osmani's outer developer loop, including its "cognitive surrender"), and the three colliding
+  numbered scales in one table: Google capability Levels 0–4 (`architectures.md`), Oracle
+  harness Levels 1–3, Lanham Layers 1–3 — named as orthogonal, each cited by owner.
+- The four loop elements (goal/plan/state/decision) with the summary-drops-state warning;
+  model-proposes/harness-disposes; **Layers 1–3 as where the elements live**, with
+  orchestration-first carried from round 16.
+- **The layered stop gate**: goal predicate vs terminal message (self-declared completion is a
+  biased self-assessment); stagnation as the stop failure the "same error signature" factor
+  never trips; the published specimen (chapter_09/04 promises five conditions, ships three)
+  recorded as the anti-example, including its prose-vs-exercise 85%-semantic/80%-word
+  discrepancy.
+- The programmatic/agent-triggered boundary (with the scheduled-reflection delta from the new
+  book's ch. 7); context economics in the loop (offload every iteration, append-don't-rewrite,
+  compaction preserves originals, filter-at-the-tool); **explorer must not write the report**;
+  breadth-vs-depth as a named queue parameter; the three surrounding loops (feedback/training/
+  human) with cross-references.
+
+### Shipped: `loop_example` (the fifth worked example) + 12 smoke checks
+
+`scripts/loop_example/loop_core.py` (pure stdlib, no import-time side effects) implements the
+gate the reference specifies: `stop_reason()` returns the *name* of the stop family
+(iteration/cost/wall-clock caps, stagnation, queue exhausted, goal predicate) — the reason is
+data; `StagnationDetector` (word-set Jaccard ≥ 0.8 on consecutive summaries — the offline
+stand-in for embedding cosine, mechanism identical); `FollowUpQueue` with permanent `_seen`
+(re-asked questions cannot re-enter even after being popped) and `order="breadth"|"depth"` as a
+constructor argument; `OffloadLog` (id + bounded digest out, `fetch(id)` keeps originals
+addressable); `run_loop` with `explore_fn`/`write_fn` as separate callables and findings as the
+only interface between them; injectable `clock`. `agent.py` wires a real model via OpenRouter
+behind `__main__`. `references/loop-example.md` documents the design against its published
+counterpart.
+
+Smoke **47 → 59** (checks 48–59), including the three negative properties the published
+specimen fails: **halts with `stop == "stagnation"` on two near-identical summaries and the
+third exploration never runs; the queue de-duplicates across case/punctuation and refuses
+re-entry after popping; the module imports without executing anything (AST-verified: no
+module-level calls, no environ reads).** One test fixed against itself during the round: the
+first version of the breadth/depth check asserted FIFO behaviour for both orders — the depth
+branch of the test was wrong, not the queue; rewritten with per-order expectations.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows (English rows into otherwise-Ukrainian bodies, per
+  the row-by-row language policy); `loop-engineering.md`'s row now carries the "outer developer
+  loop, not the agent loop" marker; both descriptions extended with loop-routing phrases.
+- **`check_docs.py` caught three staleness bugs on first run** — the zip had 34 references
+  against 36 on disk, and both `mcp-example.md` and `rag-example.md` still claimed "47 smoke
+  checks, all four examples". Counts updated to 59/five, zip rebuilt
+  (`ai_gen_knowledge.zip` **216 817 bytes**, instructions unchanged at 6 928/8 000 — routing
+  needed no new bytes because the loop routes through `design-agent-architecture`, which the
+  instructions already carry). The guard exists precisely for this failure class; it fired and
+  was obeyed.
+- `check_docs.py` → **docs OK**; smoke **59/59**.
+
+### Open threads added by this round
+
+- **Full triage of *The Brain of AI Agents*** (ch. 2/3/5/6/9/10 read only at section level) —
+  do it before round 23 is executed; ch. 6 must face the two-taxonomy memory rule.
+- **Round 23 (new): code execution + agent workspaces + Agent Skills**, cross-referencing
+  round 21's sandboxing/egress security material instead of duplicating it.
 
 ## What just happened (round 17 — retrieval authorization + memory architecture, 2026-07-21, branch `docs/ai-gen-lanham-ch7-11-triage` off `main`, same session and branch as rounds 15–16, per the user's "use the current branch" instruction)
 

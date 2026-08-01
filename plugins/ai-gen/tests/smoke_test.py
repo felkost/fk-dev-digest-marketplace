@@ -62,6 +62,141 @@ two-agent handoff in LangGraph; see references/guardrail-example.md):
  46-47. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
+What it pins, loop_example (Layer-2 research loop harness -- the layered stop
+gate agent-loop.md specifies; the published counterpart, chapter_09/04, ships
+three of its five promised stop conditions and executes at import time, which
+is exactly what checks 48 and 51-55 exist to forbid; see
+references/loop-example.md):
+ 48.   the directory exists with the expected files;
+ 49.   loop_core imports without executing anything -- no module-level call
+       of the loop, no import-time environ read (AST-verified);
+ 50.   loop_core imports ONLY stdlib;
+ 51.   two near-identical summaries halt the loop with stop == "stagnation"
+       and the third exploration never runs;
+ 52.   the follow-up queue de-duplicates across case/punctuation and refuses
+       re-entry even after the question was popped;
+ 53.   order="breadth" vs "depth" provably changes traversal order;
+ 54.   the cost cap stops a never-stagnating, always-branching explorer and
+       the run record names "cost_cap";
+ 55.   the wall-clock cap fires via the injected clock, deterministically;
+ 56.   the offload log returns an id plus a bounded digest and fetch(id)
+       still returns the original;
+ 57.   the writer receives only accumulated findings -- raw observations
+       never cross the explorer/writer boundary;
+ 58-59. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
+What it pins, tdad_example (Test-Driven Agent Development harness -- the
+normalizing evaluator, the grounding check that takes context explicitly, and
+defect localization evaluate-optimize-models/references/agent-tdad.md
+specifies; the motivating bug is chapter_07/06_RAG_grounding_with_
+guardrails.py's module-level `_last_context`, reproduced by checks 64-65 and
+fixed by the explicit-argument signature; see references/tdad-example.md):
+ 60.   the directory exists with the expected files;
+ 61.   harness_core imports without executing anything, and imports ONLY
+       stdlib;
+ 62.   exact_match("Photons.", "photons") is True -- the normalizing-
+       evaluator case the reference names by name;
+ 63.   polarity -- a context-drawn answer is grounded, a distinctively
+       off-context answer is not;
+ 64.   two AccumulatingContext instances never contaminate each other's
+       is_grounded result under interleaved add()/snapshot() calls;
+ 65.   an answer citing only the first of two searches is NOT grounded
+       against the second search's content alone, but IS grounded against
+       the full accumulated snapshot;
+ 66.   a stub passing 3/5 times reports pass_rate == 0.6 over n=5, not a
+       false clean pass;
+ 67-69. classify_failure resolves "evaluator_bug", "instruction_bug" and
+       "capability_gap" from three synthetic cases;
+ 70.   escalate_fix_tier moves one ladder step at a time and raises past
+       "model";
+ 71.   retry_ceiling_action returns "retry" under the cap, the named policy
+       at the cap, and raises on an unrecognized policy;
+ 72-73. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
+What it pins, reliability_example (the time-budget/fallback/circuit-breaker/
+graceful-degradation ladder, and the idempotency contrast
+deploy-ai-environments/references/serving-release.md specifies; the
+motivating bug is chapter_08/06_idempotent_key_example.py's argument-hash-only
+cache, reproduced by check 81 and fixed by ArgHashCache vs IdempotencyCache;
+see references/reliability-example.md):
+ 74.   the directory exists with the expected files;
+ 75.   reliability_core imports without executing anything, and imports ONLY
+       stdlib;
+ 76.   a successful primary never touches any fallback;
+ 77.   a primary exceeding its time budget falls back, and the fallback's
+       success is what the result reports;
+ 78.   every rung failing returns outcome == "degraded" with the supplied
+       value, never an unhandled exception;
+ 79.   the circuit breaker opens after the failure threshold and sheds load
+       (outcome == "circuit_open") without calling primary while open;
+ 80.   a successful HALF_OPEN probe closes the breaker; a failed probe
+       reopens it immediately, without waiting to re-count failures;
+ 81.   the idempotency contrast -- two different operation_ids with
+       IDENTICAL arguments both execute under IdempotencyCache, but collapse
+       into one execution under ArgHashCache, reproducing the book's bug on
+       purpose;
+ 82.   the SAME operation_id called twice executes the underlying function
+       once under IdempotencyCache -- the cache hit path;
+ 83-84. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
+What it pins, security_example (the egress allowlist, schema-first argument
+validator, and durable HITL checkpoint deploy-ai-environments/references/
+security-governance.md specifies; agent.py demonstrates the point directly --
+a real model is shown an indirect-prompt-injection attempt and the egress
+allowlist blocks the exfiltration try regardless of what the model decides;
+see references/security-example.md):
+ 85.   the directory exists with the expected files;
+ 86.   security_core imports without executing anything, and imports ONLY
+       stdlib;
+ 87.   the egress allowlist denies lookalike hostnames
+       (docs.myapp.com.attacker.com, notdocs.myapp.com) a naive substring
+       check would have let through, while allowing the real listed host;
+ 88.   the schema validator rejects an unknown field even when every
+       required field is present and correctly typed;
+ 89.   the schema validator reports a missing required field and a wrong
+       type as distinct errors;
+ 90.   a checkpoint created in one CheckpointStore and read from a second
+       instance wrapping the same backing dict has identical state --
+       restart survival without an actual restart;
+ 91.   a pending checkpoint past its timeout escalates; one still within
+       the window does not;
+ 92.   an already-approved checkpoint is immune to a later timeout check --
+       resolving first must not let escalation overwrite it;
+ 93-94. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
+What it pins, metacog_example (the confidence gate and dual-signal stagnation
+detector design-agent-architecture/references/agent-metacognition.md
+specifies; the motivating gap is the source's own prose-vs-code split --
+it argues for logprob-derived confidence, then ships an LLM self-report
+instead -- which resolve_confidence's honestly-labelled fallback exists to
+never repeat; see references/metacog-example.md):
+ 95.   the directory exists with the expected files;
+ 96.   metacog_core imports without executing anything, and imports ONLY
+       stdlib;
+ 97.   the gate signals uncertainty below the floor, regardless of other
+       state;
+ 98.   the soft band gathers more while a retry budget remains, and signals
+       uncertainty once it is exhausted;
+ 99.   an open contradiction forces GATHER_MORE even at high confidence;
+ 100.  a declining confidence trend forces GATHER_MORE at high confidence;
+       a flat-or-rising trend presents;
+ 101.  cosine rejects mismatched dimensions and returns 0.0 for a zero
+       vector;
+ 102.  content stagnation fires on near-identical injected vectors and not
+       on dissimilar ones;
+ 103.  confidence-plateau stagnation fires on a flatlined trend even with
+       deliberately dissimilar embeddings -- the signal-independence case;
+ 104.  implicit_confidence_from_logprobs returns a value in (0, 1] given
+       real logprobs, and None -- never a guessed number -- given none;
+ 105.  resolve_confidence labels its source correctly in both directions,
+       and the fallback branch returns the caller's value unchanged;
+ 106-107. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
 Console note: this box's console is cp1251, so output is ASCII-safe.
@@ -81,10 +216,20 @@ EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "rag_example"
 MCP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "mcp_example"
 REFLEXION_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reflexion_example"
 GUARDRAIL_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "guardrail_example"
+LOOP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "loop_example"
+TDAD_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "tdad_example"
+RELIABILITY_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reliability_example"
+SECURITY_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "security_example"
+METACOG_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "metacog_example"
 sys.path.insert(0, str(EXAMPLE))
 sys.path.insert(0, str(MCP_EXAMPLE))
 sys.path.insert(0, str(REFLEXION_EXAMPLE))
 sys.path.insert(0, str(GUARDRAIL_EXAMPLE))
+sys.path.insert(0, str(LOOP_EXAMPLE))
+sys.path.insert(0, str(TDAD_EXAMPLE))
+sys.path.insert(0, str(RELIABILITY_EXAMPLE))
+sys.path.insert(0, str(SECURITY_EXAMPLE))
+sys.path.insert(0, str(METACOG_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -822,6 +967,802 @@ def _():
             assert value in ("", "not-needed-for-local"), (
                 f"{key} looks filled in ({value!r}) -- .env.example must ship blank"
             )
+
+
+# --------------------------------------------------------------------------- #
+# 48-59. loop_example: the layered stop gate, offline
+# --------------------------------------------------------------------------- #
+
+@check("loop_example directory exists with the expected files")
+def _():
+    for name in ("loop_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (LOOP_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("loop_core imports without executing anything (AST-verified)")
+def _():
+    tree = ast.parse((LOOP_EXAMPLE / "loop_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute the loop"
+        )
+    src = (LOOP_EXAMPLE / "loop_core.py").read_text(encoding="utf-8")
+    assert "os.environ" not in src, "loop_core must not read the environment"
+    import loop_core  # noqa: F401  -- and the import itself must succeed bare
+
+
+@check("loop_core imports ONLY stdlib (keeps this test runnable offline)")
+def _():
+    tree = ast.parse((LOOP_EXAMPLE / "loop_core.py").read_text(encoding="utf-8"))
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"re", "dataclasses", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+
+
+def _explorer(script):
+    """Build an explore_fn from a list of (summary, follow_ups, cost) tuples."""
+    calls = {"n": 0}
+
+    def explore_fn(question):
+        i = min(calls["n"], len(script) - 1)
+        calls["n"] += 1
+        summary, follow_ups, cost = script[i]
+        return f"RAW({question})", summary, list(follow_ups), cost
+
+    return explore_fn, calls
+
+
+@check("two near-identical summaries halt with stop == 'stagnation'")
+def _():
+    from loop_core import LoopBudget, run_loop
+    script = [
+        ("the capital of france is paris, a large city", ["q2"], 0.0),
+        ("paris is the capital of france -- a large city", ["q3"], 0.0),
+        ("something completely different entirely", ["q4"], 0.0),
+    ]
+    explore_fn, calls = _explorer(script)
+    result = run_loop(["q1"], explore_fn, lambda f: "r",
+                      budget=LoopBudget(max_iterations=10, max_cost=99, max_wall_clock_s=99))
+    assert result.stop == "stagnation", f"stopped by {result.stop}"
+    assert calls["n"] == 2, f"third exploration ran ({calls['n']} calls)"
+
+
+@check("follow-up queue de-duplicates and refuses re-entry after popping")
+def _():
+    from loop_core import FollowUpQueue
+    q = FollowUpQueue()
+    assert q.push("What is RRF?") is True
+    assert q.push("what is rrf") is False, "case-variant duplicate accepted"
+    assert q.push("What is RRF!?") is False, "punctuation-variant duplicate accepted"
+    assert len(q) == 1
+    q.pop()
+    assert q.push("What is RRF?") is False, "popped question re-entered the queue"
+
+
+@check("order='breadth' vs 'depth' provably changes traversal order")
+def _():
+    from loop_core import FollowUpQueue
+    # breadth (FIFO): siblings of the seed go first; depth (LIFO): the most
+    # recently opened thread goes first.
+    for order, first, second in (("breadth", "A", "B"), ("depth", "B", "C")):
+        q = FollowUpQueue(order=order)
+        q.push("A"); q.push("B")
+        assert q.pop() == first, f"{order}: wrong first pop"
+        q.push("C")  # follow-up opened by the first exploration
+        assert q.pop() == second, f"{order}: wrong second pop"
+
+
+@check("cost cap stops a never-stagnating, always-branching explorer")
+def _():
+    from loop_core import LoopBudget, run_loop
+    counter = {"n": 0}
+
+    def explore_fn(question):
+        counter["n"] += 1
+        i = counter["n"]
+        return f"RAW{i}", f"unique finding number {i} about topic {i}", [f"q{i + 100}"], 0.5
+
+    result = run_loop(["q1"], explore_fn, lambda f: "r",
+                      budget=LoopBudget(max_iterations=99, max_cost=1.0, max_wall_clock_s=99))
+    assert result.stop == "cost_cap", f"stopped by {result.stop}"
+    assert result.iterations == 2 and result.cost_spent == 1.0
+
+
+@check("wall-clock cap fires via the injected clock, deterministically")
+def _():
+    from loop_core import LoopBudget, run_loop
+    ticks = iter([0.0, 10.0, 20.0, 30.0, 40.0, 50.0])
+
+    def explore_fn(question):
+        return "RAW", f"different every time {question}", [f"fu-{question}"], 0.0
+
+    result = run_loop(["q1"], explore_fn, lambda f: "r",
+                      budget=LoopBudget(max_iterations=99, max_cost=99, max_wall_clock_s=15.0),
+                      clock=lambda: next(ticks))
+    assert result.stop == "wall_clock_cap", f"stopped by {result.stop}"
+
+
+@check("offload log returns id + bounded digest; fetch returns the original")
+def _():
+    from loop_core import OffloadLog
+    log = OffloadLog(digest_chars=20)
+    raw = "x" * 5000 + " tail"
+    rec_id, digest = log.store(raw)
+    assert rec_id == "obs-0001" and len(digest) <= 20
+    assert log.fetch(rec_id) == raw, "original must stay addressable"
+
+
+@check("the writer receives only accumulated findings, never raw output")
+def _():
+    from loop_core import LoopBudget, run_loop
+    seen = {}
+
+    def write_fn(findings):
+        seen["findings"] = findings
+        return "report"
+
+    def explore_fn(question):
+        return "RAW-SECRET", f"summary of {question}", [], 0.0
+
+    run_loop(["q1"], explore_fn, write_fn, budget=LoopBudget(max_iterations=5))
+    (question, rec_id, summary), = seen["findings"]
+    assert question == "q1" and rec_id.startswith("obs-") and "RAW-SECRET" not in summary
+
+
+@check("loop_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (LOOP_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (LOOP_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("loop_example .env.example ships no filled-in secret")
+def _():
+    for line in (LOOP_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
+
+
+# --------------------------------------------------------------------------- #
+# 60-73. tdad_example: the TDAD harness, offline
+# --------------------------------------------------------------------------- #
+
+@check("tdad_example directory exists with the expected files")
+def _():
+    for name in ("harness_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (TDAD_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("harness_core imports without executing anything, ONLY stdlib")
+def _():
+    tree = ast.parse((TDAD_EXAMPLE / "harness_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute anything"
+        )
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"re", "dataclasses", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+    import harness_core  # noqa: F401  -- the import itself must succeed bare
+
+
+@check('exact_match("Photons.", "photons") is True')
+def _():
+    from harness_core import exact_match
+    assert exact_match("Photons.", "photons") is True
+    assert exact_match("Photons.", "electrons") is False
+
+
+@check("grounding polarity: context-drawn answer grounded, off-context answer not")
+def _():
+    from harness_core import is_grounded
+    context = (
+        "RRF (Reciprocal Rank Fusion) combines ranked lists from multiple "
+        "retrieval systems by summing the reciprocal of each item's rank.",
+    )
+    grounded_answer = "RRF combines ranked lists by summing reciprocal ranks."
+    ungrounded_answer = "RRF was patented in 2003 by satellite engineers for telemetry."
+    assert is_grounded(grounded_answer, context) is True
+    assert is_grounded(ungrounded_answer, context) is False
+
+
+@check("two AccumulatingContext instances never contaminate each other")
+def _():
+    from harness_core import AccumulatingContext, is_grounded
+    ctx_a = AccumulatingContext()
+    ctx_a.add("Paris is the capital of France.")
+    ctx_b = AccumulatingContext()
+    ctx_b.add("Tokyo is the capital of Japan.")
+
+    answer_a = "Paris is the capital of France."
+    # interleave: check B in between two checks of A
+    first = is_grounded(answer_a, ctx_a.snapshot())
+    is_grounded("Tokyo is the capital of Japan.", ctx_b.snapshot())
+    second = is_grounded(answer_a, ctx_a.snapshot())
+    assert first is True and second is True, "A's result changed after checking B"
+    assert is_grounded(answer_a, ctx_b.snapshot()) is False, "A grounded against B's context"
+
+
+@check("grounds against the ACCUMULATED snapshot, not the last piece alone")
+def _():
+    from harness_core import AccumulatingContext, is_grounded
+    ctx = AccumulatingContext()
+    search1 = "RRF combines ranked lists by summing reciprocal ranks."
+    search2 = "Cosine similarity measures the angle between two embedding vectors."
+    ctx.add(search1)
+    answer = "RRF combines ranked lists using reciprocal ranks and cosine similarity."
+    last_piece_only = (search2,)
+    assert is_grounded(answer, last_piece_only) is False, (
+        "checking only the latest piece should miss the RRF claim from search 1"
+    )
+    ctx.add(search2)
+    assert is_grounded(answer, ctx.snapshot()) is True, (
+        "checking the full accumulated snapshot should find both claims"
+    )
+
+
+@check("run_benchmark reports a rate, not a false clean pass")
+def _():
+    from harness_core import run_benchmark
+    script = iter([True, False, True, False, True])  # 3/5
+
+    def stub():
+        return next(script)
+
+    result = run_benchmark(stub, n=5)
+    assert result.pass_rate == 0.6 and result.passes == 3 and result.n == 5
+
+
+@check('classify_failure resolves "evaluator_bug"')
+def _():
+    from harness_core import classify_failure
+    verdict = classify_failure(
+        expected="42", raw_output="  42.", evaluator_verdict=False,
+        tool_calls=["calculator"], required_tool="calculator",
+    )
+    assert verdict == "evaluator_bug"
+
+
+@check('classify_failure resolves "instruction_bug"')
+def _():
+    from harness_core import classify_failure
+    verdict = classify_failure(
+        expected="42", raw_output="I don't know", evaluator_verdict=False,
+        tool_calls=[], required_tool="calculator",
+    )
+    assert verdict == "instruction_bug"
+
+
+@check('classify_failure resolves "capability_gap"')
+def _():
+    from harness_core import classify_failure
+    verdict = classify_failure(
+        expected="42", raw_output="41", evaluator_verdict=False,
+        tool_calls=["calculator"], required_tool="calculator",
+    )
+    assert verdict == "capability_gap"
+
+
+@check("escalate_fix_tier moves one step at a time and raises past 'model'")
+def _():
+    from harness_core import LADDER, escalate_fix_tier
+    assert LADDER == ("word", "clause", "sentence", "section", "tool", "model")
+    assert escalate_fix_tier("word") == "clause"
+    assert escalate_fix_tier("section") == "tool"
+    try:
+        escalate_fix_tier("model")
+        raise AssertionError("escalating past the last tier should raise")
+    except ValueError:
+        pass
+    try:
+        escalate_fix_tier("bogus-tier")
+        raise AssertionError("an unknown tier should raise")
+    except ValueError:
+        pass
+
+
+@check("retry_ceiling_action: retry under cap, named policy at cap, rejects unknown policy")
+def _():
+    from harness_core import retry_ceiling_action
+    assert retry_ceiling_action(2, 5) == "retry"
+    assert retry_ceiling_action(5, 5, policy="escalate_human") == "escalate_human"
+    assert retry_ceiling_action(5, 5, policy="fail") == "fail"
+    try:
+        retry_ceiling_action(5, 5, policy="bogus-policy")
+        raise AssertionError("an unrecognized policy should raise")
+    except ValueError:
+        pass
+
+
+@check("tdad_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (TDAD_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (TDAD_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("tdad_example .env.example ships no filled-in secret")
+def _():
+    for line in (TDAD_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
+
+
+# --------------------------------------------------------------------------- #
+# 74-84. reliability_example: the ladder and the idempotency contrast, offline
+# --------------------------------------------------------------------------- #
+
+@check("reliability_example directory exists with the expected files")
+def _():
+    for name in ("reliability_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (RELIABILITY_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("reliability_example reliability_core imports without executing anything, ONLY stdlib")
+def _():
+    tree = ast.parse((RELIABILITY_EXAMPLE / "reliability_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute anything"
+        )
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"hashlib", "json", "dataclasses", "enum", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+    import reliability_core  # noqa: F401  -- the import itself must succeed bare
+
+
+def _ladder_stub(elapsed: float, value):
+    return lambda: (elapsed, value)
+
+
+def _ladder_stub_raises():
+    def _fn():
+        raise RuntimeError("boom")
+    return _fn
+
+
+@check("a successful primary never touches any fallback")
+def _():
+    from reliability_core import CircuitBreaker, run_ladder
+    fallback_called = {"n": 0}
+
+    def fallback():
+        fallback_called["n"] += 1
+        return 0.1, "fallback-value"
+
+    result = run_ladder(
+        _ladder_stub(0.1, "primary-value"), [("secondary", fallback)],
+        breaker=CircuitBreaker(), time_budget=1.0, now=0,
+    )
+    assert result.outcome == "primary" and result.value == "primary-value"
+    assert fallback_called["n"] == 0
+
+
+@check("a primary exceeding its time budget falls back, reporting the fallback's success")
+def _():
+    from reliability_core import CircuitBreaker, run_ladder
+    result = run_ladder(
+        _ladder_stub(5.0, "too-slow"), [("secondary", _ladder_stub(0.1, "fast-enough"))],
+        breaker=CircuitBreaker(), time_budget=1.0, now=0,
+    )
+    assert result.outcome == "fallback:secondary" and result.value == "fast-enough"
+
+
+@check("every rung failing returns outcome == 'degraded', never an unhandled exception")
+def _():
+    from reliability_core import CircuitBreaker, run_ladder
+    result = run_ladder(
+        _ladder_stub_raises(), [("secondary", _ladder_stub_raises())],
+        breaker=CircuitBreaker(), time_budget=1.0, now=0, degraded_value="sorry",
+    )
+    assert result.outcome == "degraded" and result.value == "sorry"
+    assert result.attempts == ("primary", "fallback:secondary", "degraded")
+
+
+@check("circuit breaker opens after the threshold and sheds load without calling primary")
+def _():
+    from reliability_core import CircuitBreaker, run_ladder
+    breaker = CircuitBreaker(failure_threshold=2, cooldown=100)
+    for now in (0, 1):
+        run_ladder(_ladder_stub_raises(), [], breaker=breaker, time_budget=1.0, now=now,
+                   degraded_value=None)
+    assert breaker.state.value == "open"
+
+    primary_called = {"n": 0}
+
+    def primary():
+        primary_called["n"] += 1
+        return 0.1, "should-not-run"
+
+    result = run_ladder(primary, [], breaker=breaker, time_budget=1.0, now=2, degraded_value="x")
+    assert result.outcome == "circuit_open" and primary_called["n"] == 0
+
+
+@check("a successful HALF_OPEN probe closes the breaker; a failed one reopens immediately")
+def _():
+    from reliability_core import BreakerState, CircuitBreaker
+
+    closing = CircuitBreaker(failure_threshold=1, cooldown=5)
+    closing.record_failure(now=0)
+    assert closing.state == BreakerState.OPEN
+    assert closing.allow(now=5) is True and closing.state == BreakerState.HALF_OPEN
+    closing.record_success()
+    assert closing.state == BreakerState.CLOSED
+
+    reopening = CircuitBreaker(failure_threshold=1, cooldown=5)
+    reopening.record_failure(now=0)
+    assert reopening.allow(now=5) is True and reopening.state == BreakerState.HALF_OPEN
+    reopening.record_failure(now=5)
+    assert reopening.state == BreakerState.OPEN, "a failed probe must reopen, not stay half-open"
+
+
+@check("idempotency contrast: distinct operation_ids both execute under IdempotencyCache, "
+       "collapse into one under ArgHashCache")
+def _():
+    from reliability_core import ArgHashCache, IdempotencyCache
+    args = {"amount": 10, "customer": "cust_1"}
+
+    calls = {"n": 0}
+
+    def execute():
+        calls["n"] += 1
+        return calls["n"]
+
+    good = IdempotencyCache()
+    r1, cached1 = good.call("op-1", execute)
+    r2, cached2 = good.call("op-2", execute)
+    assert cached1 is False and cached2 is False
+    assert r1 != r2, "two distinct operation_ids must both actually execute"
+    assert calls["n"] == 2
+
+    calls["n"] = 0
+    broken = ArgHashCache()
+    b1, bcached1 = broken.call("charge", args, execute)
+    b2, bcached2 = broken.call("charge", args, execute)
+    assert bcached1 is False and bcached2 is True, (
+        "the argument-hash cache should silently treat the second distinct "
+        "operation as a cache hit -- reproducing chapter_08/06's bug"
+    )
+    assert b1 == b2 and calls["n"] == 1, "the bug: only one real execution happened"
+
+
+@check("the SAME operation_id called twice executes the function once (the cache-hit path)")
+def _():
+    from reliability_core import IdempotencyCache
+    calls = {"n": 0}
+
+    def execute():
+        calls["n"] += 1
+        return "result"
+
+    cache = IdempotencyCache()
+    _, cached1 = cache.call("op-1", execute)
+    _, cached2 = cache.call("op-1", execute)
+    assert cached1 is False and cached2 is True
+    assert calls["n"] == 1
+
+
+@check("reliability_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (RELIABILITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (RELIABILITY_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("reliability_example .env.example ships no filled-in secret")
+def _():
+    for line in (RELIABILITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
+
+
+# --------------------------------------------------------------------------- #
+# 85-94. security_example: egress allowlist, schema validator, HITL checkpoint
+# --------------------------------------------------------------------------- #
+
+@check("security_example directory exists with the expected files")
+def _():
+    for name in ("security_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (SECURITY_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("security_example security_core imports without executing anything, ONLY stdlib")
+def _():
+    tree = ast.parse((SECURITY_EXAMPLE / "security_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute anything"
+        )
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"dataclasses", "urllib", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+    import security_core  # noqa: F401  -- the import itself must succeed bare
+
+
+@check("egress allowlist denies lookalike hostnames, allows the real one")
+def _():
+    from security_core import EgressPolicy
+    policy = EgressPolicy(allowed_hosts=frozenset({"docs.myapp.com"}))
+    assert policy.allows("https://docs.myapp.com/page") is True
+    assert policy.allows("https://docs.myapp.com.attacker.com/page") is False, (
+        "suffix-spoofed lookalike host should be denied"
+    )
+    assert policy.allows("https://notdocs.myapp.com/page") is False, (
+        "prefix-spoofed lookalike host should be denied"
+    )
+    assert policy.allows("https://attacker.example/exfiltrate") is False
+
+
+@check("schema validator rejects an unknown field even when required fields are valid")
+def _():
+    from security_core import ToolSchema
+    schema = ToolSchema(required={"url": str})
+    result = schema.validate({"url": "https://docs.myapp.com", "extra_field": "sneaky"})
+    assert result.valid is False
+    assert any("extra_field" in e for e in result.errors)
+
+
+@check("schema validator reports missing-required and wrong-type as distinct errors")
+def _():
+    from security_core import ToolSchema
+    schema = ToolSchema(required={"url": str, "timeout_ms": int})
+    result = schema.validate({"timeout_ms": "not-an-int"})
+    assert result.valid is False
+    assert any("missing required field: 'url'" in e for e in result.errors)
+    assert any("timeout_ms" in e and "expected int" in e for e in result.errors)
+
+
+@check("a checkpoint survives being read from a second store over the same backing dict")
+def _():
+    from security_core import CheckpointStore
+    backing = {}
+    store_a = CheckpointStore(backing)
+    store_a.create("cp-1", "fetch https://docs.myapp.com", now=0.0)
+
+    # simulate a restart: a brand-new store instance, same backing dict
+    store_b = CheckpointStore(backing)
+    resumed = store_b.get("cp-1")
+    assert resumed.status == "pending"
+    assert resumed.action_description == "fetch https://docs.myapp.com"
+
+
+@check("a pending checkpoint past its timeout escalates; one within the window does not")
+def _():
+    from security_core import CheckpointStore
+    store = CheckpointStore()
+    store.create("cp-timeout", "risky action", now=0.0)
+    store.create("cp-ok", "risky action", now=0.0)
+
+    timed_out = store.check_timeout("cp-timeout", now=100.0, timeout_s=60.0)
+    still_waiting = store.check_timeout("cp-ok", now=30.0, timeout_s=60.0)
+
+    assert timed_out.status == "escalated"
+    assert still_waiting.status == "pending"
+
+
+@check("an already-approved checkpoint is immune to a later timeout check")
+def _():
+    from security_core import CheckpointStore
+    store = CheckpointStore()
+    store.create("cp-approved", "risky action", now=0.0)
+    store.resolve("cp-approved", "approved", reviewer_note="looks fine")
+
+    result = store.check_timeout("cp-approved", now=1000.0, timeout_s=60.0)
+    assert result.status == "approved", "a resolved checkpoint must not be escalated later"
+
+
+@check("security_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (SECURITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (SECURITY_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("security_example .env.example ships no filled-in secret")
+def _():
+    for line in (SECURITY_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
+
+
+# --------------------------------------------------------------------------- #
+# 95-107. metacog_example: confidence gate, dual-signal stagnation detector
+# --------------------------------------------------------------------------- #
+
+@check("metacog_example directory exists with the expected files")
+def _():
+    for name in ("metacog_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (METACOG_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("metacog_example metacog_core imports without executing anything, ONLY stdlib")
+def _():
+    tree = ast.parse((METACOG_EXAMPLE / "metacog_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute anything"
+        )
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"dataclasses", "enum", "math", "typing", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+    import metacog_core  # noqa: F401  -- the import itself must succeed bare
+
+
+@check("confidence gate signals uncertainty below the floor regardless of other state")
+def _():
+    from metacog_core import ConfidenceState, GateDecision, check_confidence_gate
+    state = ConfidenceState(value=0.1, retries_used=99, trend=(0.9, 0.9, 0.9))
+    assert check_confidence_gate(state) == GateDecision.SIGNAL_UNCERTAINTY
+
+
+@check("soft band gathers more within the retry budget, signals uncertainty once exhausted")
+def _():
+    from metacog_core import ConfidenceState, GateDecision, check_confidence_gate
+    within_budget = ConfidenceState(value=0.4, retries_used=1)
+    exhausted = ConfidenceState(value=0.4, retries_used=3)
+    assert check_confidence_gate(within_budget, max_retries=3) == GateDecision.GATHER_MORE
+    assert check_confidence_gate(exhausted, max_retries=3) == GateDecision.SIGNAL_UNCERTAINTY
+
+
+@check("an open contradiction forces GATHER_MORE even at high confidence")
+def _():
+    from metacog_core import ConfidenceState, GateDecision, check_confidence_gate
+    state = ConfidenceState(value=0.95, has_open_contradiction=True)
+    assert check_confidence_gate(state) == GateDecision.GATHER_MORE
+
+
+@check("a declining confidence trend forces GATHER_MORE; flat-or-rising presents")
+def _():
+    from metacog_core import ConfidenceState, GateDecision, check_confidence_gate
+    declining = ConfidenceState(value=0.9, trend=(0.95, 0.93, 0.91))
+    rising = ConfidenceState(value=0.9, trend=(0.7, 0.8, 0.85))
+    assert check_confidence_gate(declining) == GateDecision.GATHER_MORE
+    assert check_confidence_gate(rising) == GateDecision.PRESENT
+
+
+@check("cosine rejects mismatched dimensions and returns 0.0 for a zero vector")
+def _():
+    from metacog_core import cosine
+    try:
+        cosine([1.0, 0.0], [1.0, 0.0, 0.0])
+        raise AssertionError("expected ValueError on dimension mismatch")
+    except ValueError:
+        pass
+    assert cosine([0.0, 0.0], [1.0, 1.0]) == 0.0
+
+
+@check("content stagnation fires on near-identical embeddings, not on dissimilar ones")
+def _():
+    from metacog_core import detect_content_stagnation
+    identical_ish = [[1.0, 0.0], [0.99, 0.01]]
+    orthogonal = [[1.0, 0.0], [0.0, 1.0]]
+    assert detect_content_stagnation(identical_ish) is True
+    assert detect_content_stagnation(orthogonal) is False
+
+
+@check("confidence-plateau stagnation fires on a flatlined trend, independent of content")
+def _():
+    from metacog_core import detect_stagnation
+    # Deliberately dissimilar embeddings -- content stagnation must NOT fire --
+    # paired with a flatlined confidence trend, which must fire on its own.
+    dissimilar_embeddings = [[1.0, 0.0], [0.0, 1.0]]
+    flatlined_trend = [0.52, 0.51, 0.53]
+    verdict = detect_stagnation(dissimilar_embeddings, flatlined_trend)
+    assert verdict.stagnant is True
+    assert verdict.signal == "confidence_plateau"
+
+
+@check("implicit_confidence_from_logprobs: a value in (0, 1] given logprobs, None given none")
+def _():
+    from metacog_core import implicit_confidence_from_logprobs
+    estimate = implicit_confidence_from_logprobs([-0.1, -0.2, -0.05])
+    assert estimate is not None and 0.0 < estimate <= 1.0
+    assert implicit_confidence_from_logprobs(None) is None
+    assert implicit_confidence_from_logprobs([]) is None
+
+
+@check("resolve_confidence labels its source correctly and never alters the fallback value")
+def _():
+    from metacog_core import resolve_confidence
+    with_signal = resolve_confidence([-0.1, -0.2], fallback=0.5)
+    without_signal = resolve_confidence(None, fallback=0.42)
+    assert with_signal.source == "implicit_logprob"
+    assert without_signal.source == "fallback_declared"
+    assert without_signal.value == 0.42
+
+
+@check("metacog_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (METACOG_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (METACOG_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("metacog_example .env.example ships no filled-in secret")
+def _():
+    for line in (METACOG_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
 
 
 # --------------------------------------------------------------------------- #

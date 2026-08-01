@@ -166,7 +166,7 @@ Four points worth being precise about:
 
 ## What the smoke test pins (this file's share, offline)
 
-`python tests/smoke_test.py` — 47 checks total (all four examples this plugin ships); 18 of them
+`python tests/smoke_test.py` — 107 checks total (all nine examples this plugin ships); 18 of them
 are this file's own (the other three examples' shares are in `mcp-example.md`,
 `reflexion-example.md` and `guardrail-example.md`). Run from the plugin root. Grouped:
 

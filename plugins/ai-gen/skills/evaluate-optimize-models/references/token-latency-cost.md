@@ -3,6 +3,14 @@
 Order of leverage, highest first. Every change is a before/after pair on the same eval set —
 an optimization that loses quality you didn't measure is a regression you shipped.
 
+**Cost makes sense only relative to what the agent replaces or produces, never in absolute
+terms.** An interaction that costs more than the lookup it replaces is expensive; the same cost
+is cheap if it replaces a far more expensive human process. Optimizing before establishing that
+ratio produces cuts that erode value the business never noticed it was losing. Instrument cost
+per session, per resolved task, and per user *before* applying any lever below, and spend effort
+on the part of the system where the cost-to-value ratio is worst — not on whichever lever is
+easiest to reach for.
+
 ## 1. Prompt and context budget
 
 - Cut dead weight: repeated instructions, over-long few-shot examples, boilerplate the model
@@ -21,6 +29,16 @@ an optimization that loses quality you didn't measure is a regression you shippe
   traffic); semantic caching (embedding-similarity hit) buys more but needs a correctness
   threshold and an invalidation story.
 - Cache tool results (search, DB lookups) inside agent runs — agents repeat calls.
+- **Cache candidacy is a rule, not a reflex** — the question is never "what can be cached" but
+  "does this specific data's cost-to-staleness tradeoff justify a TTL." Good candidates are
+  **deterministic, expensive, and stable across a defined window** (an exchange rate for
+  minutes, an embedding for as long as the source text and model stay fixed, an idempotent tool
+  result for the lifetime of its inputs) — each has a staleness window that sets a sensible TTL.
+  Poor candidates are results the cache key cannot fully capture the context for, or where
+  staleness is hard to detect: anything touching auth/authorization state, results depending on
+  full conversation history, and outputs whose correctness depends on the freshest available
+  data. Caching one of these without explicit invalidation logic produces a bug that looks like
+  the model got worse, not like a cache went stale.
 
 ## 3. Model right-sizing and routing
 
