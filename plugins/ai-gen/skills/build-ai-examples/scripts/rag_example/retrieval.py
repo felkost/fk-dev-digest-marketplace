@@ -61,3 +61,33 @@ def recall_at_k(ranked_indices: Sequence[int], relevant: set[int]) -> float:
     if not relevant:
         raise ValueError("relevant set must be non-empty")
     return len(set(ranked_indices) & relevant) / len(relevant)
+
+
+def reciprocal_rank_fusion(
+    rankings: Sequence[Sequence[int]],
+    k: int = 60,
+) -> list[tuple[int, float]]:
+    """Fuse multiple ranked id lists into one, best first.
+
+    Cormack, Clarke & Buttcher, "Reciprocal Rank Fusion Outperforms Condorcet
+    and Individual Rank Learning Methods" (SIGIR 2009): each system
+    contributes 1 / (k + rank) per id it ranked, rank counted from 1. An id
+    absent from a given ranking simply gets nothing from that system -- no
+    score normalization is needed between systems, which is what makes this
+    usable when one ranking comes from cosine similarity and the other from a
+    PostgreSQL ts_rank_cd score on a completely different scale (see
+    agent.py's search_docs). k=60 is the paper's own near-optimal constant,
+    found via a pilot sweep in which the choice was explicitly NOT critical
+    (their table: MAP moved from .2138 to .2147 across k=40..90) -- so it is
+    a reasonable default, not a tuned value to chase.
+
+    Ties break by ascending id, the same determinism `rank()` above enforces
+    by index: an unstable fusion makes a retrieval eval unreproducible.
+    """
+    if k <= 0:
+        raise ValueError("k must be positive")
+    scores: dict[int, float] = {}
+    for ranking in rankings:
+        for position, doc_id in enumerate(ranking, start=1):
+            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + position)
+    return sorted(scores.items(), key=lambda pair: (-pair[1], pair[0]))

@@ -31,6 +31,24 @@ load_dotenv(pathlib.Path(__file__).parent / ".env")
 # "vector type not found in the database". Verified against a real container.
 EXTENSION = "CREATE EXTENSION IF NOT EXISTS vector;"
 
+# Full-text search needs no extension -- tsvector/GIN are core PostgreSQL, unlike the
+# vector type above (verified against PostgreSQL's current full text search docs). The
+# search config ('english') is baked into the generated column's expression below, the
+# same way `dim` is baked into the vector column: a STORED generated column's expression
+# is fixed at DDL time, not re-evaluated from an env var per query, so changing the
+# language is a schema migration -- add a new column, backfill, cut over -- not a config
+# edit, exactly the same discipline the embedding-model-ID comment states two lines down.
+# ADD COLUMN IF NOT EXISTS makes this idempotent whether `chunks` is brand new (created
+# moments earlier by build_schema) or already existed before this column did; either way
+# PostgreSQL's docs are explicit that adding a STORED generated column rewrites the whole
+# table, a real cost worth knowing about before running this against a large corpus.
+FTS_COLUMN = (
+    "ALTER TABLE chunks ADD COLUMN IF NOT EXISTS content_tsv tsvector "
+    "GENERATED ALWAYS AS (to_tsvector('english', content)) STORED;"
+)
+FTS_INDEX = "CREATE INDEX IF NOT EXISTS chunks_content_tsv_idx ON chunks USING GIN (content_tsv);"
+
+
 # The index is versioned by embedding-model ID: changing the model means
 # re-embedding the whole corpus, which is a planned migration and not a config
 # edit. Mixing vectors from two models degrades silently to noise.
@@ -108,6 +126,8 @@ def main(corpus_dir: str) -> None:
         conn.execute(EXTENSION)
         register_vector(conn)
         conn.execute(build_schema(len(vectors[0])))
+        conn.execute(FTS_COLUMN)
+        conn.execute(FTS_INDEX)
         with conn.cursor() as cur:
             for chunk, vector in zip(chunks, vectors):
                 cur.execute(

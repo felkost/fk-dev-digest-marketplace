@@ -124,6 +124,10 @@ Explore multiple reasoning branches with self-evaluation, lookahead and backtrac
 
 - **Buys:** large gains on search-like puzzles where a single pass fails badly.
 - **Costs:** many model calls per problem, plus an evaluation function and a search policy.
+- **Needs orchestration code, not a prompt:** branching, self-evaluation and backtracking are a
+  search algorithm over LLM-scored nodes — something outside the model has to hold the frontier.
+  `design-agent-architecture/references/reasoning-patterns.md` covers that architectural layer,
+  and the rest of the reasoning-structure selection (ReAct, Reflexion) this file does not.
 - **Judgment (not the paper's claim):** rarely justified in application work. Before reaching
   for it, ask whether the task is genuinely search — most business tasks are not, and the same
   budget spent on retrieval quality or a better decomposition returns more.

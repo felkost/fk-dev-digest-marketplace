@@ -238,10 +238,30 @@ mistake: cost triples, latency triples, and nobody can attribute the change.
 
 ## Production concerns the stage list does not cover
 
-Everything above gets a pipeline working. The three below decide whether it survives contact
+Everything above gets a pipeline working. The sections below decide whether it survives contact
 with real traffic, real users, and a corpus other people can write to. They are **engineering
 practice** rather than results from a paper — where a specific claim has a source, it is cited;
 where it does not, it is stated as practice and you should check it against your own system.
+
+### Grounding has degrees; the stakes pick which one you need
+
+Stage 5 above says to cite per claim and measure groundedness. "Grounded" is not one bar, and
+treating it as one either wastes engineering effort or leaves a real risk unmeasured:
+
+- **Weak grounding.** The answer is *consistent with* the retrieved context — nothing in it
+  contradicts what was retrieved — checked by instruction plus a spot check, not by code. Cheap,
+  and enough for low-stakes, human-reviewed output where a wrong sentence costs a correction,
+  not a decision made on bad information.
+- **Strong grounding.** *Every claim* is traceable to a specific passage, with a citation a
+  person or a program can verify. This is the bar the three hallucination-detection techniques
+  below actually enforce — they exist to produce strong grounding, and their cost (a second
+  pass, an NLI model, N generations) is the price of it.
+
+Pick the degree by what a wrong, confident sentence costs downstream. A support macro answering
+"what's your refund window" and a system drafting a medical or legal response do not need the
+same bar, and building the expensive one everywhere is the same over-engineering mistake as
+adding HyDE, multi-query, and reranking to a pipeline nobody has measured yet (see "Order of
+work" above).
 
 ### Hallucination: detect, then *correct*
 
@@ -307,6 +327,37 @@ adversarial and prompt-injection attacks is *rarely covered* in the literature (
 Liu, Wang & Qu, "Transforming Data Annotation with AI Agents", *Future Internet* 2025, 17(8),
 353, <https://doi.org/10.3390/fi17080353>, §1 and §10.1). Read that second half as the reason to
 design this yourself rather than expecting the field to have solved it.
+
+### Read-side authorization is a different failure class from injection
+
+The section above is about content flowing *in* as instructions. This one is about content
+flowing *out* to someone who should never have seen it — and it needs no adversary at all. A
+completely benign query, asked by a completely legitimate user, over an index that mixes
+documents at different confidentiality levels, can retrieve a passage that user has no right to
+read. Vector similarity has no concept of a permission boundary; it returns whichever chunk is
+nearest, and nearest does not imply authorized. This is a permissions problem on the index, not
+a prompt-injection problem, and hardening the prompt against injection does nothing to fix it.
+
+- **Failure mode:** a multi-tenant or role-segmented corpus — HR records, per-customer data,
+  internal-vs-customer-facing docs — embedded into one index. The retriever returns the
+  semantically closest chunk regardless of who is asking, and the generator repeats it
+  correctly, groundedly, and to the wrong person.
+- **Counter-measure:** authorization is a retrieval-time filter, not a prompt-time hope — related
+  to, but not the same job as, the trust-tier point above. A trust tier stops a low-trust
+  document from *outranking* a trusted one; an ACL stops a document from being *returned to a
+  reader* who has no right to it at all. Carry tenant/owner and an ACL as load-time metadata
+  (`build-ai-examples/references/document-loading.md` already lists tenant/owner among the
+  fields to capture at that stage) and enforce them as a hard pre-filter or index partition
+  ahead of the nearest-neighbour search — never as an instruction asking the model not to repeat
+  what it was just shown. A document the model never received cannot leak; one it received and
+  was told to withhold is one prompt-injection or one model mistake away from leaking anyway.
+- **Multi-tenancy is the same enforcement at scale:** keyed by tenant id instead of role, and
+  just as unforgivable to implement as an application-layer convention instead of a hard filter
+  the query itself cannot bypass.
+- **This compounds with staleness.** A permission *revoked* has the same shape as a document
+  *deleted* — see "Index freshness at scale" next: if the index does not reflect the
+  revocation, the old access keeps working until the next rebuild, the same tombstone-path gap
+  now guarding confidentiality instead of correctness.
 
 ### Index freshness at scale
 

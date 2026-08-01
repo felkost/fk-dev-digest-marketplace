@@ -23,6 +23,15 @@ Docker + React 19** (+ бібліотеки візуалізації Python), м
   примітиви, обидва чинні транспорти) + LangGraph-агент через `langchain-mcp-adapters`; код у
   `scripts/mcp_example/`, офлайн-смоук + безкоштовна жива перевірка stdio (обидві реально
   прогнані), розділ продакшн-дельт.
+- [references/reflexion-example.md](references/reflexion-example.md) — a working solver-critic
+  Reflexion loop: an anti-oracle checker plus loop control in pure Python, wired into a real
+  LangGraph `StateGraph`; code in `scripts/reflexion_example/`, offline smoke tests plus a free
+  live check of the graph wiring itself (both actually run), a production-deltas section.
+- [references/guardrail-example.md](references/guardrail-example.md) — a working deterministic
+  pass-off guardrail gating a two-agent handoff: a polarity-tested review in pure Python, wired
+  into a real LangGraph `StateGraph`; code in `scripts/guardrail_example/`, offline smoke tests
+  plus a free live check of the graph wiring itself (both actually run), a production-deltas
+  section.
 - [references/document-loading.md](references/document-loading.md) — витягування тексту з
   реальних файлів: Word/PDF/Excel/SQL/аудіо/зображення/відео з режимами відмови, три рівні
   парсингу (текст → layout-aware → мультимодальний), збагачення на етапі індексації (метадані,

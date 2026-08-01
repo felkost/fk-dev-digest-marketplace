@@ -1,0 +1,10 @@
+# Pin exact versions at build time -- look them up when generating the
+# example, do not trust remembered version numbers.
+#
+# guardrail_core.py imports none of this on purpose: the guardrail and the
+# decision point are testable with a bare interpreter (see
+# tests/smoke_test.py in the plugin root).
+
+langgraph
+langchain-openai
+python-dotenv     # loads .env into os.environ, used only by agent.py

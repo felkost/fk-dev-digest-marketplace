@@ -136,8 +136,9 @@ Two further cautions:
 
 A separate question from "should I use a reasoning model at all": given the reasoning capability
 a modern frontier model already has built in, when is that enough, and when do you still need to
-layer a structured pattern (ReAct, explicit planning, self-consistency — `prompt-techniques.md`)
-on top?
+layer a structured pattern (ReAct, Tree of Thoughts, Reflexion, explicit planning — which one,
+`design-agent-architecture/references/reasoning-patterns.md`; self-consistency and per-technique
+cost, `prompt-techniques.md`) on top?
 
 **Native reasoning is usually enough** when the task has a short horizon (roughly one to three
 steps), the tool surface is small, a wrong action is cheap and reversible, and the model is a

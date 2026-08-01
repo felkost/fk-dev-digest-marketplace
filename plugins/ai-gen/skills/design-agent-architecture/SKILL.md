@@ -1,6 +1,6 @@
 ---
 name: design-agent-architecture
-description: Designs LLM/agent system architecture with explicit trade-offs and risks. Covers workflow patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) versus agents, ReAct, RAG, multi-agent, and human-in-the-loop patterns, connecting models to MCP servers and tools, short-term and long-term memory including persistent knowledge bases, vector databases for retrieval, and autonomous loops with stop contracts and maker-checker separation. Use for agent architecture decisions, RAG pipeline design, tool integration via MCP, memory/state design, vector store selection, and deciding what an agent may do unattended. Respond in Ukrainian unless the user requests another language.
+description: Designs LLM/agent system architecture with explicit trade-offs and risks. Covers workflow patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) versus agents, ReAct, Tree of Thoughts, Reflexion, RAG, multi-agent, and human-in-the-loop patterns, connecting models to MCP servers and tools, short-term and long-term memory including persistent knowledge bases, vector databases for retrieval, and autonomous loops with stop contracts and maker-checker separation. Use for agent architecture decisions, choosing a reasoning structure, RAG pipeline design, tool integration via MCP, memory/state design, vector store selection, and deciding what an agent may do unattended. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Архітектура агентних систем
@@ -13,6 +13,12 @@ description: Designs LLM/agent system architecture with explicit trade-offs and 
 
 - [references/architectures.md](references/architectures.md) — ReAct, RAG, multi-agent,
   human-in-the-loop: коли який, переваги, ризики, типові збої.
+- [references/reasoning-patterns.md](references/reasoning-patterns.md) — which reasoning
+  structure an agent should use: decomposition vs planning as operations that fail independently;
+  a CoT/ReAct/ToT/Reflexion selection table; what actually defines ReAct; why Tree of Thoughts
+  needs orchestration code, not a prompt; Reflexion from the primary source with the
+  feedback-signal honesty; the plan as external state re-read every step; `sequential-thinking`
+  as the scratchpad instance.
 - [references/mcp-tools.md](references/mcp-tools.md) — приєднання інструментів через MCP-сервери:
   три примітиви й ієрархія контролю, транспорти (stdio + Streamable HTTP) і форми розгортання,
   ціна протоколу, дизайн інструментів (податок на кількість, семантичний добір, offloading),
