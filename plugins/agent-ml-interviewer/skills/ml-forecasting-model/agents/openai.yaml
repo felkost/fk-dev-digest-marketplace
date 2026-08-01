@@ -1,7 +1,7 @@
 interface:
   display_name: "Прогноз часових рядів (модель)"
-  short_description: "Наївна база→ETS→ARIMA→global ML; ADF+KPSS; MASE/RMSSE; Tweedie на переміжному"
-  default_prompt: Use $ml-forecasting-model to choose a time-series forecasting model — is it forecasting versus feature regression, stationarity via ADF and KPSS read together, the ladder from naive/seasonal-naive through ETS and ARIMA/SARIMAX to global gradient boosting on lags, Tweedie loss for intermittent (many-zero) demand, direct per-horizon versus recursive multi-step, local versus global, rolling-origin validation, and MASE/RMSSE/WRMSSE over MAPE; answer in Ukrainian.
+  short_description: "Наївна база→ETS→ARIMA→global ML→TimesFM/Chronos-2 zero-shot; MASE/RMSSE; Tweedie"
+  default_prompt: Use $ml-forecasting-model to choose a time-series forecasting model — is it forecasting versus feature regression, stationarity via ADF and KPSS read together, the ladder from naive/seasonal-naive/climatology baselines through ETS and ARIMA/SARIMAX to global gradient boosting on lags and zero-shot foundation models (TimesFM 2.5, Chronos-2) that still must beat the baseline on your own backtest, STL with robust=True when outliers bend the trend, choosing between foundation models by covariate support and interval calibration, the fine-tune-last ordering (zero-shot, then covariates, LoRA last) and forecast-band anomaly detection, Prophet's control surface (changepoints in first 80 percent, interval_width 0.8, outliers as NaN), Ljung-Box on residuals for order sufficiency, why tree ensembles cannot extrapolate a trend and differencing fixes it, quantile-head intervals with measured coverage, automated feature extraction (tsfel, feature-engine), Tweedie loss for intermittent (many-zero) demand, direct per-horizon versus recursive multi-step, local versus global, rolling-origin validation, and MASE/RMSSE/WRMSSE over MAPE; answer in Ukrainian.
 policy:
   products:
     - chatgpt

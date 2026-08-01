@@ -1,6 +1,6 @@
 ---
 name: ml-forecasting-model
-description: Chooses the time-series forecasting model and its core settings — whether the task is genuine forecasting (extrapolating a series' own past) versus cross-sectional regression on time features, the stationarity check with ADF and KPSS reading them together because they test opposite nulls, the model ladder from naive and seasonal-naive baselines through ETS/Holt-Winters and ARIMA/SARIMAX to global gradient-boosted models on lag features, local versus global fitting, ACF/PACF versus AIC order selection, the Tweedie loss for intermittent (many-zero) demand where squared error biases the zero-day forecast upward, the direct per-horizon versus recursive multi-step strategy, and the scale-free MASE/RMSSE/WRMSSE metrics (the M5 family) because MAPE explodes on zeros and volume-weighting changes what you optimise. Use when forecasting a series forward, when choosing between ARIMA, ETS, Prophet and ML, when asked how many differences or which seasonal order, which loss for sparse/intermittent sales, how to forecast many horizons ahead, which forecasting error metric, or deciding local per-series versus one global model. Does NOT design the backtest splitter itself (use ml-validation-design for rolling-origin/purged CV) and does NOT tune the gradient-boosting hyperparameters (use ml-tree-ensemble-params).
+description: Chooses the time-series forecasting model and its core settings — whether the task is genuine forecasting (extrapolating a series' own past) versus cross-sectional regression on time features, the stationarity check with ADF and KPSS reading them together because they test opposite nulls, the model ladder from naive, seasonal-naive and climatology (calendar-position average) baselines through ETS/Holt-Winters and ARIMA/SARIMAX to global gradient-boosted models on lag features, STL decomposition with the robust flag when outliers bend the extracted trend, local versus global fitting, ACF/PACF versus AIC order selection, the Tweedie loss for intermittent (many-zero) demand where squared error biases the zero-day forecast upward, the direct per-horizon versus recursive multi-step strategy, zero-shot pretrained foundation models (TimesFM, Chronos-2) as a second baseline that still must beat seasonal-naive on your own backtest, choosing between them by covariate support, interval calibration and LoRA fine-tuning with the measured ordering (zero-shot first, then known-future covariates, fine-tune last, and a sibling adapter does not rescue a cold start), using the forecast quantile band as the normality corridor for anomaly detection on a series, why tree ensembles cannot extrapolate a trend beyond the training range and modelling differences fixes it, Prophet's real control surface (changepoints placed only in the first 80 percent of history, interval_width defaulting to 0.8 not 0.95, MCMC needed for seasonal uncertainty, outliers set to NaN, holidays and shocks as special events, built-in cross_validation), checking ARIMA order sufficiency with the Ljung-Box test on residuals, automated feature extraction for the global rung (tsfel, feature-engine lag/window transformers), and the scale-free MASE/RMSSE/WRMSSE metrics (the M5 family) because MAPE explodes on zeros and volume-weighting changes what you optimise. Use when forecasting a series forward, when choosing between ARIMA, ETS, Prophet, ML and a pretrained foundation model, when asked whether TimesFM or Chronos-2 or zero-shot forecasting is worth trying, when a foundation model needs exogenous covariates or fine-tuning, when asked how many differences or which seasonal order, which loss for sparse/intermittent sales, how to forecast many horizons ahead, how to get forecast intervals, which forecasting error metric, or deciding local per-series versus one global model. Does NOT design the backtest splitter itself (use ml-validation-design for rolling-origin/purged CV) and does NOT tune the gradient-boosting hyperparameters (use ml-tree-ensemble-params).
 ---
 
 # Forecasting часових рядів: яку модель і які налаштування
@@ -66,10 +66,11 @@ stationary проти difference-stationary, і лік різний (детре�
 
 | Щабель | Модель | Коли досить |
 |---|---|---|
-| 0 | **наївний** (`y[t]=y[t−1]`) / **сезонний наївний** (`y[t]=y[t−s]`) | обов'язкова база; часто непобивана |
+| 0 | **наївний** (`y[t]=y[t−1]`) / **сезонний наївний** (`y[t]=y[t−s]`) / **кліматологія** (середнє по календарній позиції за всі роки) | обов'язкова база; довгий сезон (денні дані, річний цикл) → кліматологія тихіша за snaive: −21.6% MAE (derivations §9) |
 | 1 | **ETS / Holt-Winters** (`ExponentialSmoothing`) | тренд+сезон, один ряд, інтерпретовно |
 | 2 | **ARIMA / SARIMAX** | автокореляційна структура, екзогенні `X` (SARIMAX) |
 | 3 | **global ML** (лаги → gradient boosting) | багато рядів, спільна структура, нелінійність |
+| 4 | **zero-shot foundation model** (TimesFM 2.5) | багато різнорідних рядів без бюджету на тюнінг; холодний старт; швидка друга база |
 
 Живий прогін (сезонні дані, H=24): сезонний-наївний MAE 1.35, **ETS(сезон) 0.80**
 (найкраще), ARIMA(2,1,2) без сезонного члена 1.24 — недомодельований сезон ледь
@@ -84,6 +85,13 @@ stationary проти difference-stationary, і лік різний (детре�
   Позичає силу, тягне тисячі рядів, ловить нелінійність; ціна — ідентичність ряду
   треба подати ознакою, інакше ряди взаємозамінні (перегук person-centered у
   `ml-clustering-k`). Не потребує per-series ACF-аналізу й масштабування ознак.
+  Ознаки понад лаги — автоматичною екстракцією (tsfel, feature-engine
+  Lag/WindowFeatures зі зсувом без витоку; пастки й версії — api-2026 §7).
+  **Дерева не екстраполюють рівні:** прогноз бустингу обмежений діапазоном
+  train-цілі — на трендовому ряді рекурсивний прогноз уперся в стелю
+  (MAE **10.44** проти 0.41 в ETS), а те саме дерево на **різницях** з
+  інтеграцією назад дало 0.72 (derivations §8). Трендовий ряд → різниці або
+  явна трендова ознака, не сирі рівні.
 
 ## Крок 2a — переміжний попит: яку ВТРАТУ, а не лише модель
 
@@ -102,6 +110,67 @@ Tweedie p=1.9 **0.744**, −6.7%). Книга (M5) повідомляє біль
 гостріше переміжних даних. Правило: **переміжний попит → Tweedie для GBM**, не L2;
 `p` (1.1–1.9) на валідації.
 
+## Крок 2b — zero-shot foundation models: друга база, не заміна драбини
+
+**TimesFM 2.5** (Google, decoder-only, ~100 млрд точок претрену) і
+**Chronos-2** (Amazon, 120M, патч-енкодер із квантильною головою) — прогноз
+**без навчання**, на вхід — сирий ряд. Живий прогін обох на тих самих рядах
+(2026-08-01/08, CPU; повні числа в derivations §7):
+
+| Ряд | сезонний наївний | ETS | TimesFM 2.5 | Chronos-2 |
+|---|---|---|---|---|
+| A: чистий сезон+тренд | MAE 1.049 | **0.396** | 0.477 | 0.434 |
+| B: переміжний (65% нулів) | 1.417 | 1.411 | 1.343 | **1.341** |
+
+Правила читання:
+
+- **На чистому одному ряді правильно специфікований ETS б'є ОБИДВІ
+  foundation-моделі.** Сила zero-shot — багато різнорідних/брудних рядів,
+  холодний старт, нуль тюнінгу — швидка друга база після сезонного наївного.
+- **Лідерборд ≠ твої дані** (GIFT-Eval у TimesFM, «SOTA zero-shot» у
+  Chronos-2): власний rolling-origin проти наївної бази обов'язковий.
+- **Покриття інтервалів МІРЯТИ:** номінальна 80%-смуга на переміжному B —
+  TimesFM **37.5%**, Chronos-2 **62.5%** (обидві завузькі, друга помітно
+  чесніша); на гладкому A — 87.5% проти 79.2%.
+- **Вибір між двома:** коваріати/мультиваріативність/файнтюн потрібні →
+  Chronos-2 (dict-вхід із known-future коваріатами, LoRA через peft; на
+  Windows у TimesFM коваріати недоступні — `[xreg]` тягне `jax[cuda]`).
+  Чистий univariate і швидкість → TimesFM (інференс 1.1 с проти 5.1 с CPU).
+  Виміряно чесно: коваріати платять лише інформацією, якої НЕМАЄ в історії
+  цілі — детермінований сезон як known-future коваріата дав нуль
+  (MAE 0.349 → 0.355); а там, де коваріати несуть фізику (погода/зайнятість →
+  HVAC), вони ріжуть WAPE удвічі ще ДО файнтюну (8.4→4.2%, ноутбуки авторів).
+- **Файнтюн — після zero-shot із коваріатами, не замість:** LoRA лише по цілі
+  дає −7..9% WAPE, з коваріатами −27..33% (до 2.8%); coverage після файнтюну
+  звужується (98→91%), а **cold-start із 3 днями контексту адаптер не рятує
+  (15.6→15.5%)**. Порядок: сезонний наївний → zero-shot → +коваріати →
+  LoRA, і кожен крок має виправдати наступний числом. Прогноз працює і як
+  детектор аномалій — квантильна смуга як «норма» (api-2026 §6).
+
+## Крок 2c — Prophet: декомпозиційна регресія для бізнес-денних даних
+
+Коли ряд денний, зі святами, пропусками й викидами — **Prophet** (тренд зі
+зламами + сезонності Фур'є + свята як регресори) конкурує зі щаблями 1-2 за
+мізерну ціну налаштування. Живий прогін на тих самих рядах (prophet 1.3.0,
+дефолти): A MAE **0.437** (≈Chronos-2, за ETS), B **1.408** (≈ETS). Пастки —
+усі перевірені живцем:
+
+- **`interval_width` за замовчуванням 0.8, не 0.95** — «інтервал Prophet»
+  вужчий, ніж звикли читати; і без `mcmc_samples>0` невизначеність — ЛИШЕ
+  тренд+шум (MAP), без сезонної складової: покриття 80%-смуги на сезонному
+  ряді A — **62.5%**. Повна байєсова — `mcmc_samples=300`, на порядки довше.
+- **25 потенційних зламів лише в перших 80% ряду** (`changepoint_range=0.8`):
+  свіжий злам тренду в останніх 20% модель точкою зламу не побачить.
+  Гнучкість — `changepoint_prior_scale` (дефолт 0.05).
+- **Викиди → `NaN`, не видалення рядка**: Prophet толерує пропуски; два
+  класи шкоди від викидів — розгойдана сезонність і роздуті інтервали. Шок
+  (локдаун) — не викид, а спеціальна подія: моделювати holiday-вікном.
+- Місячні дані: автодетекція сезонностей коректно лишає тільки `yearly`
+  (перевірено); `make_future_dataframe(freq="MS")` — без freq буде денна сітка.
+- Вбудовані `cross_validation(initial/period/horizon)` + `performance_metrics`
+  — rolling-origin з коробки. Установка тепер проста: `pip install prophet`
+  (1.3.0, Windows/3.12) — рекомендація «лише Anaconda» застаріла.
+
 ## Крок 3 — порядок (p,d,q)(P,D,Q)ₛ
 
 - **`d`, `D`** — з Кроку 1 (скільки різниць до стаціонарності).
@@ -110,6 +179,10 @@ Tweedie p=1.9 **0.744**, −6.7%). Книга (M5) повідомляє біль
   (`pmdarima.auto_arima` тут відсутній — сітка руками або `statsmodels`).
 - **Не роздувати.** ARIMA(1,1,1) чи (2,1,2) покриває більшість; високі порядки
   зазвичай ловлять шум і гірше екстраполюють.
+- **Достатність порядку перевіряє Ljung-Box на залишках**, не лише AIC:
+  недоспецифікована ARIMA(1,0,0) на AR(2)-даних — p=0.0000 (залишки ще
+  автокорельовані, структура недобрана), коректна (2,0,0) — p=0.90
+  (`acorr_ljungbox(res.resid, lags=[10], model_df=p+q)`, живий прогін).
 
 ## Крок 4 — валідація: лише rolling-origin
 
@@ -170,23 +243,35 @@ MASE (один викид: RMSSE 0.5→1.0, MASE лишається 0.655).
   Tweedie тримає його біля нуля (Крок 2a).
 - **Рівномірні зусилля під зваженою метрикою** — WRMSSE рухають кілька дорогих
   рядів (Крок 5).
+- **Foundation model за лідербордом без локального backtest** — GIFT-Eval не
+  знає твоїх даних; на чистому ряді ETS побив обидві foundation-моделі (Крок 2b).
+- **Бустинг на сирих рівнях трендового ряду** — прогноз упирається в максимум
+  train і систематично недотягує (MAE 10.44 → 0.72 після переходу на різниці).
+- **Інтервал Prophet прочитано як 95%** — дефолт `interval_width=0.8`, і без
+  MCMC він не містить сезонної невизначеності (покриття 62.5% на ряді A).
+- **Залишки не перевірені після підбору порядку** — AIC мовчить про
+  недоспецифікацію, яку Ljung-Box показує одразу (Крок 3).
+- **Номінальне покриття інтервалів без перевірки** — «80%» смуга квантильної
+  голови покрила 37.5% на переміжному ряді; покриття міряється на backtest.
 
 ## Що повідомити
 
 1. Чи це forecasting (Крок 0) — і чому не звичайна регресія.
 2. Стаціонарність: ADF **і** KPSS, скільки різниць `d`/`D`, чи потрібен log.
-3. Обраний щабель драбини й **чому саме він побив попередній** (з числами).
+3. Обраний щабель драбини й **чому саме він побив попередній** (з числами);
+   якщо розглядався zero-shot — його число проти ETS/наївного (Крок 2b).
 4. Local чи global і чому; для global — ідентичність ряду й втрата (Tweedie на
    переміжному попиті).
 5. Схема backtest (rolling/expanding, горизонт) — делеговано `ml-validation-design`.
-6. MASE/RMSSE проти наївної бази, інтервал прогнозу, якщо рішення під ризиком.
+6. MASE/RMSSE проти наївної бази; інтервал прогнозу з **виміряним покриттям**,
+   якщо рішення під ризиком.
 
 ## Завантажити за потреби
 
 | Файл | Коли читати |
 |---|---|
-| `references/api-2026.md` | statsmodels 0.14 (ARIMA/SARIMAX/ETS/adfuller/kpss), lightgbm tweedie/quantile, чого немає (prophet/pmdarima/sktime/darts) |
-| `references/derivations.md` | ADF vs KPSS, MASE/RMSSE/WRMSSE формально, рекурсивний vs прямий, Tweedie на переміжному, ACF/PACF |
+| `references/api-2026.md` | statsmodels (ARIMA/ETS/STL robust/adfuller/kpss), lightgbm tweedie/quantile, TimesFM 2.5 і Chronos-2 (§6), tsfel/feature-engine (§7), Prophet 1.3 (§8) |
+| `references/derivations.md` | ADF vs KPSS, MASE/RMSSE/WRMSSE формально, рекурсивний vs прямий, Tweedie, ACF/PACF, zero-shot проти ETS (§7), стеля дерев (§8) |
 
 ## Джерела
 
@@ -196,5 +281,14 @@ CV, local vs global). Hyndman & Athanasopoulos, *FPP* — драбина мод�
 ETS-таксономія. Nguyen, *Building Statistical Models in Python* — ADF/KPSS,
 SARIMAX. Banachewicz & Massaron, *The Kaggle Workbook*, розд. M5 — WRMSSE,
 Tweedie-втрата для переміжного попиту, прямий per-horizon підхід Monsaraida.
+TimesFM 2.5 (github.com/google-research/timesfm, HF
+`google/timesfm-2.5-200m-pytorch`) і Chronos-2 (HF `amazon/chronos-2`,
+`chronos-forecasting`) — Крок 2b, перевірено живцем 2026-08-01/08; файнтюн-числа
+Chronos-2 (WAPE 8.4→2.8%) — заявка статті TDS, не власний прогін. Rafferty,
+*Forecasting Time Series Data with Prophet* (2-ге вид., Packt 2023) — Крок 2c,
+кожен дефолт і пастка переперевірені на prophet 1.3.0. Brownlee, *Introduction
+to Time Series Forecasting with Python* v1.9 — діагностика залишків (Крок 3,
+Ljung-Box як формалізація його розд. 19).
 **Усі числа вище — власні живі прогони на statsmodels 0.14.6 / lightgbm 4.6.0 /
-sklearn 1.9.0**, не переказ книг.
+sklearn 1.9.0 / timesfm 2.0.2 / chronos-forecasting 2.3.1 / prophet 1.3.0
+(torch 2.13.0)**, не переказ книг чи README.

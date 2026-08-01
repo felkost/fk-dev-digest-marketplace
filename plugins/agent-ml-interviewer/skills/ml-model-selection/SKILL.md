@@ -1,6 +1,6 @@
 ---
 name: ml-model-selection
-description: Chooses the model family for a task with justification — screens candidates against seven constraints (explainability, memory/incrementality, n and d, categorical vs numeric features, linearity of the boundary, training time, inference latency), maps data signatures to families (linear, tree, RF, gradient boosting, kNN, SVM, naive Bayes, neural nets), names the preprocessing each family requires, hands the winner to the family-specific tuning skill, and — for already-fitted Bayesian candidates — compares them via WAIC/LOO/Occam's razor instead of held-out CV. Use when deciding which algorithm to use, when comparing candidate models (frequentist or Bayesian), when asked whether a neural net or boosting is warranted, or when a model was picked without justification. Does NOT tune the chosen family's hyperparameters (use ml-tree-ensemble-params or ml-linear-regularization) and does NOT design the validation that compares frequentist candidates (use ml-validation-design).
+description: Chooses the model family for a task with justification — screens candidates against seven constraints (explainability, memory/incrementality, n and d, categorical vs numeric features, linearity of the boundary, training time, inference latency), maps data signatures to families (linear, tree, RF, gradient boosting, kNN, SVM, naive Bayes, neural nets), names the preprocessing each family requires, treats a low-code AutoML sweep (PyCaret-class compare_models) as an empirical shortlist tool with its metric-sorting, CV-scheme and version-drift pitfalls, hands the winner to the family-specific tuning skill, and — for already-fitted Bayesian candidates — compares them via WAIC/LOO/Occam's razor instead of held-out CV. Use when deciding which algorithm to use, when comparing candidate models (frequentist or Bayesian), when asked whether a neural net or boosting is warranted, when asked whether an AutoML or PyCaret leaderboard can be trusted, or when a model was picked without justification. Does NOT tune the chosen family's hyperparameters (use ml-tree-ensemble-params or ml-linear-regularization) and does NOT design the validation that compares frequentist candidates (use ml-validation-design).
 ---
 
 # Обґрунтований вибір сімейства моделі
@@ -83,6 +83,30 @@ description: Chooses the model family for a task with justification — screens 
   `ml-linear-regularization`.
 - **Потрібні калібровані ймовірності** → лінійна; або будь-що + `CalibratedClassifierCV`.
 
+## Крок 3a — AutoML-розвідка: sweep дає шорт-лист, не рішення
+
+Low-code AutoML (клас інструментів PyCaret: `compare_models()` тренує ~15-20
+сімейств одним викликом і друкує таблицю CV-метрик) — легітимний спосіб швидко
+отримати **емпіричний шорт-лист** після відсіву Кроку 1. Чотири правила, без
+яких sweep обертається на шкоду:
+
+1. **Метрику сортування задати ДО sweep** (`ml-metric-choice`): дефолтне
+   сортування за accuracy на дисбалансі вкаже не на ту модель.
+2. **CV усередині sweep має відповідати даним.** Дефолт — звичайний K-fold;
+   якщо в даних групи або час, без явного `fold_strategy`
+   (`"groupkfold"`/`"timeseries"` чи власний сплітер) уся таблиця порівнює
+   витоки, а не моделі (`ml-validation-design`).
+3. **Sweep обирає сімейство, тюнінг — після** (п.5 Кроку 4): тюнити переможця,
+   а не всіх кандидатів. Числа книги-джерела це підтверджують: `tune_model()`
+   зрушив RMSE 4750→4625 (−2.6%) — на порядок менше, ніж різниця між
+   сімействами в тій самій таблиці.
+4. **AutoML-пакет ставити в окремий venv, не в робоче середовище.** Перевірено
+   живцем (2026-08-01): `pycaret` 3.3.2 (остання, квітень 2024) на Python 3.12
+   резолвиться, але тягне **scikit-learn 1.4.2** — п'ять мінорних версій назад
+   від 1.9.0; встановлення в робоче середовище відкочує його. Пін книги-джерела
+   `pycaret==2.3.4` мертвий: `scipy<=1.5.4` → `numpy==1.17.3`, який на 3.12
+   падає ще на генерації метаданих. Деталі — `references/api-2026.md`.
+
 ## Крок 4 — як порівнювати кандидатів чесно
 
 1. **2–3 сімейства з РІЗНИМ зміщенням** (напр. лінійне + деревне), не п'ять
@@ -133,6 +157,9 @@ description: Chooses the model family for a task with justification — screens 
 - **Ігнорування вимог продукту** (латентність, пояснюваність) до вибору — потім
   доводиться викидати найкращу модель.
 - **Ансамбль заради ансамблю** — складність, яку ніхто не супроводжуватиме.
+- **AutoML-переможець із дефолтною метрикою/CV** — таблиця sweep красива, але
+  сортована за accuracy на дисбалансі чи порахована K-fold'ом на групах/часі
+  (Крок 3a) — обрано не модель, а артефакт схеми.
 
 ## Що повідомити
 
@@ -157,7 +184,9 @@ description: Chooses the model family for a task with justification — screens 
 алгоритмів і мотивація ансамблів; §8.2 — об'єднання різнорідних моделей.
 Схема-пам'ятка вибору алгоритму в scikit-learn (рис. 5.1 там само). Babushkin &
 Kravchenko, *ML System Design*, гл. 8 «Baseline solution» — базлайн як обов'язкова
-точка відліку. Мартін, *Байесовский анализ на Python*, гл. 5 «Сравнение
+точка відліку. Tolios, *Simplifying ML with PyCaret* (2022) — AutoML-sweep як
+розвідка (Крок 3a); версійний дрейф пін-стека книги перевірено живцем 2026-08-01
+(`references/api-2026.md`). Мартін, *Байесовский анализ на Python*, гл. 5 «Сравнение
 моделей» — бритва Оккама, точність у/поза вибіркою, WAIC/PSIS-LOO (Крок 4a);
 живі перевірки PyMC 6.1/ArviZ 1.2 (елпд-знак, Pareto-k пастка) — у
 `ml-bayesian-inference/references/api-2026.md`.

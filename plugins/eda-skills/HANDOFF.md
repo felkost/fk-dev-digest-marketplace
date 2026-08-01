@@ -1,6 +1,6 @@
 # Session handoff — eda_skills
 
-Written 2026-07-19, last updated 2026-07-20 at the end of round 29 (measurement quality: reliability, influence, ordinal data), for a fresh Claude session with no conversation history. Read this whole file before touching anything. Newest round first: 29 is the top section, then 28 (latent factor structure), then 27 (the marketplace migration).
+Written 2026-07-19, last updated 2026-08-15 at the end of round 31 (anomaly scoring + EMD naming, measured), for a fresh Claude session with no conversation history. Read this whole file before touching anything. Newest round first: 31, then 30 (window-leakage and fold-spread facts), then 29 (measurement quality), then 28 (latent factor structure), then 27 (the marketplace migration).
 
 ## What this project is
 
@@ -16,10 +16,67 @@ Each has `SKILL.md` (Ukrainian body, Claude-facing) + `references/*.md` (English
 ## Current verified state (as of this handoff)
 
 - `tests/check_docs.py`: **passes** (`python tests/check_docs.py`, exit 0). Round 27 added check `[6]`: a drift guard between the modality-routing table (`plan-eda-dataset/references/modality-routing.md`) and its condensed twin in `plan-eda-dataset/SKILL.md` — the two are a deliberate duplication (see round 27), and this guard is what makes duplicating them safe.
-- `tests/smoke_test.py`: **76/76 checks pass** (up from 71/71 — round 28 added 5 for the new factor-structure module). **Round 27 also fixed a path bug that had made all 67 pre-existing checks fail on import** (`ModuleNotFoundError`) since the migration into the monorepo — see round 27 below before trusting any check count from before it.
+- `tests/smoke_test.py`: **84/84 checks pass** (71 → 76 in round 28 for the factor-structure module, 76 → 84 in round 29; re-verified green in round 30). **Round 27 also fixed a path bug that had made all 67 pre-existing checks fail on import** (`ModuleNotFoundError`) since the migration into the monorepo — see round 27 below before trusting any check count from before it.
 - `dist/eda_skills_knowledge.zip`: rebuilt in round 28 — **25 references + 29 scripts**, up from the 24 + 28 that round 27 established. (Round 27 is where those counts became trustworthy at all: the previously-committed zip showed 21/27 because `chatgpt/build_gpt_package.ps1` had the same path bug and was silently packaging a stale pre-migration snapshot.) The five per-skill `dist/<name>.zip` files are a pre-migration artifact of the standalone-repo build pattern (see "No per-skill build script exists" further down) and were not part of this fix.
 - **`chatgpt/gpt_instructions.md` is at 7,014 / 8,000 UTF-8 bytes** (986 B headroom, up from 20 B). Round 27 moved the modality-routing table out of the instructions and into `plan-eda-dataset/references/modality-routing.md`, leaving only a branch index + pointer inline — freeing ~1,000 bytes that had been the single largest non-procedural section. Every modality added from now on costs 0 instruction bytes.
 - **The authoritative history for rounds 1–26 is `MEMORY.md` → `eda-skills-deliverable.md`**, but that auto-memory account key was tied to the pre-migration working directory (`...F--Data-Neoversity-ai-eda-skills...`). Post-migration, auto-memory is keyed to `C:\Users\felko\.claude\projects\F--Data-Neoversity-ai-fk-dev-digest-marketplace\memory\` — a **different** memory scope with no round history of its own yet. If the old memory file is still reachable, it has one dense paragraph per round (26 rounds) with exact measured numbers and reasoning for every pre-migration design decision; if not, this HANDOFF plus round 27 below is what a fresh session has to work from.
+
+## What just happened (round 31 — anomaly scoring and EMD naming, same cross-plugin vein, 2026-08-15)
+
+Second enrichment round from a source batch triaged for the sibling plugin's
+round 14. **One reference touched** (`discover-eda-structure/references/
+time-series.md`), three additions, all measured:
+
+- **Rolling z-score point anomalies: exclude the point from its own window.**
+  An 8σ spike scored with itself inside the window gets z=**3.72**; the same
+  point scored leave-one-out gets z=**8.14** — the spike inflates its own
+  window's std. At 4.5σ the naive score (3.03) grazes |z|>3 while LOO (4.56)
+  clears it. Also records the four-layer anomaly taxonomy (point / volatility
+  / trend / series-level) from the TDS toolkit article.
+- **Forecast-band anomaly detection** (from the Chronos-2 notebook 3, author's
+  own run): score = distance outside the forecast quantile band scaled by the
+  band half-width; known-future covariates cut false alarms (precision
+  67.6% → 96.3%, recall 68.7 → 77.6% on four injected events); gradual drift
+  is the measured weak spot (33/48 hours) — it starts inside the band.
+- **EMD naming traps, all verified live**: the tutorial call
+  `emd.emd(signal, max_imf=10)` exists in NO package; PyPI `emd` 0.8.1 is
+  `emd.sift.sift(..., max_imfs=)` with IMFs as columns, PyPI `EMD-signal`
+  1.10.0 (imported `PyEMD`) is `PyEMD.EMD().emd(..., max_imf=)` with IMFs as
+  rows — different spellings, transposed outputs.
+
+Smoke **84/84**, `check_docs.py` exit 0, zip rebuilt. Committed separately
+from the sibling's round-14 commit, same branch.
+
+## What just happened (round 30 — two measured leakage facts from a cross-plugin source batch, 2026-08-08)
+
+A **small enrichment round** driven by a source batch triaged primarily for the
+sibling plugin `agent-ml-interviewer` (its round 13); two claims survived the
+measurement standard and landed here. **Two references touched, nothing else**
+— no scripts, no SKILL.md, no routing, no instruction bytes (references cost 0).
+
+- `discover-eda-structure/references/time-series.md`, "Avoid leakage": pandas
+  window defaults measured. `rolling(3).mean()` on `[1,2,3,4,100]` returns
+  **35.67** at the last row — the window at `t` includes `y[t]`, so as a
+  feature it leaks the target; `ewm(span=5).mean()` is **strictly causal**
+  (changing every value after `t` leaves the value at `t` bit-identical).
+  A circulating "10 one-liners" tutorial flags these exactly backwards
+  (rolling "safe", ewm "needs future points"). Universal fix: `.shift(1)`.
+- `audit-eda-data-quality/references/splits-leakage.md`, "Verification": the
+  "perfect fold consistency indicates leakage" heuristic measured and
+  **rejected in its bare form**. Clean features: 5-fold AUC 0.900 ± 0.025 at
+  n=300 → 0.970 ± **0.007** at n=5000 (spread legitimately shrinks with n);
+  one leaked feature: 1.0000 ± 0.0000. The usable signature is level *and*
+  spread jointly, framed as a hypothesis trigger for the existing probes.
+
+Smoke **84/84** unchanged (references carry no checks of their own);
+`check_docs.py` exit 0; `dist/eda_skills_knowledge.zip` rebuilt (375,980 B)
+and both facts verified present in the zip. Committed separately from the
+sibling plugin's round-13 commit.
+
+**Correction to round 29's "Open threads" below: PR #8 (round 29, `feat/eda`)
+IS merged into `main`** — that bullet was true when written and is not any
+more; `reliability.py`, `ordinal_data.py`, `influence_diagnostics` and both
+new references exist on `main`.
 
 ## What just happened (round 29 — measurement quality: reliability, influence, ordinal data, 2026-07-20, branch `feat/eda`)
 
