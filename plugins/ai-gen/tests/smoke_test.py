@@ -86,6 +86,35 @@ references/loop-example.md):
  58-59. .env.example covers every variable agent.py reads and ships no
        filled-in secret.
 
+What it pins, tdad_example (Test-Driven Agent Development harness -- the
+normalizing evaluator, the grounding check that takes context explicitly, and
+defect localization evaluate-optimize-models/references/agent-tdad.md
+specifies; the motivating bug is chapter_07/06_RAG_grounding_with_
+guardrails.py's module-level `_last_context`, reproduced by checks 64-65 and
+fixed by the explicit-argument signature; see references/tdad-example.md):
+ 60.   the directory exists with the expected files;
+ 61.   harness_core imports without executing anything, and imports ONLY
+       stdlib;
+ 62.   exact_match("Photons.", "photons") is True -- the normalizing-
+       evaluator case the reference names by name;
+ 63.   polarity -- a context-drawn answer is grounded, a distinctively
+       off-context answer is not;
+ 64.   two AccumulatingContext instances never contaminate each other's
+       is_grounded result under interleaved add()/snapshot() calls;
+ 65.   an answer citing only the first of two searches is NOT grounded
+       against the second search's content alone, but IS grounded against
+       the full accumulated snapshot;
+ 66.   a stub passing 3/5 times reports pass_rate == 0.6 over n=5, not a
+       false clean pass;
+ 67-69. classify_failure resolves "evaluator_bug", "instruction_bug" and
+       "capability_gap" from three synthetic cases;
+ 70.   escalate_fix_tier moves one ladder step at a time and raises past
+       "model";
+ 71.   retry_ceiling_action returns "retry" under the cap, the named policy
+       at the cap, and raises on an unrecognized policy;
+ 72-73. .env.example covers every variable agent.py reads and ships no
+       filled-in secret.
+
 Run:  python tests/smoke_test.py     (exit code 0 = all passed)
 
 Console note: this box's console is cp1251, so output is ASCII-safe.
@@ -106,11 +135,13 @@ MCP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "mcp_example"
 REFLEXION_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "reflexion_example"
 GUARDRAIL_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "guardrail_example"
 LOOP_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "loop_example"
+TDAD_EXAMPLE = ROOT / "skills" / "build-ai-examples" / "scripts" / "tdad_example"
 sys.path.insert(0, str(EXAMPLE))
 sys.path.insert(0, str(MCP_EXAMPLE))
 sys.path.insert(0, str(REFLEXION_EXAMPLE))
 sys.path.insert(0, str(GUARDRAIL_EXAMPLE))
 sys.path.insert(0, str(LOOP_EXAMPLE))
+sys.path.insert(0, str(TDAD_EXAMPLE))
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -1012,6 +1043,187 @@ def _():
 @check("loop_example .env.example ships no filled-in secret")
 def _():
     for line in (LOOP_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (p.strip() for p in line.split("=", 1))
+        if any(m in key for m in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            assert value == "", f"{key} looks filled in ({value!r})"
+
+
+# --------------------------------------------------------------------------- #
+# 60-73. tdad_example: the TDAD harness, offline
+# --------------------------------------------------------------------------- #
+
+@check("tdad_example directory exists with the expected files")
+def _():
+    for name in ("harness_core.py", "agent.py", ".env.example", "requirements.txt"):
+        assert (TDAD_EXAMPLE / name).is_file(), f"missing {name}"
+
+
+@check("harness_core imports without executing anything, ONLY stdlib")
+def _():
+    tree = ast.parse((TDAD_EXAMPLE / "harness_core.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call), (
+            "module-level call found -- importing must not execute anything"
+        )
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = {"re", "dataclasses", "__future__"}
+    assert imported <= allowed, f"non-stdlib or unexpected imports: {imported - allowed}"
+    import harness_core  # noqa: F401  -- the import itself must succeed bare
+
+
+@check('exact_match("Photons.", "photons") is True')
+def _():
+    from harness_core import exact_match
+    assert exact_match("Photons.", "photons") is True
+    assert exact_match("Photons.", "electrons") is False
+
+
+@check("grounding polarity: context-drawn answer grounded, off-context answer not")
+def _():
+    from harness_core import is_grounded
+    context = (
+        "RRF (Reciprocal Rank Fusion) combines ranked lists from multiple "
+        "retrieval systems by summing the reciprocal of each item's rank.",
+    )
+    grounded_answer = "RRF combines ranked lists by summing reciprocal ranks."
+    ungrounded_answer = "RRF was patented in 2003 by satellite engineers for telemetry."
+    assert is_grounded(grounded_answer, context) is True
+    assert is_grounded(ungrounded_answer, context) is False
+
+
+@check("two AccumulatingContext instances never contaminate each other")
+def _():
+    from harness_core import AccumulatingContext, is_grounded
+    ctx_a = AccumulatingContext()
+    ctx_a.add("Paris is the capital of France.")
+    ctx_b = AccumulatingContext()
+    ctx_b.add("Tokyo is the capital of Japan.")
+
+    answer_a = "Paris is the capital of France."
+    # interleave: check B in between two checks of A
+    first = is_grounded(answer_a, ctx_a.snapshot())
+    is_grounded("Tokyo is the capital of Japan.", ctx_b.snapshot())
+    second = is_grounded(answer_a, ctx_a.snapshot())
+    assert first is True and second is True, "A's result changed after checking B"
+    assert is_grounded(answer_a, ctx_b.snapshot()) is False, "A grounded against B's context"
+
+
+@check("grounds against the ACCUMULATED snapshot, not the last piece alone")
+def _():
+    from harness_core import AccumulatingContext, is_grounded
+    ctx = AccumulatingContext()
+    search1 = "RRF combines ranked lists by summing reciprocal ranks."
+    search2 = "Cosine similarity measures the angle between two embedding vectors."
+    ctx.add(search1)
+    answer = "RRF combines ranked lists using reciprocal ranks and cosine similarity."
+    last_piece_only = (search2,)
+    assert is_grounded(answer, last_piece_only) is False, (
+        "checking only the latest piece should miss the RRF claim from search 1"
+    )
+    ctx.add(search2)
+    assert is_grounded(answer, ctx.snapshot()) is True, (
+        "checking the full accumulated snapshot should find both claims"
+    )
+
+
+@check("run_benchmark reports a rate, not a false clean pass")
+def _():
+    from harness_core import run_benchmark
+    script = iter([True, False, True, False, True])  # 3/5
+
+    def stub():
+        return next(script)
+
+    result = run_benchmark(stub, n=5)
+    assert result.pass_rate == 0.6 and result.passes == 3 and result.n == 5
+
+
+@check('classify_failure resolves "evaluator_bug"')
+def _():
+    from harness_core import classify_failure
+    verdict = classify_failure(
+        expected="42", raw_output="  42.", evaluator_verdict=False,
+        tool_calls=["calculator"], required_tool="calculator",
+    )
+    assert verdict == "evaluator_bug"
+
+
+@check('classify_failure resolves "instruction_bug"')
+def _():
+    from harness_core import classify_failure
+    verdict = classify_failure(
+        expected="42", raw_output="I don't know", evaluator_verdict=False,
+        tool_calls=[], required_tool="calculator",
+    )
+    assert verdict == "instruction_bug"
+
+
+@check('classify_failure resolves "capability_gap"')
+def _():
+    from harness_core import classify_failure
+    verdict = classify_failure(
+        expected="42", raw_output="41", evaluator_verdict=False,
+        tool_calls=["calculator"], required_tool="calculator",
+    )
+    assert verdict == "capability_gap"
+
+
+@check("escalate_fix_tier moves one step at a time and raises past 'model'")
+def _():
+    from harness_core import LADDER, escalate_fix_tier
+    assert LADDER == ("word", "clause", "sentence", "section", "tool", "model")
+    assert escalate_fix_tier("word") == "clause"
+    assert escalate_fix_tier("section") == "tool"
+    try:
+        escalate_fix_tier("model")
+        raise AssertionError("escalating past the last tier should raise")
+    except ValueError:
+        pass
+    try:
+        escalate_fix_tier("bogus-tier")
+        raise AssertionError("an unknown tier should raise")
+    except ValueError:
+        pass
+
+
+@check("retry_ceiling_action: retry under cap, named policy at cap, rejects unknown policy")
+def _():
+    from harness_core import retry_ceiling_action
+    assert retry_ceiling_action(2, 5) == "retry"
+    assert retry_ceiling_action(5, 5, policy="escalate_human") == "escalate_human"
+    assert retry_ceiling_action(5, 5, policy="fail") == "fail"
+    try:
+        retry_ceiling_action(5, 5, policy="bogus-policy")
+        raise AssertionError("an unrecognized policy should raise")
+    except ValueError:
+        pass
+
+
+@check("tdad_example .env.example covers every variable agent.py reads")
+def _():
+    env_keys = set()
+    for line in (TDAD_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            env_keys.add(line.split("=", 1)[0].strip())
+    agent_src = (TDAD_EXAMPLE / "agent.py").read_text(encoding="utf-8")
+    read_keys = set(re.findall(r"os\.environ(?:\.get\(|\[)\s*[\"']([A-Z0-9_]+)[\"']", agent_src))
+    read_keys |= set(re.findall(r"_require\(\s*[\"']([A-Z0-9_]+)[\"']\s*\)", agent_src))
+    missing = read_keys - env_keys
+    assert not missing, f"agent.py reads {missing} not present in .env.example"
+
+
+@check("tdad_example .env.example ships no filled-in secret")
+def _():
+    for line in (TDAD_EXAMPLE / ".env.example").read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

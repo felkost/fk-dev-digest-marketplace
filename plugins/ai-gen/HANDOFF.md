@@ -1,12 +1,101 @@
 # Session handoff — ai-gen
 
-Newest entry on top (eda-skills convention). Last updated 2026-08-29, round **18** (the agent
-loop: `agent-loop.md` + `loop_example`). Skills stay at **8**, references are now **36**
-(`design-agent-architecture/references/agent-loop.md`,
-`build-ai-examples/references/loop-example.md`), smoke checks **47 → 59**. Round **19** is next
-(TDAD / evaluation development loop), then 20–22, then **23** (code execution + agent workspaces,
-from the newly triaged second book — see the round-18 entry). Written for a fresh Claude session
-with no conversation history — read this whole file before touching anything.
+Newest entry on top (eda-skills convention). Last updated 2026-08-29, round **19** (the TDAD
+development loop: `agent-tdad.md` + `tdad_example`). Skills stay at **8**, references are now
+**38** (`evaluate-optimize-models/references/agent-tdad.md`,
+`build-ai-examples/references/tdad-example.md`), smoke checks **59 → 73**. Round **20** is next
+(serving runtimes, wires, front-door topology, release engineering), then 21–22, then **23**
+(code execution + agent workspaces, from the second-book triage — see the round-18 entry).
+Written for a fresh Claude session with no conversation history — read this whole file before
+touching anything.
+
+## What just happened (round 19 — the TDAD development loop, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`, same branch as round 18 — sequential rounds share a branch until merged, matching rounds 15–17's precedent)
+
+The next queued unit of work, executed exactly as the ch. 7–11 triage's roadmap table specified.
+
+### A router gap from round 18, caught and fixed first
+
+`skill-router.md`'s granular trigger table had no row for `agent-loop.md` — round 18 added the
+reference and its `design-agent-architecture` description-level routing phrase, but missed the
+per-reference row every other reference in that skill has. Fixed before starting round 19's own
+work, so it does not compound into a second missed row.
+
+### Shipped: `agent-tdad.md` (the 37th reference)
+
+Every gap item the roadmap table named, none skipped, each cross-referenced instead of duplicated:
+TDAD as a red/green/refactor loop adapted for a stochastic system under test and a fallible
+oracle; running each **case** N times before believing a pass (narrower than, and cross-referenced
+to, `evaluation.md`'s set-level statistical-hygiene section); testing the **trajectory**, not only
+the final answer, using `agent-loop.md`'s run record as the thing that makes a trajectory
+checkable at all; the **minimum-change ladder** (word → clause → sentence → section → tool →
+model, escalating only after the cheaper tier is confirmed to have failed); **defect
+localization** as a three-way split (evaluator bug / instruction bug / capability gap) that checks
+the evaluator's own correctness first, because a wrong verdict on a right answer poisons everything
+downstream; **rubric construction** (concrete, checkable anchors) plus **threshold calibration as
+a sweep that finds where rubric/human agreement peaks**, not a round-number guess, extending
+`evaluation.md`'s existing hand-calibration line rather than repeating it; **agent collusion and
+evaluation governance** — zero prior coverage — with the framing that a colluding evaluation layer
+is worse than none because it manufactures false confidence, plus its four guards (different
+model family for the evaluator, human review of a random sample of the *unflagged* cases, an
+authority hierarchy with logged agent-to-agent messages, escalation rules); the **retry ceiling as
+a named design decision** for what happens the instant `autonomy-contracts.md`'s cap fires
+(retry / escalate-human / escalate-model / partial-with-flag), not left as a gap the harness falls
+through; **grounding as a technique vs. the grounding agent as one implementation** — the
+distinction whose absence is what let the companion repo's bug through in the first place; human
+feedback as noisy data (aggregate across raters, run outlier detection on raters not only on data,
+stratify the review sample); annotations becoming a permanent regression set, tying together
+`agent-ops.md`'s incident→eval-case loop and TDAD's own local version of the same discipline; and
+an explicitly volatile note on observability tooling instead of naming products that will be stale
+within a quarter.
+
+### Shipped: `tdad_example` (the sixth worked example) + 14 smoke checks
+
+`scripts/tdad_example/harness_core.py` (pure stdlib, no import-time side effects) is built around
+the concrete bug the reference documents: `chapter_07/06_RAG_grounding_with_guardrails.py`'s
+grounding check reads a module-level global that every search overwrites, so a two-search answer
+only ever gets checked against the *last* search's context, and no concurrency is needed to trigger
+it. The fix is structural — `is_grounded(answer, context, threshold=...)` takes context as a plain
+argument, and `AccumulatingContext.snapshot()` returns an immutable copy so a caller checking
+*accumulated* evidence passes the whole snapshot, not the latest `add()`'s piece. Also:
+`normalize()`/`exact_match()` (the reference's "Photons." equals "photons" case, by name);
+`run_benchmark()` returning a **rate** over N runs, never a single boolean; `classify_failure()`
+checking evaluator-correctness first, then trajectory (`required_tool` membership), before
+concluding capability gap; `LADDER` and `escalate_fix_tier()` refusing to skip a tier or wrap past
+`"model"`; `retry_ceiling_action()` returning `"retry"` under the cap and a **named** policy
+outcome at it, raising on an unrecognized policy rather than defaulting to one. `agent.py` wires a
+real solver via OpenRouter at nonzero temperature (repetition only demonstrates anything if the
+solver can vary) behind `__main__`.
+
+Smoke **59 → 73** (checks 60–73), including the two checks that directly reproduce and then fix
+the companion-repo bug's exact failure shapes: **two `AccumulatingContext` instances never
+contaminate each other's `is_grounded` result under interleaved `add()`/`snapshot()` calls, and an
+answer citing only the first of two searches is provably NOT grounded when checked against the
+second search's content alone but IS grounded against the full accumulated snapshot.** All 14
+checks passed on the first run — no test needed fixing against itself this round, unlike round 18.
+
+### Registration and honest bookkeeping
+
+- Both SKILL.md files: new reference rows, descriptions extended with TDAD-routing phrases.
+  `openai.yaml` for both skills was **deliberately left untouched** — checked the commit history
+  first (`git log -- '**/agents/openai.yaml'`) and confirmed these files are only touched when a
+  skill is first created, never when an existing skill's content deepens; an initial edit to
+  `evaluate-optimize-models/agents/openai.yaml` was reverted once that pattern was confirmed,
+  rather than quietly breaking the convention.
+- `skill-router.md` gets a new row for `agent-tdad.md`, plus the round-18 `agent-loop.md` row
+  fixed above.
+- **`check_docs.py` caught the same staleness class it caught in round 18** — zip had 36
+  references against 38 on disk, and both `mcp-example.md` and `rag-example.md` still said "59
+  checks, all five examples". Fixed to 73/six; zip rebuilt (`ai_gen_knowledge.zip`
+  **231 411 bytes**, instructions unchanged at 6 928/8 000 — `gpt_instructions.md`'s stage-level
+  routing line for `evaluate-optimize-models` stays generic on purpose, matching round 18's choice
+  not to enumerate individual references there).
+- `check_docs.py` → **docs OK**; smoke **73/73**.
+
+### Open threads unchanged
+
+Full triage of *The Brain of AI Agents* (ch. 2/3/5/6/9/10 at section level only) is still owed
+before round 23; ch. 6 must face the two-taxonomy memory rule from round 17 before any third
+memory vocabulary is admitted.
 
 ## What just happened (round 18 — the agent loop, 2026-08-29, branch `feat/ai-gen-agent-loop-round18` off `main`)
 

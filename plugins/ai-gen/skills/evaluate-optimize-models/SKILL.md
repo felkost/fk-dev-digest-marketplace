@@ -1,6 +1,6 @@
 ---
 name: evaluate-optimize-models
-description: Measures model quality correctly and optimizes efficiency. Covers choosing evaluation metrics per task class (generation, classification, retrieval, agents), building eval sets, LLM-as-judge with its biases, and optimizing tokens, latency, cost and throughput (prompt budgeting, caching, batching, model right-sizing, quantization). Use for "how do I know it works", eval design, quality regressions, token/cost reduction, and latency tuning. Respond in Ukrainian unless the user requests another language.
+description: Measures model quality correctly and optimizes efficiency. Covers choosing evaluation metrics per task class (generation, classification, retrieval, agents), building eval sets, LLM-as-judge with its biases, developing an agent against tests (TDAD loop, minimum-change ladder, N-repeat benchmarking, trajectory-not-answer testing, defect localization between evaluator bugs/instruction bugs/capability gaps, rubric construction and threshold calibration, agent collusion and evaluation governance, retry ceiling as a design decision), and optimizing tokens, latency, cost and throughput (prompt budgeting, caching, batching, model right-sizing, quantization). Use for "how do I know it works", eval design, quality regressions, an eval that keeps flip-flopping between pass and fail, diagnosing whether a failing case is the agent's fault or the evaluator's, token/cost reduction, and latency tuning. Respond in Ukrainian unless the user requests another language.
 ---
 
 # Оцінювання якості та оптимізація
@@ -17,6 +17,13 @@ description: Measures model quality correctly and optimizes efficiency. Covers c
 - [references/agent-ops.md](references/agent-ops.md) — експлуатація агента в проді:
   трасування траєкторій (OpenTelemetry), вибіркове онлайн-суддівство, деплой за метриками,
   цикл «інцидент → eval-кейс», guardrails і поверхня prompt injection.
+- [references/agent-tdad.md](references/agent-tdad.md) — the TDAD development loop: run each
+  case N times before believing a pass, test the trajectory not only the answer, the
+  minimum-change ladder (word → clause → sentence → section → tool → model), defect localization
+  (evaluator bug vs instruction bug vs capability gap), rubric construction and threshold
+  calibration at the rubric/human agreement peak, agent collusion and evaluation governance,
+  retry ceiling as a named design decision, grounding as a technique vs the grounding agent as
+  one implementation (the module-global bug that motivates the worked example).
 - [references/token-latency-cost.md](references/token-latency-cost.md) — важелі оптимізації:
   бюджет промпта, кешування, батчинг, right-sizing моделі, квантизація; що міряти до і після.
 

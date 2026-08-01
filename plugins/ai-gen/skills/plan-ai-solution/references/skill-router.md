@@ -94,10 +94,12 @@ Ukrainian the user is likely to type.
 | «покажи робочий MCP-сервер», код tool/resource/prompt, langchain-mcp-adapters | `build-ai-examples` | `references/mcp-example.md` |
 | «покажи робочий Reflexion-цикл», solver-critic loop, код LangGraph StateGraph | `build-ai-examples` | `references/reflexion-example.md` |
 | «покажи робочий guardrail», типізований pass-off, polarity test | `build-ai-examples` | `references/guardrail-example.md` |
+| «агент зациклився / не зупиняється», stagnation, goal predicate vs terminal message, inner execution loop | `design-agent-architecture` | `references/agent-loop.md` |
 | «щоб працювало саме», автономний цикл, автоматизації, worktrees, субагенти | `design-agent-architecture` | `references/loop-engineering.md` |
 | «коли агенту можна не питати», stop conditions, autonomy boundaries | `design-agent-architecture` | `references/autonomy-contracts.md` |
 | «як виміряти якість», eval set, LLM-суддя, регресії якості | `evaluate-optimize-models` | `references/evaluation.md` |
 | «агент у проді», трасування, моніторинг, деплой за метриками, guardrails | `evaluate-optimize-models` | `references/agent-ops.md` |
+| «як розробляти агента через тести», TDAD, чому тест червоний — агент чи оцінювач винен, retry ceiling | `evaluate-optimize-models` | `references/agent-tdad.md` |
 | «чому модель так робить», токенізація, увага, контекст як механізм | `explain-llm-internals` | `references/architecture-training.md` |
 | «чому повільно/дорого» на рівні механізму, KV-кеш, квантизація, MoE | `explain-llm-internals` | `references/inference-internals.md` |
 | «як влаштоване донавчання», LoRA/QLoRA, chat-шаблони, адаптери | `explain-llm-internals` | `references/fine-tuning-mechanics.md` |
